@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ParsedOrderItem } from "@/types";
 
-type OrderStep = "welcome" | "input" | "loading" | "confirmation" | "submitted";
+type OrderStep = "welcome" | "input" | "loading" | "confirmation" | "payment" | "submitted";
 
 interface OrderState {
   step: OrderStep;
@@ -14,6 +14,7 @@ interface OrderState {
   customerName: string;
   customerPhone: string;
   error: string | null;
+  clientSecret: string | null;
 
   // Actions
   setStep: (step: OrderStep) => void;
@@ -26,6 +27,7 @@ interface OrderState {
   setCustomerName: (name: string) => void;
   setCustomerPhone: (phone: string) => void;
   setError: (error: string | null) => void;
+  setClientSecret: (secret: string | null) => void;
   reset: () => void;
 }
 
@@ -40,6 +42,7 @@ const initialState = {
   customerName: "",
   customerPhone: "",
   error: null,
+  clientSecret: null,
 };
 
 export const useOrderStore = create<OrderState>((set) => ({
@@ -75,5 +78,6 @@ export const useOrderStore = create<OrderState>((set) => ({
   setCustomerName: (customerName) => set({ customerName }),
   setCustomerPhone: (customerPhone) => set({ customerPhone }),
   setError: (error) => set({ error }),
+  setClientSecret: (clientSecret) => set({ clientSecret }),
   reset: () => set(initialState),
 }));
