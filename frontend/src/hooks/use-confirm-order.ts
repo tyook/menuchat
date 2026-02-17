@@ -7,6 +7,8 @@ interface ConfirmOrderParams {
   rawInput: string;
   tableIdentifier: string;
   language: string;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export function useConfirmOrder(slug: string) {
@@ -17,7 +19,9 @@ export function useConfirmOrder(slug: string) {
         params.items,
         params.rawInput,
         params.tableIdentifier,
-        params.language
+        params.language,
+        params.customerName,
+        params.customerPhone
       ),
   });
 }

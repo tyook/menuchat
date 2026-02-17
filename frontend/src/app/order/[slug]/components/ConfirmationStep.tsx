@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
+import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 import { useConfirmOrder } from "@/hooks/use-confirm-order";
 import type { ConfirmOrderItem } from "@/types";
 
@@ -20,14 +24,26 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
     rawInput,
     language,
     tableIdentifier,
+    customerName,
+    customerPhone,
     setStep,
     setOrderId,
     setError,
+    setCustomerName,
+    setCustomerPhone,
     removeItem,
     updateItemQuantity,
   } = useOrderStore();
   const { allergyNote } = usePreferencesStore();
+  const { customer, isAuthenticated } = useCustomerAuthStore();
   const confirmOrderMutation = useConfirmOrder(slug);
+
+  // Auto-fill name and phone if customer is logged in
+  useEffect(() => {
+    if (isAuthenticated && customer && !customerName) {
+      setCustomerName(customer.name);
+    }
+  }, [isAuthenticated, customer, customerName, setCustomerName]);
 
   const handleConfirm = () => {
     const items: ConfirmOrderItem[] = parsedItems.map((item) => {
@@ -47,7 +63,7 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
     });
 
     confirmOrderMutation.mutate(
-      { items, rawInput, tableIdentifier, language },
+      { items, rawInput, tableIdentifier, language, customerName, customerPhone },
       {
         onSuccess: (order) => {
           setOrderId(order.id);
@@ -133,6 +149,32 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
 
       <Separator className="my-4" />
 
+      {/* Customer info */}
+      <div className="space-y-3 mb-6">
+        <div>
+          <Label htmlFor="customer-name">Your name *</Label>
+          <Input
+            id="customer-name"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Name for the order"
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="customer-phone">Phone (optional)</Label>
+          <Input
+            id="customer-phone"
+            type="tel"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="For order updates"
+          />
+        </div>
+      </div>
+
+      <Separator className="my-4" />
+
       <div className="space-y-1 mb-6">
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
@@ -159,7 +201,7 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
         <Button
           className="flex-1"
           onClick={handleConfirm}
-          disabled={confirmOrderMutation.isPending}
+          disabled={confirmOrderMutation.isPending || !customerName.trim()}
         >
           {confirmOrderMutation.isPending ? "Placing Order..." : "Place Order"}
         </Button>

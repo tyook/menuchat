@@ -11,6 +11,8 @@ interface OrderState {
   language: string;
   orderId: string | null;
   tableIdentifier: string;
+  customerName: string;
+  customerPhone: string;
   error: string | null;
 
   // Actions
@@ -21,6 +23,8 @@ interface OrderState {
   updateItemQuantity: (index: number, quantity: number) => void;
   setOrderId: (id: string) => void;
   setTableIdentifier: (table: string) => void;
+  setCustomerName: (name: string) => void;
+  setCustomerPhone: (phone: string) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
@@ -33,6 +37,8 @@ const initialState = {
   language: "en",
   orderId: null,
   tableIdentifier: "",
+  customerName: "",
+  customerPhone: "",
   error: null,
 };
 
@@ -66,6 +72,8 @@ export const useOrderStore = create<OrderState>((set) => ({
     }),
   setOrderId: (orderId) => set({ orderId }),
   setTableIdentifier: (tableIdentifier) => set({ tableIdentifier }),
+  setCustomerName: (customerName) => set({ customerName }),
+  setCustomerPhone: (customerPhone) => set({ customerPhone }),
   setError: (error) => set({ error }),
   reset: () => set(initialState),
 }));

@@ -111,7 +111,9 @@ export async function confirmOrder(
   items: ConfirmOrderItem[],
   rawInput: string,
   tableIdentifier: string,
-  language: string
+  language: string,
+  customerName?: string,
+  customerPhone?: string
 ): Promise<OrderResponse> {
   return apiFetch<OrderResponse>(`/api/order/${slug}/confirm/`, {
     method: "POST",
@@ -120,6 +122,8 @@ export async function confirmOrder(
       raw_input: rawInput,
       table_identifier: tableIdentifier,
       language,
+      customer_name: customerName || "",
+      customer_phone: customerPhone || "",
     }),
   });
 }
