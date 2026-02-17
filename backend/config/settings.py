@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     # Local
     "restaurants",
     "orders",
+    "customers",
 ]
 
 MIDDLEWARE = [
