@@ -1,6 +1,7 @@
 import pytest
+import stripe
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from rest_framework import status
 
 from orders.llm.base import ParsedOrder, ParsedOrderItem
@@ -235,3 +236,144 @@ class TestKitchenOrderUpdate:
             format="json",
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+class TestCreatePayment:
+    @pytest.fixture
+    def menu_setup(self):
+        restaurant = RestaurantFactory(slug="payment-test", tax_rate=Decimal("8.875"))
+        cat = MenuCategoryFactory(restaurant=restaurant)
+        item = MenuItemFactory(category=cat, name="Burger")
+        variant = MenuItemVariantFactory(
+            menu_item=item, label="Regular", price=Decimal("10.00"), is_default=True
+        )
+        return {
+            "restaurant": restaurant,
+            "item": item,
+            "variant": variant,
+        }
+
+    @patch("orders.views.settings")
+    @patch("orders.views.stripe")
+    def test_create_payment_creates_order_and_intent(self, mock_stripe, mock_settings, api_client, menu_setup):
+        mock_settings.STRIPE_SECRET_KEY = "sk_test_fake_key"
+        mock_intent = MagicMock()
+        mock_intent.id = "pi_test_123"
+        mock_intent.client_secret = "pi_test_123_secret_456"
+        mock_stripe.PaymentIntent.create.return_value = mock_intent
+
+        response = api_client.post(
+            "/api/order/payment-test/create-payment/",
+            {
+                "items": [
+                    {
+                        "menu_item_id": menu_setup["item"].id,
+                        "variant_id": menu_setup["variant"].id,
+                        "quantity": 2,
+                    }
+                ],
+                "raw_input": "Two burgers",
+                "table_identifier": "3",
+                "language": "en",
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["status"] == "pending_payment"
+        assert response.data["payment_status"] == "pending"
+        assert response.data["client_secret"] == "pi_test_123_secret_456"
+
+        # Verify order in DB
+        order = Order.objects.get(id=response.data["id"])
+        assert order.stripe_payment_intent_id == "pi_test_123"
+        assert order.status == "pending_payment"
+        # Subtotal: 10.00 * 2 = 20.00, Tax: 20.00 * 8.875% = 1.78
+        assert order.subtotal == Decimal("20.00")
+        assert order.tax_amount == Decimal("1.78")
+        assert order.total_price == Decimal("21.78")
+
+        # Verify Stripe was called with correct amount in cents
+        mock_stripe.PaymentIntent.create.assert_called_once()
+        call_kwargs = mock_stripe.PaymentIntent.create.call_args[1]
+        assert call_kwargs["amount"] == 2178
+        assert call_kwargs["currency"] == "usd"
+
+    @patch("orders.views.stripe")
+    def test_create_payment_no_items_rejected(self, mock_stripe, api_client, menu_setup):
+        response = api_client.post(
+            "/api/order/payment-test/create-payment/",
+            {"items": [], "raw_input": "nothing"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        mock_stripe.PaymentIntent.create.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestStripeWebhook:
+    @patch("orders.views.stripe.Webhook.construct_event")
+    @patch("orders.views.broadcast_order_to_kitchen")
+    def test_payment_succeeded_confirms_order(self, mock_broadcast, mock_construct, api_client):
+        order = OrderFactory(
+            status="pending_payment",
+            payment_status="pending",
+            stripe_payment_intent_id="pi_test_webhook",
+        )
+
+        mock_construct.return_value = {
+            "type": "payment_intent.succeeded",
+            "data": {"object": {"id": "pi_test_webhook"}},
+        }
+
+        response = api_client.post(
+            "/api/webhooks/stripe/",
+            data=b"raw_payload",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        order.refresh_from_db()
+        assert order.status == "confirmed"
+        assert order.payment_status == "paid"
+        mock_broadcast.assert_called_once_with(order)
+
+    @patch("orders.views.stripe.Webhook.construct_event")
+    def test_payment_failed_updates_status(self, mock_construct, api_client):
+        order = OrderFactory(
+            status="pending_payment",
+            payment_status="pending",
+            stripe_payment_intent_id="pi_test_fail",
+        )
+
+        mock_construct.return_value = {
+            "type": "payment_intent.payment_failed",
+            "data": {"object": {"id": "pi_test_fail"}},
+        }
+
+        response = api_client.post(
+            "/api/webhooks/stripe/",
+            data=b"raw_payload",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        order.refresh_from_db()
+        assert order.payment_status == "failed"
+        assert order.status == "pending_payment"
+
+    @patch("orders.views.stripe.Webhook.construct_event")
+    def test_invalid_signature_rejected(self, mock_construct, api_client):
+        mock_construct.side_effect = stripe.error.SignatureVerificationError(
+            "bad sig", "sig_header"
+        )
+
+        response = api_client.post(
+            "/api/webhooks/stripe/",
+            data=b"raw_payload",
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="bad_sig",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
