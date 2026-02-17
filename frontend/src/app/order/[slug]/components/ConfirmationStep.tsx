@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
-import { useConfirmOrder } from "@/hooks/use-confirm-order";
+import { useCreatePayment } from "@/hooks/use-create-payment";
 import type { ConfirmOrderItem } from "@/types";
 
 interface ConfirmationStepProps {
@@ -29,6 +29,7 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
     setStep,
     setOrderId,
     setError,
+    setClientSecret,
     setCustomerName,
     setCustomerPhone,
     removeItem,
@@ -36,7 +37,7 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
   } = useOrderStore();
   const { allergyNote } = usePreferencesStore();
   const { customer, isAuthenticated } = useCustomerAuthStore();
-  const confirmOrderMutation = useConfirmOrder(slug);
+  const createPaymentMutation = useCreatePayment(slug);
 
   // Auto-fill name and phone if customer is logged in
   useEffect(() => {
@@ -62,15 +63,16 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
       };
     });
 
-    confirmOrderMutation.mutate(
+    createPaymentMutation.mutate(
       { items, rawInput, tableIdentifier, language, customerName, customerPhone },
       {
-        onSuccess: (order) => {
-          setOrderId(order.id);
-          setStep("submitted");
+        onSuccess: (result) => {
+          setOrderId(result.id);
+          setClientSecret(result.client_secret);
+          setStep("payment");
         },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : "Failed to place order");
+          setError(err instanceof Error ? err.message : "Failed to create payment");
         },
       }
     );
@@ -201,9 +203,9 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
         <Button
           className="flex-1"
           onClick={handleConfirm}
-          disabled={confirmOrderMutation.isPending || !customerName.trim()}
+          disabled={createPaymentMutation.isPending || !customerName.trim()}
         >
-          {confirmOrderMutation.isPending ? "Placing Order..." : "Place Order"}
+          {createPaymentMutation.isPending ? "Setting up payment..." : "Place Order"}
         </Button>
       </div>
     </div>
