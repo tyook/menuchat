@@ -5,6 +5,7 @@ from restaurants.models import Restaurant, MenuItem, MenuItemVariant, MenuItemMo
 
 class Order(models.Model):
     class Status(models.TextChoices):
+        PENDING_PAYMENT = "pending_payment", "Pending Payment"
         PENDING = "pending", "Pending"
         CONFIRMED = "confirmed", "Confirmed"
         PREPARING = "preparing", "Preparing"
@@ -23,7 +24,7 @@ class Order(models.Model):
     customer_name = models.CharField(max_length=255, blank=True, default="")
     customer_phone = models.CharField(max_length=20, blank=True, default="")
     status = models.CharField(
-        max_length=10, choices=Status.choices, default=Status.PENDING
+        max_length=20, choices=Status.choices, default=Status.PENDING
     )
     raw_input = models.TextField()
     parsed_json = models.JSONField(default=dict, blank=True)
@@ -35,6 +36,22 @@ class Order(models.Model):
     )
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Payment fields
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("paid", "Paid"),
+            ("failed", "Failed"),
+            ("refunded", "Refunded"),
+        ],
+        default="pending",
+    )
+    stripe_payment_intent_id = models.CharField(
+        max_length=255, blank=True, null=True, unique=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
