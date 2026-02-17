@@ -1,4 +1,6 @@
 from decimal import Decimal
+import stripe
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -190,6 +192,153 @@ class ConfirmOrderView(APIView):
             OrderResponseSerializer(order).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class CreatePaymentView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug):
+        try:
+            restaurant = Restaurant.objects.get(slug=slug)
+        except Restaurant.DoesNotExist:
+            return Response(
+                {"detail": "Restaurant not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ConfirmOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        if not data["items"]:
+            return Response(
+                {"detail": "Order must contain at least one item."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validate and calculate price server-side (same logic as ConfirmOrderView)
+        total_price = Decimal("0.00")
+        validated_items = []
+
+        for item_data in data["items"]:
+            try:
+                menu_item = MenuItem.objects.get(
+                    id=item_data["menu_item_id"],
+                    category__restaurant=restaurant,
+                    is_active=True,
+                )
+                variant = MenuItemVariant.objects.get(
+                    id=item_data["variant_id"],
+                    menu_item=menu_item,
+                )
+            except (MenuItem.DoesNotExist, MenuItemVariant.DoesNotExist):
+                return Response(
+                    {"detail": "Invalid menu item or variant."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            valid_modifiers = []
+            modifier_total = Decimal("0.00")
+            for mod_id in item_data.get("modifier_ids", []):
+                try:
+                    modifier = MenuItemModifier.objects.get(
+                        id=mod_id, menu_item=menu_item
+                    )
+                    valid_modifiers.append(modifier)
+                    modifier_total += modifier.price_adjustment
+                except MenuItemModifier.DoesNotExist:
+                    pass
+
+            quantity = item_data["quantity"]
+            line_total = (variant.price + modifier_total) * quantity
+            total_price += line_total
+
+            validated_items.append(
+                {
+                    "menu_item": menu_item,
+                    "variant": variant,
+                    "quantity": quantity,
+                    "special_requests": item_data.get("special_requests", ""),
+                    "modifiers": valid_modifiers,
+                }
+            )
+
+        # Calculate tax
+        subtotal = total_price
+        tax_rate = restaurant.tax_rate
+        tax_amount = (subtotal * tax_rate / Decimal("100")).quantize(Decimal("0.01"))
+        grand_total = subtotal + tax_amount
+
+        # Check for customer auth
+        customer = None
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if auth_header.startswith("Bearer "):
+            try:
+                from rest_framework_simplejwt.tokens import UntypedToken
+                from customers.models import Customer
+                token_str = auth_header.split(" ", 1)[1]
+                token = UntypedToken(token_str)
+                if token.get("token_type") == "customer_access":
+                    customer = Customer.objects.get(id=token["customer_id"])
+            except Exception:
+                pass
+
+        # Create order with pending_payment status
+        order = Order.objects.create(
+            restaurant=restaurant,
+            table_identifier=data.get("table_identifier") or None,
+            customer=customer,
+            customer_name=data.get("customer_name", ""),
+            customer_phone=data.get("customer_phone", ""),
+            status="pending_payment",
+            payment_status="pending",
+            raw_input=data["raw_input"],
+            parsed_json=request.data,
+            language_detected=data.get("language", "en"),
+            subtotal=subtotal,
+            tax_rate=tax_rate,
+            tax_amount=tax_amount,
+            total_price=grand_total,
+        )
+
+        for item_data in validated_items:
+            order_item = OrderItem.objects.create(
+                order=order,
+                menu_item=item_data["menu_item"],
+                variant=item_data["variant"],
+                quantity=item_data["quantity"],
+                special_requests=item_data["special_requests"],
+            )
+            order_item.modifiers.set(item_data["modifiers"])
+
+        # Create Stripe PaymentIntent
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        amount_cents = int(grand_total * 100)
+
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=amount_cents,
+                currency=restaurant.currency.lower(),
+                metadata={
+                    "order_id": str(order.id),
+                    "restaurant_slug": restaurant.slug,
+                },
+            )
+        except stripe.error.StripeError as e:
+            order.delete()
+            return Response(
+                {"detail": f"Payment setup failed: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        order.stripe_payment_intent_id = intent.id
+        order.save(update_fields=["stripe_payment_intent_id"])
+
+        response_data = OrderResponseSerializer(order).data
+        response_data["client_secret"] = intent.client_secret
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class OrderStatusView(APIView):
