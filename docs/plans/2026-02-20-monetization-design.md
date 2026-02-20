@@ -109,3 +109,28 @@ These are deliberate non-goals for launch but worth revisiting as the business g
 | ChowNow, Olo | Flat monthly | $99-$199/mo |
 
 QR Order is positioned in the $49-$199/mo range, comparable to mid-range ordering platforms, with AI multilingual parsing as the key differentiator.
+
+## Stripe Account Architecture
+
+A single Stripe account handles both diner food payments and restaurant owner subscriptions. No separate account is needed.
+
+| | Diner Payments (existing) | Owner Subscriptions (new) |
+|---|---|---|
+| **Stripe object** | PaymentIntent | Subscription |
+| **Who pays** | Restaurant customer | Restaurant owner |
+| **Stripe Customer** | One per diner account | One per restaurant owner |
+| **Billing** | One-time per order | Recurring monthly/annual |
+| **Webhook events** | `payment_intent.succeeded` | `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` |
+
+Both payment flows use the same `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Diner Stripe Customers and owner Stripe Customers are simply different Customer records in the same Stripe account.
+
+The only setup required in the Stripe Dashboard is creating Products and Prices for the three subscription tiers (Starter/Growth/Pro) under **Product Catalog**, then copying the Price IDs into environment variables.
+
+## Subscription Cancellation
+
+Restaurant owners can cancel their subscription at any time:
+
+- **Self-service cancellation** via an explicit "Cancel Subscription" button on the billing page.
+- **Cancellation takes effect at period end** - the subscription remains active until the current billing period expires, so the restaurant is never cut off mid-month.
+- **Post-cancellation behavior** - same as post-trial: AI order parsing stops, but QR codes and static menus remain accessible. The owner can resubscribe at any time.
+- **Stripe Billing Portal** is also available as a secondary management option for updating payment methods, viewing invoices, and changing plans.
