@@ -128,6 +128,46 @@ STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
 
 # ---------------------------------------------------------------------------
+# Stripe Subscription Plans
+# ---------------------------------------------------------------------------
+STRIPE_PRICE_STARTER_MONTHLY = config("STRIPE_PRICE_STARTER_MONTHLY", default="")
+STRIPE_PRICE_GROWTH_MONTHLY = config("STRIPE_PRICE_GROWTH_MONTHLY", default="")
+STRIPE_PRICE_PRO_MONTHLY = config("STRIPE_PRICE_PRO_MONTHLY", default="")
+STRIPE_PRICE_STARTER_ANNUAL = config("STRIPE_PRICE_STARTER_ANNUAL", default="")
+STRIPE_PRICE_GROWTH_ANNUAL = config("STRIPE_PRICE_GROWTH_ANNUAL", default="")
+STRIPE_PRICE_PRO_ANNUAL = config("STRIPE_PRICE_PRO_ANNUAL", default="")
+
+SUBSCRIPTION_PLANS = {
+    "starter": {
+        "name": "Starter",
+        "order_limit": 200,
+        "overage_rate_cents": 20,  # $0.20
+        "monthly_price_id": STRIPE_PRICE_STARTER_MONTHLY,
+        "annual_price_id": STRIPE_PRICE_STARTER_ANNUAL,
+    },
+    "growth": {
+        "name": "Growth",
+        "order_limit": 600,
+        "overage_rate_cents": 15,  # $0.15
+        "monthly_price_id": STRIPE_PRICE_GROWTH_MONTHLY,
+        "annual_price_id": STRIPE_PRICE_GROWTH_ANNUAL,
+    },
+    "pro": {
+        "name": "Pro",
+        "order_limit": 1500,
+        "overage_rate_cents": 10,  # $0.10
+        "monthly_price_id": STRIPE_PRICE_PRO_MONTHLY,
+        "annual_price_id": STRIPE_PRICE_PRO_ANNUAL,
+    },
+}
+
+# Free trial settings
+FREE_TRIAL_DAYS = 14
+FREE_TRIAL_ORDER_LIMIT = 200
+
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+
+# ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
 if DEBUG:
