@@ -1,7 +1,7 @@
 import pytest
-from rest_framework.test import APIClient
 from rest_framework import status
-from restaurants.tests.factories import UserFactory, RestaurantFactory, RestaurantStaffFactory
+
+from restaurants.tests.factories import RestaurantFactory, RestaurantStaffFactory, UserFactory
 
 
 @pytest.mark.django_db

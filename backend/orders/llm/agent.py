@@ -5,7 +5,7 @@ Replaces the raw OpenAI provider with a structured agent that supports
 multiple LLM providers and returns a typed ParsedOrder response.
 """
 
-from typing import Any, Optional, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -35,7 +35,7 @@ class OrderParsingAgent(BaseAgent):
     def get_instructions(self) -> str:
         return INSTRUCTIONS
 
-    def get_output_schema(self) -> Optional[Type[BaseModel]]:
+    def get_output_schema(self) -> type[BaseModel] | None:
         return ParsedOrder
 
     def get_context(self, **kwargs: Any) -> dict[str, str]:

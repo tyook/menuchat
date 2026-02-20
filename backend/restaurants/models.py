@@ -1,6 +1,8 @@
 import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 from restaurants.managers import UserManager
 
 
@@ -37,7 +39,9 @@ class Restaurant(models.Model):
     homepage = models.URLField(blank=True, default="")
     logo_url = models.URLField(blank=True, default="")
     tax_rate = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0,
+        max_digits=5,
+        decimal_places=3,
+        default=0,
         help_text="Tax rate as a percentage (e.g. 8.875 for 8.875%)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -59,16 +63,14 @@ class Subscription(models.Model):
         CANCELED = "canceled", "Canceled"
         INCOMPLETE = "incomplete", "Incomplete"
 
-    restaurant = models.OneToOneField(
-        Restaurant, on_delete=models.CASCADE, related_name="subscription"
-    )
+    restaurant = models.OneToOneField(Restaurant, on_delete=models.CASCADE, related_name="subscription")
     plan = models.CharField(max_length=20, choices=Plan.choices, default=Plan.STARTER)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TRIALING)
-    stripe_subscription_id = models.CharField(
-        max_length=255, blank=True, null=True, unique=True
-    )
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     stripe_customer_id = models.CharField(
-        max_length=255, blank=True, null=True,
+        max_length=255,
+        blank=True,
+        null=True,
     )
     trial_end = models.DateTimeField(blank=True, null=True)
     current_period_start = models.DateTimeField(blank=True, null=True)
@@ -87,6 +89,7 @@ class Subscription(models.Model):
     def order_limit(self):
         """Get order limit from settings based on plan."""
         from django.conf import settings
+
         plan_config = settings.SUBSCRIPTION_PLANS.get(self.plan, {})
         return plan_config.get("order_limit", 0)
 
@@ -118,9 +121,7 @@ class RestaurantStaff(models.Model):
 
 
 class MenuCategory(models.Model):
-    restaurant = models.ForeignKey(
-        Restaurant, on_delete=models.CASCADE, related_name="categories"
-    )
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=100)
     sort_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -134,9 +135,7 @@ class MenuCategory(models.Model):
 
 
 class MenuItem(models.Model):
-    category = models.ForeignKey(
-        MenuCategory, on_delete=models.CASCADE, related_name="items"
-    )
+    category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name="items")
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     image_url = models.URLField(blank=True, default="")
@@ -151,9 +150,7 @@ class MenuItem(models.Model):
 
 
 class MenuItemVariant(models.Model):
-    menu_item = models.ForeignKey(
-        MenuItem, on_delete=models.CASCADE, related_name="variants"
-    )
+    menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name="variants")
     label = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     is_default = models.BooleanField(default=False)
@@ -163,13 +160,9 @@ class MenuItemVariant(models.Model):
 
 
 class MenuItemModifier(models.Model):
-    menu_item = models.ForeignKey(
-        MenuItem, on_delete=models.CASCADE, related_name="modifiers"
-    )
+    menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name="modifiers")
     name = models.CharField(max_length=100)
-    price_adjustment = models.DecimalField(
-        max_digits=8, decimal_places=2, default=0
-    )
+    price_adjustment = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.menu_item.name} + {self.name} (${self.price_adjustment})"

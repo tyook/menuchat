@@ -1,6 +1,7 @@
 import uuid
+
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
-from django.contrib.auth.hashers import make_password, check_password
 
 
 class Customer(models.Model):
@@ -14,9 +15,7 @@ class Customer(models.Model):
     password = models.CharField(max_length=128, blank=True, default="")
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, blank=True, default="")
-    auth_provider = models.CharField(
-        max_length=10, choices=AuthProvider.choices, default=AuthProvider.EMAIL
-    )
+    auth_provider = models.CharField(max_length=10, choices=AuthProvider.choices, default=AuthProvider.EMAIL)
     auth_provider_id = models.CharField(max_length=255, blank=True, default="")
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     dietary_preferences = models.JSONField(default=list, blank=True)
@@ -38,6 +37,7 @@ class Customer(models.Model):
 
         import stripe
         from django.conf import settings
+
         stripe.api_key = settings.STRIPE_SECRET_KEY
 
         stripe_customer = stripe.Customer.create(

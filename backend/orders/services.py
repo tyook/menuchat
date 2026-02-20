@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from restaurants.models import Restaurant, MenuItem, MenuItemVariant, MenuItemModifier
 from orders.llm.base import ParsedOrder
+from restaurants.models import MenuItem, MenuItemModifier, MenuItemVariant, Restaurant
 
 
 def validate_and_price_order(restaurant: Restaurant, parsed: ParsedOrder) -> dict:
@@ -31,9 +31,7 @@ def validate_and_price_order(restaurant: Restaurant, parsed: ParsedOrder) -> dic
         valid_modifiers = []
         for mod_id in parsed_item.modifier_ids:
             try:
-                modifier = MenuItemModifier.objects.get(
-                    id=mod_id, menu_item=menu_item
-                )
+                modifier = MenuItemModifier.objects.get(id=mod_id, menu_item=menu_item)
                 valid_modifiers.append(
                     {
                         "id": modifier.id,
@@ -45,9 +43,7 @@ def validate_and_price_order(restaurant: Restaurant, parsed: ParsedOrder) -> dic
                 continue  # Skip invalid modifiers
 
         item_price = variant.price * parsed_item.quantity
-        modifier_total = sum(
-            Decimal(m["price_adjustment"]) for m in valid_modifiers
-        ) * parsed_item.quantity
+        modifier_total = sum(Decimal(m["price_adjustment"]) for m in valid_modifiers) * parsed_item.quantity
         line_total = item_price + modifier_total
         total_price += line_total
 

@@ -1,9 +1,11 @@
 import pytest
 from rest_framework import status
-from decimal import Decimal
+
 from restaurants.tests.factories import (
-    UserFactory, RestaurantFactory, MenuCategoryFactory,
-    MenuItemFactory, MenuItemVariantFactory, MenuItemModifierFactory,
+    MenuCategoryFactory,
+    MenuItemFactory,
+    RestaurantFactory,
+    UserFactory,
 )
 
 
@@ -104,9 +106,7 @@ class TestMenuItemAPI:
         owner, restaurant, category = setup
         item = MenuItemFactory(category=category)
         api_client.force_authenticate(user=owner)
-        response = api_client.delete(
-            f"/api/restaurants/{restaurant.slug}/items/{item.id}/"
-        )
+        response = api_client.delete(f"/api/restaurants/{restaurant.slug}/items/{item.id}/")
         assert response.status_code == status.HTTP_200_OK
         item.refresh_from_db()
         assert item.is_active is False
@@ -125,7 +125,5 @@ class TestFullMenuAPI:
         response = api_client.get(f"/api/restaurants/{restaurant.slug}/menu/")
         assert response.status_code == status.HTTP_200_OK
         # Admin view includes all items (active and inactive)
-        total_items = sum(
-            len(cat["items"]) for cat in response.data["categories"]
-        )
+        total_items = sum(len(cat["items"]) for cat in response.data["categories"])
         assert total_items == 2

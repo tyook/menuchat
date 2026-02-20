@@ -1,10 +1,12 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from rest_framework import status
-from restaurants.tests.factories import UserFactory, RestaurantFactory
-from restaurants.models import Subscription
-from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import MagicMock, patch
+
+import pytest
+from django.utils import timezone
+from rest_framework import status
+
+from restaurants.models import Subscription
+from restaurants.tests.factories import RestaurantFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -32,7 +34,9 @@ class TestSubscriptionDetail:
     def test_unauthenticated_cannot_view(self, api_client):
         restaurant = RestaurantFactory()
         Subscription.objects.create(
-            restaurant=restaurant, plan="starter", status="trialing",
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
             current_period_start=timezone.now(),
             current_period_end=timezone.now() + timedelta(days=14),
         )
@@ -43,7 +47,9 @@ class TestSubscriptionDetail:
         other_user = UserFactory()
         restaurant = RestaurantFactory()
         Subscription.objects.create(
-            restaurant=restaurant, plan="starter", status="trialing",
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
             current_period_start=timezone.now(),
             current_period_end=timezone.now() + timedelta(days=14),
         )
@@ -70,7 +76,9 @@ class TestCreateCheckoutSession:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
         Subscription.objects.create(
-            restaurant=restaurant, plan="starter", status="trialing",
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
             current_period_start=timezone.now(),
             current_period_end=timezone.now() + timedelta(days=14),
         )
@@ -92,7 +100,9 @@ class TestCreateBillingPortal:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
         Subscription.objects.create(
-            restaurant=restaurant, plan="starter", status="active",
+            restaurant=restaurant,
+            plan="starter",
+            status="active",
             stripe_customer_id="cus_test123",
             stripe_subscription_id="sub_test123",
             current_period_start=timezone.now(),
@@ -118,7 +128,9 @@ class TestCancelSubscription:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
         Subscription.objects.create(
-            restaurant=restaurant, plan="growth", status="active",
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
             stripe_customer_id="cus_test123",
             stripe_subscription_id="sub_test123",
             current_period_start=timezone.now(),
@@ -137,7 +149,9 @@ class TestCancelSubscription:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
         Subscription.objects.create(
-            restaurant=restaurant, plan="starter", status="trialing",
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
             current_period_start=timezone.now(),
             current_period_end=timezone.now() + timedelta(days=14),
             # No stripe_subscription_id — trial without Stripe sub
@@ -158,7 +172,9 @@ class TestCancelSubscription:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
         Subscription.objects.create(
-            restaurant=restaurant, plan="growth", status="active",
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
             stripe_customer_id="cus_test123",
             stripe_subscription_id="sub_test123",
             cancel_at_period_end=True,

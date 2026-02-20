@@ -1,4 +1,4 @@
-from restaurants.models import Restaurant, MenuCategory
+from restaurants.models import MenuCategory, Restaurant
 
 
 def build_menu_context(restaurant: Restaurant) -> str:
@@ -28,20 +28,14 @@ def build_menu_context(restaurant: Restaurant) -> str:
                 lines.append("    Sizes/Variants (pick one):")
                 for v in variants:
                     default_marker = " [DEFAULT]" if v.is_default else ""
-                    lines.append(
-                        f"      * {v.label}: ${v.price}{default_marker} (variant_id: {v.id})"
-                    )
+                    lines.append(f"      * {v.label}: ${v.price}{default_marker} (variant_id: {v.id})")
 
             modifiers = item.modifiers.all()
             if modifiers:
                 lines.append("    Modifiers (optional, pick any):")
                 for m in modifiers:
-                    price_str = (
-                        f"+${m.price_adjustment}" if m.price_adjustment else "free"
-                    )
-                    lines.append(
-                        f"      * {m.name}: {price_str} (modifier_id: {m.id})"
-                    )
+                    price_str = f"+${m.price_adjustment}" if m.price_adjustment else "free"
+                    lines.append(f"      * {m.name}: {price_str} (modifier_id: {m.id})")
 
         lines.append("")
 

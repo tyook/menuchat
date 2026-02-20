@@ -1,8 +1,12 @@
 import pytest
 from rest_framework import status
+
 from restaurants.tests.factories import (
-    RestaurantFactory, MenuCategoryFactory, MenuItemFactory,
-    MenuItemVariantFactory, MenuItemModifierFactory,
+    MenuCategoryFactory,
+    MenuItemFactory,
+    MenuItemModifierFactory,
+    MenuItemVariantFactory,
+    RestaurantFactory,
 )
 
 

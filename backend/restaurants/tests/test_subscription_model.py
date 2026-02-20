@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 import pytest
 from django.utils import timezone
-from datetime import timedelta
-from restaurants.tests.factories import UserFactory, RestaurantFactory
+
+from restaurants.tests.factories import RestaurantFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -9,6 +11,7 @@ class TestSubscriptionModel:
     def test_create_subscription_for_restaurant(self):
         restaurant = RestaurantFactory()
         from restaurants.models import Subscription
+
         sub = Subscription.objects.create(
             restaurant=restaurant,
             plan="starter",
@@ -26,6 +29,7 @@ class TestSubscriptionModel:
     def test_subscription_is_active_for_active_status(self):
         restaurant = RestaurantFactory()
         from restaurants.models import Subscription
+
         sub = Subscription.objects.create(
             restaurant=restaurant,
             plan="growth",
@@ -39,6 +43,7 @@ class TestSubscriptionModel:
     def test_subscription_inactive_for_canceled(self):
         restaurant = RestaurantFactory()
         from restaurants.models import Subscription
+
         sub = Subscription.objects.create(
             restaurant=restaurant,
             plan="growth",
@@ -52,6 +57,7 @@ class TestSubscriptionModel:
     def test_subscription_order_limit_from_settings(self):
         restaurant = RestaurantFactory()
         from restaurants.models import Subscription
+
         sub = Subscription.objects.create(
             restaurant=restaurant,
             plan="starter",
@@ -79,6 +85,7 @@ class TestAutoTrialSubscription:
         )
         assert response.status_code == 201
         from restaurants.models import Restaurant, Subscription
+
         restaurant = Restaurant.objects.get(slug="trial-place")
         sub = Subscription.objects.get(restaurant=restaurant)
         assert sub.status == "trialing"

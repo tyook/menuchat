@@ -1,4 +1,6 @@
+from datetime import UTC
 from decimal import Decimal
+
 import stripe
 from django.conf import settings
 from rest_framework import status
@@ -6,14 +8,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from restaurants.models import Restaurant, MenuCategory, MenuItem, MenuItemVariant, MenuItemModifier, RestaurantStaff
-from restaurants.serializers import PublicMenuCategorySerializer
-from orders.serializers import ParseInputSerializer, ConfirmOrderSerializer, OrderResponseSerializer
-from orders.services import validate_and_price_order
-from orders.llm.menu_context import build_menu_context
-from orders.llm.agent import OrderParsingAgent
-from orders.models import Order, OrderItem
 from orders.broadcast import broadcast_order_to_kitchen
+from orders.llm.agent import OrderParsingAgent
+from orders.llm.menu_context import build_menu_context
+from orders.models import Order, OrderItem
+from orders.serializers import ConfirmOrderSerializer, OrderResponseSerializer, ParseInputSerializer
+from orders.services import validate_and_price_order
+from restaurants.models import MenuCategory, MenuItem, MenuItemModifier, MenuItemVariant, Restaurant, RestaurantStaff
+from restaurants.serializers import PublicMenuCategorySerializer
 
 
 class PublicMenuView(APIView):
@@ -56,8 +58,10 @@ class ParseOrderView(APIView):
             )
 
         # Check subscription status
-        from restaurants.models import Subscription
         from django.utils import timezone
+
+        from restaurants.models import Subscription
+
         try:
             subscription = restaurant.subscription
             # Block if canceled or incomplete
@@ -67,11 +71,7 @@ class ParseOrderView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
             # Block if trial expired
-            if (
-                subscription.status == "trialing"
-                and subscription.trial_end
-                and subscription.trial_end < timezone.now()
-            ):
+            if subscription.status == "trialing" and subscription.trial_end and subscription.trial_end < timezone.now():
                 return Response(
                     {"detail": "Free trial has expired. Please subscribe to continue."},
                     status=status.HTTP_403_FORBIDDEN,
@@ -93,9 +93,8 @@ class ParseOrderView(APIView):
         # Increment order count (soft cap — always increment, never block)
         if subscription:
             from django.db import models as db_models
-            Subscription.objects.filter(id=subscription.id).update(
-                order_count=db_models.F("order_count") + 1
-            )
+
+            Subscription.objects.filter(id=subscription.id).update(order_count=db_models.F("order_count") + 1)
 
         return Response(result)
 
@@ -140,7 +139,7 @@ class ConfirmOrderView(APIView):
                 )
             except (MenuItem.DoesNotExist, MenuItemVariant.DoesNotExist):
                 return Response(
-                    {"detail": f"Invalid menu item or variant."},
+                    {"detail": "Invalid menu item or variant."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -148,9 +147,7 @@ class ConfirmOrderView(APIView):
             modifier_total = Decimal("0.00")
             for mod_id in item_data.get("modifier_ids", []):
                 try:
-                    modifier = MenuItemModifier.objects.get(
-                        id=mod_id, menu_item=menu_item
-                    )
+                    modifier = MenuItemModifier.objects.get(id=mod_id, menu_item=menu_item)
                     valid_modifiers.append(modifier)
                     modifier_total += modifier.price_adjustment
                 except MenuItemModifier.DoesNotExist:
@@ -182,7 +179,9 @@ class ConfirmOrderView(APIView):
         if auth_header.startswith("Bearer "):
             try:
                 from rest_framework_simplejwt.tokens import UntypedToken
+
                 from customers.models import Customer
+
                 token_str = auth_header.split(" ", 1)[1]
                 token = UntypedToken(token_str)
                 if token.get("token_type") == "customer_access":
@@ -273,9 +272,7 @@ class CreatePaymentView(APIView):
             modifier_total = Decimal("0.00")
             for mod_id in item_data.get("modifier_ids", []):
                 try:
-                    modifier = MenuItemModifier.objects.get(
-                        id=mod_id, menu_item=menu_item
-                    )
+                    modifier = MenuItemModifier.objects.get(id=mod_id, menu_item=menu_item)
                     valid_modifiers.append(modifier)
                     modifier_total += modifier.price_adjustment
                 except MenuItemModifier.DoesNotExist:
@@ -307,7 +304,9 @@ class CreatePaymentView(APIView):
         if auth_header.startswith("Bearer "):
             try:
                 from rest_framework_simplejwt.tokens import UntypedToken
+
                 from customers.models import Customer
+
                 token_str = auth_header.split(" ", 1)[1]
                 token = UntypedToken(token_str)
                 if token.get("token_type") == "customer_access":
@@ -406,6 +405,7 @@ class CreatePaymentView(APIView):
 
 class SaveCardConsentView(APIView):
     """PATCH: update a PaymentIntent to save the card after payment."""
+
     authentication_classes = []
     permission_classes = [AllowAny]
 
@@ -445,9 +445,7 @@ class OrderStatusView(APIView):
 
     def get(self, request, slug, order_id):
         try:
-            order = Order.objects.get(
-                id=order_id, restaurant__slug=slug
-            )
+            order = Order.objects.get(id=order_id, restaurant__slug=slug)
         except Order.DoesNotExist:
             return Response(
                 {"detail": "Order not found."},
@@ -467,7 +465,9 @@ class StripeWebhookView(APIView):
 
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, settings.STRIPE_WEBHOOK_SECRET,
+                payload,
+                sig_header,
+                settings.STRIPE_WEBHOOK_SECRET,
             )
         except (ValueError, stripe.error.SignatureVerificationError):
             return Response(
@@ -478,9 +478,7 @@ class StripeWebhookView(APIView):
         if event["type"] == "payment_intent.succeeded":
             intent = event["data"]["object"]
             try:
-                order = Order.objects.get(
-                    stripe_payment_intent_id=intent["id"]
-                )
+                order = Order.objects.get(stripe_payment_intent_id=intent["id"])
             except Order.DoesNotExist:
                 return Response(status=status.HTTP_200_OK)
 
@@ -493,9 +491,7 @@ class StripeWebhookView(APIView):
         elif event["type"] in ("payment_intent.payment_failed", "payment_intent.canceled"):
             intent = event["data"]["object"]
             try:
-                order = Order.objects.get(
-                    stripe_payment_intent_id=intent["id"]
-                )
+                order = Order.objects.get(stripe_payment_intent_id=intent["id"])
                 order.payment_status = "failed"
                 order.save(update_fields=["payment_status"])
             except Order.DoesNotExist:
@@ -505,6 +501,7 @@ class StripeWebhookView(APIView):
             session = event["data"]["object"]
             if session.get("mode") == "subscription":
                 from restaurants.models import Subscription
+
                 restaurant_id = session.get("metadata", {}).get("restaurant_id")
                 plan = session.get("metadata", {}).get("plan", "starter")
                 if restaurant_id:
@@ -515,32 +512,33 @@ class StripeWebhookView(APIView):
                         sub.plan = plan
                         sub.status = "active"
                         sub.order_count = 0  # Reset for new billing period
-                        sub.save(update_fields=[
-                            "stripe_subscription_id", "stripe_customer_id",
-                            "plan", "status", "order_count",
-                        ])
+                        sub.save(
+                            update_fields=[
+                                "stripe_subscription_id",
+                                "stripe_customer_id",
+                                "plan",
+                                "status",
+                                "order_count",
+                            ]
+                        )
                     except Subscription.DoesNotExist:
                         pass
 
         elif event["type"] == "customer.subscription.updated":
             sub_data = event["data"]["object"]
             from restaurants.models import Subscription
+
             try:
-                sub = Subscription.objects.get(
-                    stripe_subscription_id=sub_data["id"]
-                )
+                sub = Subscription.objects.get(stripe_subscription_id=sub_data["id"])
                 sub.status = sub_data["status"]
                 sub.cancel_at_period_end = sub_data.get("cancel_at_period_end", False)
 
-                from datetime import datetime, timezone as tz
+                from datetime import datetime
+
                 if sub_data.get("current_period_start"):
-                    sub.current_period_start = datetime.fromtimestamp(
-                        sub_data["current_period_start"], tz=tz.utc
-                    )
+                    sub.current_period_start = datetime.fromtimestamp(sub_data["current_period_start"], tz=UTC)
                 if sub_data.get("current_period_end"):
-                    sub.current_period_end = datetime.fromtimestamp(
-                        sub_data["current_period_end"], tz=tz.utc
-                    )
+                    sub.current_period_end = datetime.fromtimestamp(sub_data["current_period_end"], tz=UTC)
 
                 # Update plan from metadata if present
                 plan = sub_data.get("metadata", {}).get("plan")
@@ -554,10 +552,9 @@ class StripeWebhookView(APIView):
         elif event["type"] == "customer.subscription.deleted":
             sub_data = event["data"]["object"]
             from restaurants.models import Subscription
+
             try:
-                sub = Subscription.objects.get(
-                    stripe_subscription_id=sub_data["id"]
-                )
+                sub = Subscription.objects.get(stripe_subscription_id=sub_data["id"])
                 sub.status = "canceled"
                 sub.save(update_fields=["status"])
             except Subscription.DoesNotExist:
@@ -569,10 +566,9 @@ class StripeWebhookView(APIView):
             subscription_id = invoice.get("subscription")
             if subscription_id:
                 from restaurants.models import Subscription
+
                 try:
-                    sub = Subscription.objects.get(
-                        stripe_subscription_id=subscription_id
-                    )
+                    sub = Subscription.objects.get(stripe_subscription_id=subscription_id)
                     sub.order_count = 0
                     sub.save(update_fields=["order_count"])
                 except Subscription.DoesNotExist:
@@ -603,9 +599,7 @@ class KitchenOrderUpdateView(APIView):
 
         # Check user is staff at this restaurant
         is_owner = order.restaurant.owner == request.user
-        is_staff = RestaurantStaff.objects.filter(
-            user=request.user, restaurant=order.restaurant
-        ).exists()
+        is_staff = RestaurantStaff.objects.filter(user=request.user, restaurant=order.restaurant).exists()
         if not is_owner and not is_staff:
             return Response(
                 {"detail": "Not authorized."},
@@ -616,10 +610,7 @@ class KitchenOrderUpdateView(APIView):
         allowed = VALID_TRANSITIONS.get(order.status, [])
         if new_status not in allowed:
             return Response(
-                {
-                    "detail": f"Cannot transition from '{order.status}' to '{new_status}'. "
-                    f"Allowed: {allowed}"
-                },
+                {"detail": f"Cannot transition from '{order.status}' to '{new_status}'. Allowed: {allowed}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

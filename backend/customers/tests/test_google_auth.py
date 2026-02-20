@@ -1,6 +1,7 @@
-import pytest
 from unittest.mock import patch
-from rest_framework.test import APIClient
+
+import pytest
+
 from customers.models import Customer
 from customers.tests.factories import CustomerFactory
 
@@ -18,9 +19,13 @@ class TestGoogleAuth:
     @patch("customers.views.verify_google_token")
     def test_google_login_new_user(self, mock_verify, api_client):
         mock_verify.return_value = self.MOCK_GOOGLE_USER
-        resp = api_client.post("/api/customer/auth/google/", {
-            "token": "fake-google-token",
-        }, format="json")
+        resp = api_client.post(
+            "/api/customer/auth/google/",
+            {
+                "token": "fake-google-token",
+            },
+            format="json",
+        )
         assert resp.status_code == 200
         assert "access" in resp.data
         assert resp.data["customer"]["email"] == "alice@gmail.com"
@@ -34,9 +39,13 @@ class TestGoogleAuth:
     def test_google_login_existing_user(self, mock_verify, api_client):
         mock_verify.return_value = self.MOCK_GOOGLE_USER
         CustomerFactory(email="alice@gmail.com", name="Alice")
-        resp = api_client.post("/api/customer/auth/google/", {
-            "token": "fake-google-token",
-        }, format="json")
+        resp = api_client.post(
+            "/api/customer/auth/google/",
+            {
+                "token": "fake-google-token",
+            },
+            format="json",
+        )
         assert resp.status_code == 200
         assert resp.data["customer"]["email"] == "alice@gmail.com"
         # No duplicate created
@@ -45,9 +54,13 @@ class TestGoogleAuth:
     @patch("customers.views.verify_google_token")
     def test_google_login_invalid_token(self, mock_verify, api_client):
         mock_verify.side_effect = ValueError("Invalid token")
-        resp = api_client.post("/api/customer/auth/google/", {
-            "token": "bad-token",
-        }, format="json")
+        resp = api_client.post(
+            "/api/customer/auth/google/",
+            {
+                "token": "bad-token",
+            },
+            format="json",
+        )
         assert resp.status_code == 400
 
     def test_google_login_missing_token(self, api_client):

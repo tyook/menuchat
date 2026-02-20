@@ -7,7 +7,7 @@ Provides: model resolution, structured output, and XML context injection.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Type
+from typing import Any
 
 from agno.agent import Agent
 from django.conf import settings
@@ -47,7 +47,7 @@ class BaseAgent(ABC):
         ...
 
     @abstractmethod
-    def get_output_schema(self) -> Optional[Type[BaseModel]]:
+    def get_output_schema(self) -> type[BaseModel] | None:
         """Return a Pydantic model class for structured output, or None."""
         ...
 

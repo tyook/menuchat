@@ -1,6 +1,7 @@
 import pytest
 from rest_framework import status
-from restaurants.tests.factories import UserFactory, RestaurantFactory
+
+from restaurants.tests.factories import RestaurantFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -62,9 +63,12 @@ class TestRestaurantSubscriptionInResponse:
     def test_restaurant_detail_includes_subscription(self, api_client):
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user)
-        from restaurants.models import Subscription
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
+
+        from restaurants.models import Subscription
+
         Subscription.objects.create(
             restaurant=restaurant,
             plan="growth",

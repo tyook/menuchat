@@ -1,7 +1,14 @@
 from django.urls import path
+
 from orders.views import (
-    PublicMenuView, ParseOrderView, ConfirmOrderView, OrderStatusView,
-    KitchenOrderUpdateView, CreatePaymentView, SaveCardConsentView, StripeWebhookView,
+    ConfirmOrderView,
+    CreatePaymentView,
+    KitchenOrderUpdateView,
+    OrderStatusView,
+    ParseOrderView,
+    PublicMenuView,
+    SaveCardConsentView,
+    StripeWebhookView,
 )
 
 urlpatterns = [

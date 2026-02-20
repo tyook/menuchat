@@ -1,13 +1,17 @@
-import pytest
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from orders.llm.base import ParsedOrder, ParsedOrderItem
+import pytest
+
 from orders.llm.agent import OrderParsingAgent
+from orders.llm.base import ParsedOrder, ParsedOrderItem
 from orders.llm.menu_context import build_menu_context
 from restaurants.tests.factories import (
-    RestaurantFactory, MenuCategoryFactory, MenuItemFactory,
-    MenuItemVariantFactory, MenuItemModifierFactory,
+    MenuCategoryFactory,
+    MenuItemFactory,
+    MenuItemModifierFactory,
+    MenuItemVariantFactory,
+    RestaurantFactory,
 )
 
 
@@ -39,12 +43,8 @@ class TestMenuContext:
         restaurant = RestaurantFactory()
         cat = MenuCategoryFactory(restaurant=restaurant, name="Pizzas")
         item = MenuItemFactory(category=cat, name="Margherita")
-        MenuItemVariantFactory(
-            menu_item=item, label="Large", price=Decimal("14.99")
-        )
-        MenuItemModifierFactory(
-            menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00")
-        )
+        MenuItemVariantFactory(menu_item=item, label="Large", price=Decimal("14.99"))
+        MenuItemModifierFactory(menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00"))
 
         context = build_menu_context(restaurant)
         assert "Margherita" in context
@@ -100,7 +100,9 @@ class TestOrderParsingAgent:
         mock_parsed = ParsedOrder(
             items=[
                 ParsedOrderItem(
-                    menu_item_id=1, variant_id=10, quantity=2,
+                    menu_item_id=1,
+                    variant_id=10,
+                    quantity=2,
                 )
             ],
             language="en",

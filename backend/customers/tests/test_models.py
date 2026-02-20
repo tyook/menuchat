@@ -1,4 +1,5 @@
 import pytest
+
 from customers.tests.factories import CustomerFactory
 
 pytestmark = pytest.mark.django_db

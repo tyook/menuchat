@@ -2,7 +2,16 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from restaurants.models import Restaurant, RestaurantStaff, MenuCategory, MenuItem, MenuItemVariant, MenuItemModifier, Subscription
+
+from restaurants.models import (
+    MenuCategory,
+    MenuItem,
+    MenuItemModifier,
+    MenuItemVariant,
+    Restaurant,
+    RestaurantStaff,
+    Subscription,
+)
 
 User = get_user_model()
 
@@ -49,7 +58,18 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Restaurant
-        fields = ["id", "name", "slug", "phone", "address", "homepage", "logo_url", "tax_rate", "created_at", "subscription"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "phone",
+            "address",
+            "homepage",
+            "logo_url",
+            "tax_rate",
+            "created_at",
+            "subscription",
+        ]
         read_only_fields = ["id", "created_at", "subscription"]
 
     def get_subscription(self, obj):
@@ -61,9 +81,10 @@ class RestaurantSerializer(serializers.ModelSerializer):
         return SubscriptionSerializer(sub).data
 
     def create(self, validated_data):
-        from django.utils import timezone
         from datetime import timedelta
+
         from django.conf import settings
+        from django.utils import timezone
 
         validated_data["owner"] = self.context["request"].user
         restaurant = Restaurant.objects.create(**validated_data)
@@ -75,6 +96,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
         )
         # Auto-create trial subscription
         from restaurants.models import Subscription
+
         trial_end = timezone.now() + timedelta(days=settings.FREE_TRIAL_DAYS)
         Subscription.objects.create(
             restaurant=restaurant,
@@ -97,14 +119,22 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = [
-            "plan", "plan_name", "status", "trial_end",
-            "current_period_start", "current_period_end",
-            "cancel_at_period_end", "order_count", "order_limit",
-            "overage_count", "is_active",
+            "plan",
+            "plan_name",
+            "status",
+            "trial_end",
+            "current_period_start",
+            "current_period_end",
+            "cancel_at_period_end",
+            "order_count",
+            "order_limit",
+            "overage_count",
+            "is_active",
         ]
 
     def get_plan_name(self, obj):
         from django.conf import settings
+
         plan_config = settings.SUBSCRIPTION_PLANS.get(obj.plan, {})
         return plan_config.get("name", obj.plan.title())
 
@@ -135,8 +165,15 @@ class MenuItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuItem
         fields = [
-            "id", "category_id", "name", "description", "image_url",
-            "is_active", "sort_order", "variants", "modifiers",
+            "id",
+            "category_id",
+            "name",
+            "description",
+            "image_url",
+            "is_active",
+            "sort_order",
+            "variants",
+            "modifiers",
         ]
         read_only_fields = ["id"]
 
@@ -150,7 +187,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
         try:
             category = MenuCategory.objects.get(id=category_id, restaurant=restaurant)
         except MenuCategory.DoesNotExist:
-            raise serializers.ValidationError({"category_id": "Invalid category."})
+            raise serializers.ValidationError({"category_id": "Invalid category."}) from None
 
         item = MenuItem.objects.create(category=category, **validated_data)
 
@@ -187,9 +224,7 @@ class PublicMenuCategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "items"]
 
     def get_items(self, obj):
-        active_items = obj.items.filter(is_active=True).prefetch_related(
-            "variants", "modifiers"
-        )
+        active_items = obj.items.filter(is_active=True).prefetch_related("variants", "modifiers")
         return PublicMenuItemSerializer(active_items, many=True).data
 
 

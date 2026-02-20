@@ -1,20 +1,21 @@
+import stripe as stripe_lib
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.tokens import UntypedToken
 
 from customers.authentication import CustomerAccessToken, CustomerRefreshToken
 from customers.models import Customer
 from customers.serializers import (
-    CustomerRegisterSerializer,
     CustomerLoginSerializer,
     CustomerProfileSerializer,
+    CustomerRegisterSerializer,
 )
-from customers.social_auth import verify_google_token, verify_apple_token
-from orders.serializers import OrderResponseSerializer
+from customers.social_auth import verify_apple_token, verify_google_token
 from orders.models import Order
+from orders.serializers import OrderResponseSerializer
 
 
 class CustomerAuthMixin:
@@ -53,15 +54,17 @@ class CustomerLoginView(APIView):
         serializer.is_valid(raise_exception=True)
         customer = serializer.validated_data["customer"]
         refresh = CustomerRefreshToken.for_customer(customer)
-        return Response({
-            "customer": {
-                "id": str(customer.id),
-                "email": customer.email,
-                "name": customer.name,
-            },
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        })
+        return Response(
+            {
+                "customer": {
+                    "id": str(customer.id),
+                    "email": customer.email,
+                    "name": customer.name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            }
+        )
 
 
 class GoogleAuthView(APIView):
@@ -110,21 +113,22 @@ class GoogleAuthView(APIView):
         # Link order if provided
         if link_order_id:
             from orders.models import Order
-            Order.objects.filter(id=link_order_id, customer__isnull=True).update(
-                customer=customer
-            )
+
+            Order.objects.filter(id=link_order_id, customer__isnull=True).update(customer=customer)
 
         # Return JWT
         refresh = CustomerRefreshToken.for_customer(customer)
-        return Response({
-            "customer": {
-                "id": str(customer.id),
-                "email": customer.email,
-                "name": customer.name,
-            },
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        })
+        return Response(
+            {
+                "customer": {
+                    "id": str(customer.id),
+                    "email": customer.email,
+                    "name": customer.name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            }
+        )
 
 
 class AppleAuthView(APIView):
@@ -174,20 +178,21 @@ class AppleAuthView(APIView):
 
         if link_order_id:
             from orders.models import Order
-            Order.objects.filter(id=link_order_id, customer__isnull=True).update(
-                customer=customer
-            )
+
+            Order.objects.filter(id=link_order_id, customer__isnull=True).update(customer=customer)
 
         refresh = CustomerRefreshToken.for_customer(customer)
-        return Response({
-            "customer": {
-                "id": str(customer.id),
-                "email": customer.email,
-                "name": customer.name,
-            },
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        })
+        return Response(
+            {
+                "customer": {
+                    "id": str(customer.id),
+                    "email": customer.email,
+                    "name": customer.name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            }
+        )
 
 
 class CustomerTokenRefreshView(APIView):
@@ -220,6 +225,7 @@ class CustomerTokenRefreshView(APIView):
 
 class CustomerProfileView(CustomerAuthMixin, APIView):
     """GET/PATCH customer profile. Requires customer JWT."""
+
     authentication_classes = []
     permission_classes = []
 
@@ -247,6 +253,7 @@ class CustomerProfileView(CustomerAuthMixin, APIView):
 
 class CustomerOrderHistoryView(CustomerAuthMixin, APIView):
     """GET /api/customer/orders/ — list customer's past orders."""
+
     authentication_classes = []
     permission_classes = []
 
@@ -257,9 +264,11 @@ class CustomerOrderHistoryView(CustomerAuthMixin, APIView):
                 {"detail": "Authentication required."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        orders = Order.objects.filter(customer=customer).select_related(
-            "restaurant"
-        ).prefetch_related("items__menu_item", "items__variant")
+        orders = (
+            Order.objects.filter(customer=customer)
+            .select_related("restaurant")
+            .prefetch_related("items__menu_item", "items__variant")
+        )
         data = []
         for order in orders:
             order_data = OrderResponseSerializer(order).data
@@ -269,10 +278,9 @@ class CustomerOrderHistoryView(CustomerAuthMixin, APIView):
         return Response(data)
 
 
-import stripe as stripe_lib
-
 class PaymentMethodsView(CustomerAuthMixin, APIView):
     """GET: list saved payment methods. DELETE: detach a payment method."""
+
     authentication_classes = []
     permission_classes = []
 
@@ -288,6 +296,7 @@ class PaymentMethodsView(CustomerAuthMixin, APIView):
             return Response([])
 
         from django.conf import settings
+
         stripe_lib.api_key = settings.STRIPE_SECRET_KEY
 
         try:
@@ -300,19 +309,22 @@ class PaymentMethodsView(CustomerAuthMixin, APIView):
 
         result = []
         for pm in methods.data:
-            result.append({
-                "id": pm.id,
-                "brand": pm.card.brand,
-                "last4": pm.card.last4,
-                "exp_month": pm.card.exp_month,
-                "exp_year": pm.card.exp_year,
-            })
+            result.append(
+                {
+                    "id": pm.id,
+                    "brand": pm.card.brand,
+                    "last4": pm.card.last4,
+                    "exp_month": pm.card.exp_month,
+                    "exp_year": pm.card.exp_year,
+                }
+            )
 
         return Response(result)
 
 
 class PaymentMethodDetailView(CustomerAuthMixin, APIView):
     """DELETE: detach a specific payment method."""
+
     authentication_classes = []
     permission_classes = []
 
@@ -331,6 +343,7 @@ class PaymentMethodDetailView(CustomerAuthMixin, APIView):
             )
 
         from django.conf import settings
+
         stripe_lib.api_key = settings.STRIPE_SECRET_KEY
 
         try:

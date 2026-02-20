@@ -1,10 +1,12 @@
-import pytest
-from unittest.mock import patch
-from rest_framework import status
-from restaurants.tests.factories import RestaurantFactory, MenuCategoryFactory, MenuItemFactory, MenuItemVariantFactory
-from restaurants.models import Subscription
-from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
+
+import pytest
+from django.utils import timezone
+from rest_framework import status
+
+from restaurants.models import Subscription
+from restaurants.tests.factories import MenuCategoryFactory, MenuItemFactory, MenuItemVariantFactory, RestaurantFactory
 
 
 def _setup_restaurant_with_menu():
@@ -104,8 +106,10 @@ class TestSubscriptionGate:
         """Restaurants without a subscription (legacy) should not be blocked."""
         restaurant = _setup_restaurant_with_menu()
         # No Subscription object created
-        with patch("orders.views.OrderParsingAgent.run") as mock_agent, \
-             patch("orders.views.validate_and_price_order") as mock_validate:
+        with (
+            patch("orders.views.OrderParsingAgent.run") as mock_agent,
+            patch("orders.views.validate_and_price_order") as mock_validate,
+        ):
             mock_agent.return_value = {"items": [], "language": "en"}
             mock_validate.return_value = {"items": [], "language": "en"}
             response = api_client.post(

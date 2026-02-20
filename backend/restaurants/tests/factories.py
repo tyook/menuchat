@@ -1,8 +1,13 @@
 import factory
 from django.contrib.auth import get_user_model
+
 from restaurants.models import (
-    Restaurant, RestaurantStaff, MenuCategory, MenuItem,
-    MenuItemVariant, MenuItemModifier,
+    MenuCategory,
+    MenuItem,
+    MenuItemModifier,
+    MenuItemVariant,
+    Restaurant,
+    RestaurantStaff,
 )
 
 User = get_user_model()
@@ -71,6 +76,4 @@ class MenuItemModifierFactory(factory.django.DjangoModelFactory):
 
     menu_item = factory.SubFactory(MenuItemFactory)
     name = factory.Sequence(lambda n: f"Modifier {n}")
-    price_adjustment = factory.Faker(
-        "pydecimal", left_digits=1, right_digits=2, positive=True
-    )
+    price_adjustment = factory.Faker("pydecimal", left_digits=1, right_digits=2, positive=True)

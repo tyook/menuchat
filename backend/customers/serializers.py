@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from customers.models import Customer
+
 from customers.authentication import CustomerRefreshToken
+from customers.models import Customer
 
 
 class CustomerRegisterSerializer(serializers.Serializer):
@@ -25,9 +26,8 @@ class CustomerRegisterSerializer(serializers.Serializer):
         # Link order if provided
         if link_order_id:
             from orders.models import Order
-            Order.objects.filter(id=link_order_id, customer__isnull=True).update(
-                customer=customer
-            )
+
+            Order.objects.filter(id=link_order_id, customer__isnull=True).update(customer=customer)
 
         return customer
 
@@ -60,8 +60,14 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            "id", "email", "name", "phone",
-            "dietary_preferences", "allergies", "preferred_language",
-            "auth_provider", "created_at",
+            "id",
+            "email",
+            "name",
+            "phone",
+            "dietary_preferences",
+            "allergies",
+            "preferred_language",
+            "auth_provider",
+            "created_at",
         ]
         read_only_fields = ["id", "email", "auth_provider", "created_at"]

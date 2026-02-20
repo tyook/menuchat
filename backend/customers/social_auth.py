@@ -1,8 +1,8 @@
 import jwt
 import requests as http_requests
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
 from django.conf import settings
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 
 APPLE_PUBLIC_KEYS_URL = "https://appleid.apple.com/auth/keys"
 _apple_keys_cache = None
@@ -24,7 +24,7 @@ def verify_google_token(token: str) -> dict:
     if idinfo["iss"] not in ("accounts.google.com", "https://accounts.google.com"):
         raise ValueError("Invalid issuer.")
     return {
-        "sub": idinfo["sub"],           # Google user ID
+        "sub": idinfo["sub"],  # Google user ID
         "email": idinfo.get("email"),
         "name": idinfo.get("name", ""),
         "picture": idinfo.get("picture", ""),

@@ -1,6 +1,8 @@
 import uuid
+
 from django.db import models
-from restaurants.models import Restaurant, MenuItem, MenuItemVariant, MenuItemModifier
+
+from restaurants.models import MenuItem, MenuItemModifier, MenuItemVariant, Restaurant
 
 
 class Order(models.Model):
@@ -13,25 +15,26 @@ class Order(models.Model):
         COMPLETED = "completed", "Completed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    restaurant = models.ForeignKey(
-        Restaurant, on_delete=models.CASCADE, related_name="orders"
-    )
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="orders")
     table_identifier = models.CharField(max_length=50, blank=True, null=True)
     customer = models.ForeignKey(
-        "customers.Customer", on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="orders",
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
     )
     customer_name = models.CharField(max_length=255, blank=True, default="")
     customer_phone = models.CharField(max_length=20, blank=True, default="")
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     raw_input = models.TextField()
     parsed_json = models.JSONField(default=dict, blank=True)
     language_detected = models.CharField(max_length=10, blank=True, default="")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax_rate = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0,
+        max_digits=5,
+        decimal_places=3,
+        default=0,
         help_text="Tax rate snapshot at time of order (percentage)",
     )
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -49,10 +52,15 @@ class Order(models.Model):
         default="pending",
     )
     stripe_payment_intent_id = models.CharField(
-        max_length=255, blank=True, null=True, unique=True,
+        max_length=255,
+        blank=True,
+        null=True,
+        unique=True,
     )
     stripe_payment_method_id = models.CharField(
-        max_length=255, blank=True, null=True,
+        max_length=255,
+        blank=True,
+        null=True,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

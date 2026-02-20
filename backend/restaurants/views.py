@@ -1,14 +1,20 @@
 import stripe
 from django.conf import settings as django_settings
-from rest_framework import status, generics, permissions
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from restaurants.serializers import RegisterSerializer, LoginSerializer, RestaurantSerializer, MenuCategorySerializer, MenuItemSerializer, PublicMenuCategorySerializer, SubscriptionSerializer
-from restaurants.models import Restaurant, RestaurantStaff, MenuCategory, MenuItem, Subscription
-from restaurants.permissions import IsRestaurantOwnerOrStaff
+from restaurants.models import MenuCategory, MenuItem, Restaurant, RestaurantStaff, Subscription
+from restaurants.serializers import (
+    LoginSerializer,
+    MenuCategorySerializer,
+    MenuItemSerializer,
+    RegisterSerializer,
+    RestaurantSerializer,
+    SubscriptionSerializer,
+)
 
 
 class RegisterView(APIView):
@@ -39,34 +45,33 @@ class LoginView(APIView):
 
 class MyRestaurantsView(generics.ListAPIView):
     """GET /api/restaurants/me/ - List restaurants I own or have staff access to."""
+
     serializer_class = RestaurantSerializer
 
     def get_queryset(self):
         user = self.request.user
         owned = Restaurant.objects.filter(owner=user)
-        staff_ids = RestaurantStaff.objects.filter(user=user).values_list(
-            "restaurant_id", flat=True
-        )
+        staff_ids = RestaurantStaff.objects.filter(user=user).values_list("restaurant_id", flat=True)
         staffed = Restaurant.objects.filter(id__in=staff_ids)
         return (owned | staffed).distinct()
 
 
 class CreateRestaurantView(generics.CreateAPIView):
     """POST /api/restaurants/ - Create a new restaurant."""
+
     serializer_class = RestaurantSerializer
 
 
 class RestaurantDetailView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/restaurants/:slug/ - View or update a restaurant."""
+
     serializer_class = RestaurantSerializer
     lookup_field = "slug"
 
     def get_queryset(self):
         user = self.request.user
         owned = Restaurant.objects.filter(owner=user)
-        staff_ids = RestaurantStaff.objects.filter(user=user).values_list(
-            "restaurant_id", flat=True
-        )
+        staff_ids = RestaurantStaff.objects.filter(user=user).values_list("restaurant_id", flat=True)
         staffed = Restaurant.objects.filter(id__in=staff_ids)
         return (owned | staffed).distinct()
 
@@ -79,16 +84,16 @@ class RestaurantMixin:
         user = self.request.user
         try:
             restaurant = Restaurant.objects.get(slug=slug)
-        except Restaurant.DoesNotExist:
+        except Restaurant.DoesNotExist as err:
             from rest_framework.exceptions import NotFound
-            raise NotFound("Restaurant not found.")
+
+            raise NotFound("Restaurant not found.") from err
 
         is_owner = restaurant.owner == user
-        is_staff = RestaurantStaff.objects.filter(
-            user=user, restaurant=restaurant
-        ).exists()
+        is_staff = RestaurantStaff.objects.filter(user=user, restaurant=restaurant).exists()
         if not is_owner and not is_staff:
             from rest_framework.exceptions import NotFound
+
             raise NotFound("Restaurant not found.")
 
         return restaurant
@@ -120,9 +125,7 @@ class MenuItemListCreateView(RestaurantMixin, generics.ListCreateAPIView):
 
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuItem.objects.filter(
-            category__restaurant=restaurant
-        ).prefetch_related("variants", "modifiers")
+        return MenuItem.objects.filter(category__restaurant=restaurant).prefetch_related("variants", "modifiers")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -139,9 +142,7 @@ class MenuItemDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView)
 
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuItem.objects.filter(
-            category__restaurant=restaurant
-        ).prefetch_related("variants", "modifiers")
+        return MenuItem.objects.filter(category__restaurant=restaurant).prefetch_related("variants", "modifiers")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

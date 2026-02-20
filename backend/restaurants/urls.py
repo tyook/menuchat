@@ -2,13 +2,21 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from restaurants.views import (
-    RegisterView, LoginView,
-    MyRestaurantsView, CreateRestaurantView, RestaurantDetailView,
-    MenuCategoryListCreateView, MenuCategoryDetailView,
-    MenuItemListCreateView, MenuItemDetailView,
+    CancelSubscriptionView,
+    CreateBillingPortalView,
+    CreateCheckoutSessionView,
+    CreateRestaurantView,
     FullMenuView,
-    SubscriptionDetailView, CreateCheckoutSessionView, CreateBillingPortalView,
-    CancelSubscriptionView, ReactivateSubscriptionView,
+    LoginView,
+    MenuCategoryDetailView,
+    MenuCategoryListCreateView,
+    MenuItemDetailView,
+    MenuItemListCreateView,
+    MyRestaurantsView,
+    ReactivateSubscriptionView,
+    RegisterView,
+    RestaurantDetailView,
+    SubscriptionDetailView,
 )
 
 urlpatterns = [

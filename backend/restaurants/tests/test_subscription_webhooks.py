@@ -1,11 +1,13 @@
-import pytest
 import json
-from unittest.mock import patch, MagicMock
-from rest_framework import status
-from restaurants.tests.factories import RestaurantFactory
-from restaurants.models import Subscription
-from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
+
+import pytest
+from django.utils import timezone
+from rest_framework import status
+
+from restaurants.models import Subscription
+from restaurants.tests.factories import RestaurantFactory
 
 
 @pytest.mark.django_db

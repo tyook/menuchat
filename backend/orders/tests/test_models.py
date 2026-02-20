@@ -1,10 +1,15 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 from django.contrib.auth import get_user_model
 
 from orders.models import Order, OrderItem
 from restaurants.models import (
-    Restaurant, MenuCategory, MenuItem, MenuItemVariant, MenuItemModifier,
+    MenuCategory,
+    MenuItem,
+    MenuItemModifier,
+    MenuItemVariant,
+    Restaurant,
 )
 
 User = get_user_model()
@@ -14,24 +19,14 @@ User = get_user_model()
 class TestOrderModel:
     @pytest.fixture
     def menu_setup(self):
-        owner = User.objects.create_user(
-            email="orderowner@example.com", password="testpass123"
-        )
-        restaurant = Restaurant.objects.create(
-            name="Order Test", slug="order-test", owner=owner
-        )
-        category = MenuCategory.objects.create(
-            restaurant=restaurant, name="Mains", sort_order=1
-        )
-        item = MenuItem.objects.create(
-            category=category, name="Burger", description="Beef burger", sort_order=1
-        )
+        owner = User.objects.create_user(email="orderowner@example.com", password="testpass123")
+        restaurant = Restaurant.objects.create(name="Order Test", slug="order-test", owner=owner)
+        category = MenuCategory.objects.create(restaurant=restaurant, name="Mains", sort_order=1)
+        item = MenuItem.objects.create(category=category, name="Burger", description="Beef burger", sort_order=1)
         variant = MenuItemVariant.objects.create(
             menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True
         )
-        modifier = MenuItemModifier.objects.create(
-            menu_item=item, name="Extra Bacon", price_adjustment=Decimal("2.00")
-        )
+        modifier = MenuItemModifier.objects.create(menu_item=item, name="Extra Bacon", price_adjustment=Decimal("2.00"))
         return {
             "restaurant": restaurant,
             "item": item,

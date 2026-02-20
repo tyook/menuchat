@@ -1,16 +1,21 @@
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
+
 import pytest
 import stripe
-from decimal import Decimal
-from unittest.mock import patch, MagicMock
 from rest_framework import status
 
 from orders.llm.base import ParsedOrder, ParsedOrderItem
 from orders.models import Order
 from orders.tests.factories import OrderFactory
 from restaurants.tests.factories import (
-    RestaurantFactory, MenuCategoryFactory, MenuItemFactory,
-    MenuItemVariantFactory, MenuItemModifierFactory,
-    UserFactory, RestaurantStaffFactory,
+    MenuCategoryFactory,
+    MenuItemFactory,
+    MenuItemModifierFactory,
+    MenuItemVariantFactory,
+    RestaurantFactory,
+    RestaurantStaffFactory,
+    UserFactory,
 )
 
 
@@ -21,12 +26,8 @@ class TestParseOrder:
         restaurant = RestaurantFactory(slug="parse-test")
         cat = MenuCategoryFactory(restaurant=restaurant, name="Mains")
         item = MenuItemFactory(category=cat, name="Burger")
-        variant = MenuItemVariantFactory(
-            menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True
-        )
-        modifier = MenuItemModifierFactory(
-            menu_item=item, name="Extra Bacon", price_adjustment=Decimal("2.00")
-        )
+        variant = MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True)
+        modifier = MenuItemModifierFactory(menu_item=item, name="Extra Bacon", price_adjustment=Decimal("2.00"))
         return {
             "restaurant": restaurant,
             "item": item,
@@ -91,12 +92,8 @@ class TestConfirmOrder:
         restaurant = RestaurantFactory(slug="confirm-test")
         cat = MenuCategoryFactory(restaurant=restaurant)
         item = MenuItemFactory(category=cat, name="Pizza")
-        variant = MenuItemVariantFactory(
-            menu_item=item, label="Large", price=Decimal("14.99"), is_default=True
-        )
-        modifier = MenuItemModifierFactory(
-            menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00")
-        )
+        variant = MenuItemVariantFactory(menu_item=item, label="Large", price=Decimal("14.99"), is_default=True)
+        modifier = MenuItemModifierFactory(menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00"))
         return {
             "restaurant": restaurant,
             "item": item,
@@ -165,16 +162,14 @@ class TestOrderStatus:
     def test_get_order_status(self, api_client):
         restaurant = RestaurantFactory(slug="status-test")
         order = OrderFactory(restaurant=restaurant, status="preparing")
-        response = api_client.get(
-            f"/api/order/status-test/status/{order.id}/"
-        )
+        response = api_client.get(f"/api/order/status-test/status/{order.id}/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "preparing"
         assert response.data["id"] == str(order.id)
 
     def test_order_from_wrong_restaurant_returns_404(self, api_client):
         restaurant1 = RestaurantFactory(slug="r1")
-        restaurant2 = RestaurantFactory(slug="r2")
+        RestaurantFactory(slug="r2")
         order = OrderFactory(restaurant=restaurant1)
         response = api_client.get(f"/api/order/r2/status/{order.id}/")
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -186,9 +181,7 @@ class TestKitchenOrderUpdate:
     def kitchen_setup(self):
         restaurant = RestaurantFactory(slug="kitchen-test")
         kitchen_user = UserFactory(role="staff")
-        RestaurantStaffFactory(
-            user=kitchen_user, restaurant=restaurant, role="kitchen"
-        )
+        RestaurantStaffFactory(user=kitchen_user, restaurant=restaurant, role="kitchen")
         order = OrderFactory(restaurant=restaurant, status="confirmed")
         return restaurant, kitchen_user, order
 
@@ -245,9 +238,7 @@ class TestCreatePayment:
         restaurant = RestaurantFactory(slug="payment-test", tax_rate=Decimal("8.875"))
         cat = MenuCategoryFactory(restaurant=restaurant)
         item = MenuItemFactory(category=cat, name="Burger")
-        variant = MenuItemVariantFactory(
-            menu_item=item, label="Regular", price=Decimal("10.00"), is_default=True
-        )
+        variant = MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("10.00"), is_default=True)
         return {
             "restaurant": restaurant,
             "item": item,
@@ -366,9 +357,7 @@ class TestStripeWebhook:
 
     @patch("orders.views.stripe.Webhook.construct_event")
     def test_invalid_signature_rejected(self, mock_construct, api_client):
-        mock_construct.side_effect = stripe.error.SignatureVerificationError(
-            "bad sig", "sig_header"
-        )
+        mock_construct.side_effect = stripe.error.SignatureVerificationError("bad sig", "sig_header")
 
         response = api_client.post(
             "/api/webhooks/stripe/",

@@ -12,8 +12,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="restaurant",
             name="currency",
-            field=models.CharField(
-                default="USD", help_text="ISO 4217 currency code", max_length=3
-            ),
+            field=models.CharField(default="USD", help_text="ISO 4217 currency code", max_length=3),
         ),
     ]

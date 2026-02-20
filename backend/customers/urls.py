@@ -1,14 +1,15 @@
 from django.urls import path
+
 from customers.views import (
-    CustomerRegisterView,
-    CustomerLoginView,
-    GoogleAuthView,
     AppleAuthView,
-    CustomerTokenRefreshView,
-    CustomerProfileView,
+    CustomerLoginView,
     CustomerOrderHistoryView,
-    PaymentMethodsView,
+    CustomerProfileView,
+    CustomerRegisterView,
+    CustomerTokenRefreshView,
+    GoogleAuthView,
     PaymentMethodDetailView,
+    PaymentMethodsView,
 )
 
 urlpatterns = [
