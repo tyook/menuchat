@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import { useCreatePayment } from "@/hooks/use-create-payment";
 import type { ConfirmOrderItem } from "@/types";
 
@@ -36,15 +37,16 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
     updateItemQuantity,
   } = useOrderStore();
   const { allergyNote } = usePreferencesStore();
-  const { customer, isAuthenticated } = useCustomerAuthStore();
+  const { isAuthenticated } = useCustomerAuthStore();
+  const { data: profile } = useCustomerProfile();
   const createPaymentMutation = useCreatePayment(slug);
 
   // Auto-fill name and phone if customer is logged in
   useEffect(() => {
-    if (isAuthenticated && customer && !customerName) {
-      setCustomerName(customer.name);
+    if (isAuthenticated && profile && !customerName) {
+      setCustomerName(profile.name);
     }
-  }, [isAuthenticated, customer, customerName, setCustomerName]);
+  }, [isAuthenticated, profile, customerName, setCustomerName]);
 
   const handleConfirm = () => {
     const items: ConfirmOrderItem[] = parsedItems.map((item) => {

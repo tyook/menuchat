@@ -164,6 +164,15 @@ export async function fetchOrderStatus(
   return apiFetch<OrderResponse>(`/api/order/${slug}/status/${orderId}/`);
 }
 
+export async function saveCardConsent(
+  slug: string,
+  orderId: string,
+): Promise<void> {
+  await apiFetch(`/api/order/${slug}/save-card/${orderId}/`, {
+    method: "PATCH",
+  });
+}
+
 const CUSTOMER_TOKEN_KEY = "customer_access_token";
 const CUSTOMER_REFRESH_KEY = "customer_refresh_token";
 
@@ -213,6 +222,10 @@ export async function customerApiFetch<T>(
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || error.email?.[0] || `API error: ${response.status}`);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();

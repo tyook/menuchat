@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, ShoppingBag, UtensilsCrossed, User as UserIcon } from "lucide-react";
+import { CreditCard, LogOut, ShoppingBag, UtensilsCrossed, User as UserIcon } from "lucide-react";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,6 +89,10 @@ export function CustomerHeader() {
               <DropdownMenuItem onClick={() => router.push("/account/profile")}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/account/payment-methods")}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Payment Methods
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>

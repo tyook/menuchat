@@ -21,7 +21,7 @@ export function useCreatePayment(slug: string) {
         params.tableIdentifier,
         params.language,
         params.customerName,
-        params.customerPhone
+        params.customerPhone,
       ),
   });
 }

@@ -323,7 +323,6 @@ class CreatePaymentView(APIView):
         amount_cents = int((grand_total * Decimal("100")).quantize(Decimal("1")))
 
         payment_method_id = data.get("payment_method_id")
-        save_card = data.get("save_card", False)
 
         intent_params = {
             "amount": amount_cents,
@@ -339,9 +338,6 @@ class CreatePaymentView(APIView):
         if customer:
             stripe_customer_id = customer.get_or_create_stripe_customer()
             intent_params["customer"] = stripe_customer_id
-
-            if save_card:
-                intent_params["setup_future_usage"] = "on_session"
 
         # If using a saved payment method, confirm immediately server-side
         if payment_method_id and customer:
@@ -375,6 +371,42 @@ class CreatePaymentView(APIView):
             response_data["payment_status"] = "paid"
 
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class SaveCardConsentView(APIView):
+    """PATCH: update a PaymentIntent to save the card after payment."""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def patch(self, request, slug, order_id):
+        try:
+            order = Order.objects.get(id=order_id, restaurant__slug=slug)
+        except Order.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not order.stripe_payment_intent_id:
+            return Response(
+                {"detail": "No payment intent found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        try:
+            stripe.PaymentIntent.modify(
+                order.stripe_payment_intent_id,
+                setup_future_usage="on_session",
+            )
+        except stripe.error.StripeError as e:
+            return Response(
+                {"detail": f"Failed to update payment: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"detail": "Card will be saved after payment."})
 
 
 class OrderStatusView(APIView):

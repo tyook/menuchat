@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
-import { createPayment } from "@/lib/api";
+import { createPayment, saveCardConsent } from "@/lib/api";
 import type { SavedPaymentMethod, ConfirmOrderItem } from "@/types";
 
 const stripePromise = loadStripe(
@@ -52,7 +52,15 @@ function SavedCardOption({
   );
 }
 
-function PaymentForm() {
+function PaymentForm({
+  saveCard,
+  slug,
+  orderId,
+}: {
+  saveCard: boolean;
+  slug: string;
+  orderId: string | null;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const { setStep } = useOrderStore();
@@ -66,6 +74,15 @@ function PaymentForm() {
 
     setIsProcessing(true);
     setPaymentError(null);
+
+    // If user consented to save card, update the PaymentIntent before confirming
+    if (saveCard && slug && orderId) {
+      try {
+        await saveCardConsent(slug, orderId);
+      } catch {
+        // Non-fatal — proceed with payment even if save-card update fails
+      }
+    }
 
     const { error } = await stripe.confirmPayment({
       elements,
@@ -116,6 +133,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
     language,
     customerName,
     customerPhone,
+    orderId,
     setOrderId,
   } = useOrderStore();
   const { isAuthenticated } = useCustomerAuthStore();
@@ -248,7 +266,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
       ) : clientSecret ? (
         <div>
           {isAuthenticated && (
-            <label className="flex items-center gap-2 mb-4">
+            <label className="flex items-center gap-2 mb-4 cursor-pointer">
               <input
                 type="checkbox"
                 checked={saveCard}
@@ -265,7 +283,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
               appearance: { theme: "stripe" },
             }}
           >
-            <PaymentForm />
+            <PaymentForm saveCard={saveCard} slug={slug} orderId={orderId} />
           </Elements>
           {hasSavedCards && (
             <Button

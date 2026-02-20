@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { Settings, User } from "lucide-react";
 import { useOrderStore } from "@/stores/order-store";
+import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 import { useMenu } from "@/hooks/use-menu";
 import { Button } from "@/components/ui/button";
 import { PreferencesDialog } from "@/components/PreferencesDialog";
@@ -22,7 +23,13 @@ export default function OrderPage() {
   const step = useOrderStore((s) => s.step);
   const reset = useOrderStore((s) => s.reset);
   const { data: menu, isLoading, error } = useMenu(slug);
+  const { isAuthenticated } = useCustomerAuthStore();
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     reset();
@@ -47,9 +54,15 @@ export default function OrderPage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
-        <Link href="/account/login" className="text-sm text-muted-foreground hover:text-foreground">
-          Sign in
-        </Link>
+        {mounted && (isAuthenticated ? (
+          <Link href="/account/profile" className="text-sm text-muted-foreground hover:text-foreground">
+            <User className="h-5 w-5" />
+          </Link>
+        ) : (
+          <Link href="/account/login" className="text-sm text-muted-foreground hover:text-foreground">
+            Sign in
+          </Link>
+        ))}
         <Button
           variant="ghost"
           size="icon"

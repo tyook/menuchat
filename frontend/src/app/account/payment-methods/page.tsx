@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
-import { usePaymentMethods, useDeletePaymentMethod } from "@/hooks/use-payment-methods";
+import {
+  usePaymentMethods,
+  useDeletePaymentMethod,
+} from "@/hooks/use-payment-methods";
 
 export default function PaymentMethodsPage() {
   const router = useRouter();
   const { isAuthenticated, checkAuth } = useCustomerAuthStore();
-  const { data: methods, isLoading, error } = usePaymentMethods();
+  const { data: methods, isLoading, error, refetch } = usePaymentMethods();
   const deleteMutation = useDeletePaymentMethod();
 
   useEffect(() => {
@@ -52,18 +55,28 @@ export default function PaymentMethodsPage() {
       ) : (
         <div className="space-y-3">
           {methods.map((method) => (
-            <Card key={method.id} className="p-4 flex items-center justify-between">
+            <Card
+              key={method.id}
+              className="p-4 flex items-center justify-between"
+            >
               <div>
                 <span className="font-medium capitalize">{method.brand}</span>
-                <span className="text-muted-foreground"> ending in {method.last4}</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  ending in {method.last4}
+                </span>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Expires {String(method.exp_month).padStart(2, "0")}/{method.exp_year}
+                  Expires {String(method.exp_month).padStart(2, "0")}/
+                  {method.exp_year}
                 </p>
               </div>
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={() => deleteMutation.mutate(method.id)}
+                onClick={async () => {
+                  await deleteMutation.mutate(method.id);
+                  refetch();
+                }}
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? "Removing..." : "Remove"}
