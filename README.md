@@ -43,7 +43,7 @@ cd backend
 Start the frontend (port 3001):
 ```
 cd frontend
-npm run dev -- -p 3001
+yarn dev -- -p 3001
 ```
 
 | Service  | URL                     |

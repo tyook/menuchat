@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 
@@ -32,57 +32,85 @@ export function SocialLoginButtons({
   const { googleLogin, appleLogin } = useCustomerAuthStore();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  // Stable callback ref so Google's initialize doesn't go stale
+  const googleCallbackRef = useRef<(response: { credential?: string }) => void>();
+  googleCallbackRef.current = async (response: { credential?: string }) => {
+    if (!response.credential) {
+      onError?.("Google login was cancelled or failed");
+      setLoading(null);
+      return;
+    }
+    try {
+      setLoading("google");
+      await googleLogin(response.credential, linkOrderId);
+      onSuccess?.();
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : "Google login failed");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const initGoogle = useCallback(() => {
+    const google = (window as unknown as Record<string, unknown>).google as
+      | {
+          accounts: {
+            id: {
+              initialize: (config: Record<string, unknown>) => void;
+              renderButton: (element: HTMLElement, config: Record<string, unknown>) => void;
+            };
+          };
+        }
+      | undefined;
+
+    if (!google || !googleBtnRef.current) return;
+
+    google.accounts.id.initialize({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
+      callback: (response: { credential?: string }) => {
+        googleCallbackRef.current?.(response);
+      },
+    });
+
+    // Render a hidden Google button that we'll click programmatically
+    google.accounts.id.renderButton(googleBtnRef.current, {
+      type: "icon",
+      size: "large",
+    });
+
+    setGoogleReady(true);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // GIS script may already be loaded (lazyOnload), or may still be loading
+    if ((window as unknown as Record<string, unknown>).google) {
+      initGoogle();
+    } else {
+      const interval = setInterval(() => {
+        if ((window as unknown as Record<string, unknown>).google) {
+          initGoogle();
+          clearInterval(interval);
+        }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, [initGoogle]);
 
-  const handleGoogleClick = async () => {
-    if (!mounted) return;
-    setLoading("google");
-    try {
-      // Use the Google Identity Services (GIS) library loaded via script tag
-      const google = (window as unknown as Record<string, unknown>).google as
-        | {
-            accounts: {
-              oauth2: {
-                initTokenClient: (config: Record<string, unknown>) => {
-                  requestAccessToken: () => void;
-                };
-              };
-            };
-          }
-        | undefined;
-
-      if (!google) {
-        onError?.("Google Sign-In is not available");
-        setLoading(null);
-        return;
-      }
-
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-        scope: "email profile",
-        callback: async (response: { access_token?: string; error?: string }) => {
-          if (response.error || !response.access_token) {
-            onError?.("Google login was cancelled or failed");
-            setLoading(null);
-            return;
-          }
-          try {
-            await googleLogin(response.access_token, linkOrderId);
-            onSuccess?.();
-          } catch (err) {
-            onError?.(err instanceof Error ? err.message : "Google login failed");
-          } finally {
-            setLoading(null);
-          }
-        },
-      });
-      client.requestAccessToken();
-    } catch (err) {
-      onError?.(err instanceof Error ? err.message : "Google login failed");
-      setLoading(null);
+  const handleGoogleClick = () => {
+    if (!googleReady) {
+      onError?.("Google Sign-In is still loading. Please try again.");
+      return;
+    }
+    // Click the hidden Google rendered button to open the consent popup
+    const iframe = googleBtnRef.current?.querySelector("div[role='button']") as HTMLElement | null;
+    if (iframe) {
+      iframe.click();
+    } else {
+      onError?.("Google Sign-In is not available");
     }
   };
 
@@ -115,6 +143,8 @@ export function SocialLoginButtons({
 
   return (
     <div className="space-y-2">
+      {/* Hidden Google rendered button — clicked programmatically */}
+      <div ref={googleBtnRef} className="h-0 w-0 overflow-hidden" />
       <Button
         variant="outline"
         className="w-full"

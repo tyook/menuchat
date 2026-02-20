@@ -256,10 +256,16 @@ export async function customerGoogleAuth(
   token: string,
   linkOrderId?: string,
 ): Promise<CustomerAuthResponse> {
-  return customerApiFetch<CustomerAuthResponse>("/api/customer/auth/google/", {
+  const response = await fetch(`${API_URL}/api/customer/auth/google/`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, link_order_id: linkOrderId }),
   });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `API error: ${response.status}`);
+  }
+  return response.json();
 }
 
 export async function customerAppleAuth(
@@ -267,9 +273,15 @@ export async function customerAppleAuth(
   name?: string,
   linkOrderId?: string,
 ): Promise<CustomerAuthResponse> {
-  return customerApiFetch<CustomerAuthResponse>("/api/customer/auth/apple/", {
+  const response = await fetch(`${API_URL}/api/customer/auth/apple/`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, name, link_order_id: linkOrderId }),
   });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || `API error: ${response.status}`);
+  }
+  return response.json();
 }
 

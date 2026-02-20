@@ -326,6 +326,7 @@ class CreatePaymentView(APIView):
             intent = stripe.PaymentIntent.create(
                 amount=amount_cents,
                 currency=restaurant.currency.lower(),
+                automatic_payment_methods={"enabled": True},
                 metadata={
                     "order_id": str(order.id),
                     "restaurant_slug": restaurant.slug,
