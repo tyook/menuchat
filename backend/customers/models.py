@@ -31,5 +31,23 @@ class Customer(models.Model):
     def check_password(self, raw_password: str) -> bool:
         return check_password(raw_password, self.password)
 
+    def get_or_create_stripe_customer(self):
+        """Get existing or create new Stripe Customer. Returns stripe_customer_id."""
+        if self.stripe_customer_id:
+            return self.stripe_customer_id
+
+        import stripe
+        from django.conf import settings
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        stripe_customer = stripe.Customer.create(
+            email=self.email,
+            name=self.name,
+            metadata={"customer_id": str(self.id)},
+        )
+        self.stripe_customer_id = stripe_customer.id
+        self.save(update_fields=["stripe_customer_id"])
+        return self.stripe_customer_id
+
     def __str__(self):
         return f"{self.name} ({self.email})"
