@@ -14,6 +14,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.OWNER)
     phone = models.CharField(max_length=20, blank=True, default="")
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
 
     username = None  # Remove username field
     USERNAME_FIELD = "email"
@@ -43,6 +44,59 @@ class Restaurant(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Subscription(models.Model):
+    class Plan(models.TextChoices):
+        STARTER = "starter", "Starter"
+        GROWTH = "growth", "Growth"
+        PRO = "pro", "Pro"
+
+    class Status(models.TextChoices):
+        TRIALING = "trialing", "Trialing"
+        ACTIVE = "active", "Active"
+        PAST_DUE = "past_due", "Past Due"
+        CANCELED = "canceled", "Canceled"
+        INCOMPLETE = "incomplete", "Incomplete"
+
+    restaurant = models.OneToOneField(
+        Restaurant, on_delete=models.CASCADE, related_name="subscription"
+    )
+    plan = models.CharField(max_length=20, choices=Plan.choices, default=Plan.STARTER)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TRIALING)
+    stripe_subscription_id = models.CharField(
+        max_length=255, blank=True, null=True, unique=True
+    )
+    stripe_customer_id = models.CharField(
+        max_length=255, blank=True, null=True,
+    )
+    trial_end = models.DateTimeField(blank=True, null=True)
+    current_period_start = models.DateTimeField(blank=True, null=True)
+    current_period_end = models.DateTimeField(blank=True, null=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    order_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_active(self):
+        """Subscription allows usage if trialing, active, or past_due."""
+        return self.status in ("trialing", "active", "past_due")
+
+    @property
+    def order_limit(self):
+        """Get order limit from settings based on plan."""
+        from django.conf import settings
+        plan_config = settings.SUBSCRIPTION_PLANS.get(self.plan, {})
+        return plan_config.get("order_limit", 0)
+
+    @property
+    def overage_count(self):
+        """Number of orders exceeding the plan limit."""
+        return max(0, self.order_count - self.order_limit)
+
+    def __str__(self):
+        return f"{self.restaurant.name} - {self.plan} ({self.status})"
 
 
 class RestaurantStaff(models.Model):
