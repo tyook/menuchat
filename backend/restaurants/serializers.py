@@ -51,6 +51,10 @@ class RestaurantSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
     def create(self, validated_data):
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.conf import settings
+
         validated_data["owner"] = self.context["request"].user
         restaurant = Restaurant.objects.create(**validated_data)
         # Auto-create owner staff record
@@ -58,6 +62,18 @@ class RestaurantSerializer(serializers.ModelSerializer):
             user=self.context["request"].user,
             restaurant=restaurant,
             role="owner",
+        )
+        # Auto-create trial subscription
+        from restaurants.models import Subscription
+        trial_end = timezone.now() + timedelta(days=settings.FREE_TRIAL_DAYS)
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
+            trial_end=trial_end,
+            current_period_start=timezone.now(),
+            current_period_end=trial_end,
+            order_count=0,
         )
         return restaurant
 

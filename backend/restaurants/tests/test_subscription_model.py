@@ -65,3 +65,23 @@ class TestSubscriptionModel:
     def test_user_stripe_customer_id(self):
         user = UserFactory()
         assert user.stripe_customer_id is None
+
+
+@pytest.mark.django_db
+class TestAutoTrialSubscription:
+    def test_creating_restaurant_auto_creates_trial_subscription(self, api_client):
+        user = UserFactory()
+        api_client.force_authenticate(user=user)
+        response = api_client.post(
+            "/api/restaurants/",
+            {"name": "Trial Place", "slug": "trial-place"},
+            format="json",
+        )
+        assert response.status_code == 201
+        from restaurants.models import Restaurant, Subscription
+        restaurant = Restaurant.objects.get(slug="trial-place")
+        sub = Subscription.objects.get(restaurant=restaurant)
+        assert sub.status == "trialing"
+        assert sub.plan == "starter"
+        assert sub.order_count == 0
+        assert sub.trial_end is not None
