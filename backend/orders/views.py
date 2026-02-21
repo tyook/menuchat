@@ -455,6 +455,61 @@ class OrderStatusView(APIView):
         return Response(OrderResponseSerializer(order).data)
 
 
+class ConfirmPaymentView(APIView):
+    """Called by the frontend after stripe.confirmPayment() succeeds.
+
+    Verifies the PaymentIntent status with Stripe and transitions the
+    order from pending_payment → confirmed.  This is a synchronous
+    fallback so the order status is correct even when the Stripe webhook
+    hasn't arrived yet (common in local dev and occasionally in prod due
+    to webhook delays).
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug, order_id):
+        try:
+            order = Order.objects.get(id=order_id, restaurant__slug=slug)
+        except Order.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not order.stripe_payment_intent_id:
+            return Response(
+                {"detail": "No payment intent associated with this order."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        try:
+            intent = stripe.PaymentIntent.retrieve(order.stripe_payment_intent_id)
+        except stripe.error.StripeError as e:
+            return Response(
+                {"detail": f"Failed to verify payment: {str(e)}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if intent.status == "succeeded":
+            updated = Order.objects.filter(
+                id=order.id, payment_status="pending"
+            ).update(status="confirmed", payment_status="paid")
+            order.refresh_from_db()
+            if updated:
+                broadcast_order_to_kitchen(order)
+        elif intent.status in ("requires_payment_method", "canceled"):
+            Order.objects.filter(
+                id=order.id, payment_status="pending"
+            ).update(payment_status="failed")
+            return Response(
+                {"detail": "Payment failed.", "status": order.status, "payment_status": "failed"},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        return Response(OrderResponseSerializer(order).data)
+
+
 class StripeWebhookView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -482,10 +537,11 @@ class StripeWebhookView(APIView):
             except Order.DoesNotExist:
                 return Response(status=status.HTTP_200_OK)
 
-            if order.payment_status != "paid":
-                order.status = "confirmed"
-                order.payment_status = "paid"
-                order.save(update_fields=["status", "payment_status"])
+            updated = Order.objects.filter(
+                id=order.id, payment_status="pending"
+            ).update(status="confirmed", payment_status="paid")
+            if updated:
+                order.refresh_from_db()
                 broadcast_order_to_kitchen(order)
 
         elif event["type"] in ("payment_intent.payment_failed", "payment_intent.canceled"):

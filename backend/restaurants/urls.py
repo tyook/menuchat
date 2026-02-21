@@ -16,6 +16,7 @@ from restaurants.views import (
     ReactivateSubscriptionView,
     RegisterView,
     RestaurantDetailView,
+    RestaurantOrderListView,
     SubscriptionDetailView,
 )
 
@@ -55,6 +56,12 @@ urlpatterns = [
         "restaurants/<slug:slug>/menu/",
         FullMenuView.as_view(),
         name="full-menu",
+    ),
+    # Orders (Admin)
+    path(
+        "restaurants/<slug:slug>/orders/",
+        RestaurantOrderListView.as_view(),
+        name="restaurant-orders",
     ),
     # Subscription
     path(

@@ -99,6 +99,7 @@ export interface OrderResponse {
   tax_rate: string;
   tax_amount: string;
   total_price: string;
+  payment_status: string;
   created_at: string;
   items: {
     id: number;
@@ -140,6 +141,15 @@ export interface CustomerAuthResponse {
 export interface CustomerOrderHistoryItem extends OrderResponse {
   restaurant_name: string;
   restaurant_slug: string;
+}
+
+export interface CustomerOrderDetail extends CustomerOrderHistoryItem {
+  payment_method: {
+    brand: string;
+    last4: string;
+    exp_month: number;
+    exp_year: number;
+  } | null;
 }
 
 export interface SavedPaymentMethod {

@@ -2,6 +2,7 @@ from django.urls import path
 
 from orders.views import (
     ConfirmOrderView,
+    ConfirmPaymentView,
     CreatePaymentView,
     KitchenOrderUpdateView,
     OrderStatusView,
@@ -17,6 +18,11 @@ urlpatterns = [
     path("order/<slug:slug>/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
     path("order/<slug:slug>/create-payment/", CreatePaymentView.as_view(), name="create-payment"),
     path("order/<slug:slug>/save-card/<uuid:order_id>/", SaveCardConsentView.as_view(), name="save-card-consent"),
+    path(
+        "order/<slug:slug>/confirm-payment/<uuid:order_id>/",
+        ConfirmPaymentView.as_view(),
+        name="confirm-payment",
+    ),
     path(
         "order/<slug:slug>/status/<uuid:order_id>/",
         OrderStatusView.as_view(),

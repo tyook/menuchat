@@ -7,6 +7,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { useAuthStore } from "@/stores/auth-store";
 import { useMyRestaurants } from "@/hooks/use-my-restaurants";
 import { useAdvanceOrder } from "@/hooks/use-advance-order";
+import { useRestaurantOrders } from "@/hooks/use-restaurant-orders";
 import { OrderColumn } from "./components/OrderColumn";
 import { Badge } from "@/components/ui/badge";
 import type { OrderResponse } from "@/types";
@@ -24,7 +25,7 @@ export default function KitchenPage() {
   const slug = params.slug;
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const { orders, addOrUpdateOrder } = useKitchenStore();
+  const { orders, addOrUpdateOrder, setOrders } = useKitchenStore();
   const [authorized, setAuthorized] = useState(false);
 
   const { data: restaurants, isLoading: checking } = useMyRestaurants(isAuthenticated);
@@ -46,6 +47,18 @@ export default function KitchenPage() {
       }
     }
   }, [isAuthenticated, checking, restaurants, slug, router]);
+
+  // Seed store with existing active orders on mount
+  const { data: existingOrders } = useRestaurantOrders(authorized ? slug : "");
+
+  useEffect(() => {
+    if (existingOrders) {
+      const active = existingOrders.filter(
+        (o) => o.status === "confirmed" || o.status === "preparing" || o.status === "ready"
+      );
+      setOrders(active);
+    }
+  }, [existingOrders, setOrders]);
 
   const handleMessage = useCallback(
     (data: unknown) => {

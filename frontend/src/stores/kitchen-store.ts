@@ -3,12 +3,15 @@ import type { OrderResponse } from "@/types";
 
 interface KitchenState {
   orders: OrderResponse[];
+  setOrders: (orders: OrderResponse[]) => void;
   addOrUpdateOrder: (order: OrderResponse) => void;
   getOrdersByStatus: (status: string) => OrderResponse[];
 }
 
 export const useKitchenStore = create<KitchenState>((set, get) => ({
   orders: [],
+
+  setOrders: (orders) => set({ orders }),
 
   addOrUpdateOrder: (order) =>
     set((state) => {

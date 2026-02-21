@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
 import { useCustomerAuthStore } from "@/stores/customer-auth-store";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
-import { createPayment, saveCardConsent } from "@/lib/api";
+import { confirmPayment, createPayment, saveCardConsent } from "@/lib/api";
 import type { SavedPaymentMethod, ConfirmOrderItem } from "@/types";
 
 const stripePromise = loadStripe(
@@ -96,6 +96,14 @@ function PaymentForm({
       setPaymentError(error.message || "Payment failed. Please try again.");
       setIsProcessing(false);
     } else {
+      // Verify payment with backend so order status transitions to confirmed
+      if (slug && orderId) {
+        try {
+          await confirmPayment(slug, orderId);
+        } catch {
+          // Non-fatal: webhook will eventually confirm the order
+        }
+      }
       setStep("submitted");
     }
   };

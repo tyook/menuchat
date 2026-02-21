@@ -91,6 +91,7 @@ import type {
   CustomerAuthResponse,
   CustomerProfile,
   CustomerOrderHistoryItem,
+  CustomerOrderDetail,
   SavedPaymentMethod,
   Subscription,
 } from "@/types";
@@ -163,6 +164,15 @@ export async function fetchOrderStatus(
   orderId: string
 ): Promise<OrderResponse> {
   return apiFetch<OrderResponse>(`/api/order/${slug}/status/${orderId}/`);
+}
+
+export async function confirmPayment(
+  slug: string,
+  orderId: string
+): Promise<OrderResponse> {
+  return apiFetch<OrderResponse>(`/api/order/${slug}/confirm-payment/${orderId}/`, {
+    method: "POST",
+  });
 }
 
 export async function saveCardConsent(
@@ -272,6 +282,10 @@ export async function fetchCustomerOrders(): Promise<CustomerOrderHistoryItem[]>
   return customerApiFetch<CustomerOrderHistoryItem[]>("/api/customer/orders/");
 }
 
+export async function fetchCustomerOrder(orderId: string): Promise<CustomerOrderDetail> {
+  return customerApiFetch<CustomerOrderDetail>(`/api/customer/orders/${orderId}/`);
+}
+
 export async function customerGoogleAuth(
   token: string,
   linkOrderId?: string,
@@ -313,6 +327,11 @@ export async function deletePaymentMethod(pmId: string): Promise<void> {
   await customerApiFetch<void>(`/api/customer/payment-methods/${pmId}/`, {
     method: "DELETE",
   });
+}
+
+// Restaurant Orders (Admin)
+export async function fetchRestaurantOrders(slug: string): Promise<OrderResponse[]> {
+  return apiFetch<OrderResponse[]>(`/api/restaurants/${slug}/orders/`);
 }
 
 // Subscription API

@@ -278,6 +278,57 @@ class CustomerOrderHistoryView(CustomerAuthMixin, APIView):
         return Response(data)
 
 
+class CustomerOrderDetailView(CustomerAuthMixin, APIView):
+    """GET /api/customer/orders/<order_id>/ — single order with full details."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, order_id):
+        customer = self.get_customer(request)
+        if not customer:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        try:
+            order = (
+                Order.objects.select_related("restaurant")
+                .prefetch_related("items__menu_item", "items__variant", "items__modifiers")
+                .get(id=order_id, customer=customer)
+            )
+        except Order.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        order_data = OrderResponseSerializer(order).data
+        order_data["restaurant_name"] = order.restaurant.name
+        order_data["restaurant_slug"] = order.restaurant.slug
+
+        # Resolve Stripe payment method to card details if available
+        payment_method_info = None
+        if order.stripe_payment_method_id:
+            try:
+                from django.conf import settings
+
+                stripe_lib.api_key = settings.STRIPE_SECRET_KEY
+                pm = stripe_lib.PaymentMethod.retrieve(order.stripe_payment_method_id)
+                if pm.card:
+                    payment_method_info = {
+                        "brand": pm.card.brand,
+                        "last4": pm.card.last4,
+                        "exp_month": pm.card.exp_month,
+                        "exp_year": pm.card.exp_year,
+                    }
+            except Exception:
+                pass
+        order_data["payment_method"] = payment_method_info
+
+        return Response(order_data)
+
+
 class PaymentMethodsView(CustomerAuthMixin, APIView):
     """GET: list saved payment methods. DELETE: detach a payment method."""
 

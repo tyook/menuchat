@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from orders.models import Order
+from orders.serializers import OrderResponseSerializer
 from restaurants.models import MenuCategory, MenuItem, Restaurant, RestaurantStaff, Subscription
 from restaurants.serializers import (
     LoginSerializer,
@@ -189,6 +191,20 @@ class FullMenuView(RestaurantMixin, APIView):
             data.append(cat_data)
 
         return Response({"restaurant_name": restaurant.name, "categories": data})
+
+
+class RestaurantOrderListView(RestaurantMixin, APIView):
+    """GET /api/restaurants/:slug/orders/ - List all orders for a restaurant."""
+
+    def get(self, request, slug):
+        restaurant = self.get_restaurant()
+        orders = (
+            Order.objects.filter(restaurant=restaurant)
+            .select_related("restaurant")
+            .prefetch_related("items__menu_item", "items__variant")
+        )
+        data = OrderResponseSerializer(orders, many=True).data
+        return Response(data)
 
 
 class SubscriptionDetailView(RestaurantMixin, APIView):

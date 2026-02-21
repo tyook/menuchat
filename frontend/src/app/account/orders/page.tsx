@@ -53,7 +53,11 @@ export default function CustomerOrdersPage() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} className="p-4">
+            <Card
+              key={order.id}
+              className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => router.push(`/account/orders/${order.id}`)}
+            >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <p className="font-medium text-lg">{order.restaurant_name}</p>
