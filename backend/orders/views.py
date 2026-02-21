@@ -314,6 +314,15 @@ class CreatePaymentView(APIView):
             except Exception:
                 pass
 
+        # Build customer_allergies list:
+        # - authenticated users: use their profile allergies
+        # - guest users: use allergies detected by the LLM (sent from frontend)
+        customer_allergies = []
+        if customer and customer.allergies:
+            customer_allergies = list(customer.allergies)
+        elif data.get("allergies"):
+            customer_allergies = list(data["allergies"])
+
         # Create order with pending_payment status
         order = Order.objects.create(
             restaurant=restaurant,
@@ -330,6 +339,7 @@ class CreatePaymentView(APIView):
             tax_rate=tax_rate,
             tax_amount=tax_amount,
             total_price=grand_total,
+            customer_allergies=customer_allergies,
         )
 
         for item_data in validated_items:

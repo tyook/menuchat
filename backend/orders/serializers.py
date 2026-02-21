@@ -26,6 +26,7 @@ class ConfirmOrderSerializer(serializers.Serializer):
     payment_method_id = serializers.CharField(required=False, default="", allow_blank=True)
     save_card = serializers.BooleanField(required=False, default=False)
     return_url = serializers.URLField(required=False, default="")
+    allergies = serializers.ListField(child=serializers.CharField(), required=False, default=list)
 
 
 class OrderItemResponseSerializer(serializers.ModelSerializer):
@@ -64,4 +65,5 @@ class OrderResponseSerializer(serializers.ModelSerializer):
             "stripe_payment_intent_id",
             "created_at",
             "items",
+            "customer_allergies",
         ]

@@ -10,7 +10,7 @@ export function useParseOrder(slug: string) {
   return useMutation({
     mutationFn: (rawInput: string) => parseOrder(slug, rawInput),
     onSuccess: (result) => {
-      setParsedResult(result.items, result.total_price, result.language);
+      setParsedResult(result.items, result.allergies ?? [], result.total_price, result.language);
       setStep("confirmation");
     },
     onError: (err) => {

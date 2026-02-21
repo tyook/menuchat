@@ -48,6 +48,20 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
         </span>
       </div>
 
+      {order.customer_allergies?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {order.customer_allergies.map((allergy) => (
+            <Badge
+              key={allergy}
+              variant="destructive"
+              className="text-xs"
+            >
+              {allergy}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       <ul className="text-sm space-y-1 mb-3">
         {order.items.map((item) => (
           <li key={item.id}>

@@ -65,6 +65,7 @@ def validate_and_price_order(restaurant: Restaurant, parsed: ParsedOrder) -> dic
 
     return {
         "items": validated_items,
+        "allergies": parsed.allergies,
         "total_price": str(total_price),
         "language": parsed.language,
     }

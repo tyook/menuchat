@@ -21,6 +21,7 @@ interface ConfirmationStepProps {
 export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
   const {
     parsedItems,
+    parsedAllergies,
     totalPrice,
     rawInput,
     language,
@@ -49,24 +50,22 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
   }, [isAuthenticated, profile, customerName, setCustomerName]);
 
   const handleConfirm = () => {
-    const items: ConfirmOrderItem[] = parsedItems.map((item) => {
-      let specialRequests = item.special_requests;
-      if (allergyNote) {
-        specialRequests = specialRequests
-          ? `${specialRequests} | Allergy: ${allergyNote}`
-          : `Allergy: ${allergyNote}`;
-      }
-      return {
-        menu_item_id: item.menu_item_id,
-        variant_id: item.variant.id,
-        quantity: item.quantity,
-        modifier_ids: item.modifiers.map((m) => m.id),
-        special_requests: specialRequests,
-      };
-    });
+    const items: ConfirmOrderItem[] = parsedItems.map((item) => ({
+      menu_item_id: item.menu_item_id,
+      variant_id: item.variant.id,
+      quantity: item.quantity,
+      modifier_ids: item.modifiers.map((m) => m.id),
+      special_requests: item.special_requests,
+    }));
+
+    // Merge LLM-detected allergies with user-set allergy preferences
+    const prefAllergies = allergyNote
+      ? allergyNote.split(",").map((a) => a.trim()).filter(Boolean)
+      : [];
+    const allAllergies = Array.from(new Set([...parsedAllergies, ...prefAllergies]));
 
     createPaymentMutation.mutate(
-      { items, rawInput, tableIdentifier, language, customerName, customerPhone },
+      { items, rawInput, tableIdentifier, language, customerName, customerPhone, allergies: allAllergies },
       {
         onSuccess: (result) => {
           setOrderId(result.id);
@@ -142,12 +141,17 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
         ))}
       </div>
 
-      {allergyNote && (
+      {(parsedAllergies.length > 0 || allergyNote) && (
         <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm dark:border-orange-800 dark:bg-orange-950">
           <p className="font-medium text-orange-800 dark:text-orange-200">
-            Allergy note applied to all items:
+            Allergies noted:
           </p>
-          <p className="text-orange-700 dark:text-orange-300">{allergyNote}</p>
+          <p className="text-orange-700 dark:text-orange-300">
+            {Array.from(new Set([
+              ...parsedAllergies,
+              ...(allergyNote ? allergyNote.split(",").map((a) => a.trim()).filter(Boolean) : []),
+            ])).join(", ")}
+          </p>
         </div>
       )}
 

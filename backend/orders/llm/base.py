@@ -11,4 +11,5 @@ class ParsedOrderItem(BaseModel):
 
 class ParsedOrder(BaseModel):
     items: list[ParsedOrderItem]
+    allergies: list[str] = Field(default_factory=list)
     language: str = "en"

@@ -9,6 +9,7 @@ interface CreatePaymentParams {
   language: string;
   customerName?: string;
   customerPhone?: string;
+  allergies?: string[];
 }
 
 export function useCreatePayment(slug: string) {
@@ -22,6 +23,9 @@ export function useCreatePayment(slug: string) {
         params.language,
         params.customerName,
         params.customerPhone,
+        undefined, // paymentMethodId
+        undefined, // saveCard
+        params.allergies,
       ),
   });
 }

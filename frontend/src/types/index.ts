@@ -79,6 +79,7 @@ export interface ParsedOrderItem {
 
 export interface ParsedOrderResponse {
   items: ParsedOrderItem[];
+  allergies: string[];
   total_price: string;
   language: string;
 }
@@ -101,6 +102,7 @@ export interface OrderResponse {
   total_price: string;
   payment_status: string;
   created_at: string;
+  customer_allergies: string[];
   items: {
     id: number;
     name: string;

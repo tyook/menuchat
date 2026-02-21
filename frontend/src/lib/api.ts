@@ -142,6 +142,7 @@ export async function createPayment(
   customerPhone?: string,
   paymentMethodId?: string,
   saveCard?: boolean,
+  allergies?: string[],
 ): Promise<CreatePaymentResponse> {
   return customerApiFetch<CreatePaymentResponse>(`/api/order/${slug}/create-payment/`, {
     method: "POST",
@@ -155,6 +156,7 @@ export async function createPayment(
       payment_method_id: paymentMethodId || "",
       save_card: saveCard || false,
       return_url: window.location.href,
+      allergies: allergies || [],
     }),
   });
 }

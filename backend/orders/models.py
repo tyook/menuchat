@@ -63,6 +63,8 @@ class Order(models.Model):
         null=True,
     )
 
+    customer_allergies = models.JSONField(default=list, blank=True, help_text="Snapshot of customer allergies at time of order")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

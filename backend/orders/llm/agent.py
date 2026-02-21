@@ -23,6 +23,10 @@ Rules:
 - Keep special_requests brief and in English
 - Detect the language the customer wrote/spoke in and set the "language" field
 - If something the customer asked for is not on the menu, skip it (do NOT invent IDs)
+- If the customer mentions any food allergies (e.g. "I'm allergic to peanuts", \
+"no shellfish, I have an allergy"), extract them into the "allergies" list as \
+short labels (e.g. ["Peanuts", "Shellfish"]). Only include actual allergies, \
+not plain preferences like "no onions".
 """
 
 
