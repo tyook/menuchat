@@ -13,7 +13,13 @@ Enable customers to see restaurant busyness before placing an order and track th
 
 ## Architecture: Computed Queue (No New Model)
 
-Queue position and wait time are computed on-the-fly from existing Order data. No new queue model — the Order model's `created_at` and status fields naturally define queue ordering. Historical averages and busyness levels are cached in Redis, refreshed by a Celery periodic task.
+Queue position and wait time are computed on-the-fly from existing Order data. No new queue model — the Order model's `confirmed_at` timestamp and status fields naturally define queue ordering. Historical averages and busyness levels are cached in Redis, refreshed by a Celery periodic task.
+
+### Order status handling
+
+The existing Order model has statuses: `pending_payment`, `pending`, `confirmed`, `preparing`, `ready`, `completed`. In practice, `create_order()` defaults to `confirmed` status, and the payment flow goes `pending_payment → confirmed`. The `pending` status is not actively used in the current codebase.
+
+**Queue scope**: Only orders with status `confirmed` or `preparing` are counted in the queue. Orders in `pending_payment`, `pending`, `ready`, or `completed` are excluded. Order cancellation is out of scope for v1.
 
 ## Data Model Changes
 
@@ -26,14 +32,19 @@ Queue position and wait time are computed on-the-fly from existing Order data. N
 | `ready_at` | DateTimeField, nullable | Set when status moves to `ready` |
 | `completed_at` | DateTimeField, nullable | Set when status moves to `completed` |
 
-These timestamps power historical wait time calculations.
+These timestamps power historical wait time calculations. They must be set in **all code paths** that change order status — not just `update_order_status()`. Specifically:
+- `update_order_status()` — for kitchen-driven status changes (confirmed → preparing → ready → completed)
+- `confirm_payment()` and `_handle_payment_succeeded()` in `services.py` — these set status to `confirmed` directly, so they must also set `confirmed_at`
+
+A helper function `set_status_timestamp(order, status)` centralizes this logic.
 
 ### Restaurant model additions (`backend/restaurants/models.py`)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `estimated_minutes_per_order` | PositiveIntegerField, default=10 | Owner-configurable fallback estimate |
-| `use_historical_estimates` | BooleanField, default=False | Flipped to True automatically once 50 orders have completed |
+
+No persistent `use_historical_estimates` flag — `QueueService` checks the count of completed orders (from cache) at query time to decide which estimate source to use. This avoids a DB write and potential sync issues.
 
 ### Redis cached values (per restaurant)
 
@@ -42,19 +53,23 @@ These timestamps power historical wait time calculations.
 | `queue:{slug}:avg_prep_time` | Rolling average minutes from confirmed → ready |
 | `queue:{slug}:active_count` | Count of orders in confirmed/preparing status |
 | `queue:{slug}:busyness` | Computed traffic light level (green/yellow/red) |
+| `queue:{slug}:completed_count` | Total completed orders (for threshold check) |
+
+All Redis keys use a TTL of 10 minutes (slightly longer than the 5-minute refresh interval) so stale values auto-expire if the Celery task fails.
 
 ## QueueService (`backend/orders/queue_service.py`)
 
 ### Methods
 
-- **`get_queue_position(order)`** — Counts orders for that restaurant with status in (`confirmed`, `preparing`) and `created_at` before this order's `created_at`. Returns 1-based integer position.
+- **`get_queue_position(order)`** — Counts orders for that restaurant with status in (`confirmed`, `preparing`) and `confirmed_at` before this order's `confirmed_at`. Uses `confirmed_at` (not `created_at`) to reflect actual queue entry time — orders that pay faster enter the queue first. Returns 1-based integer position.
 
-- **`get_estimated_wait(restaurant, queue_position)`** — If `use_historical_estimates` is True, uses cached `avg_prep_time * queue_position`. Otherwise, uses `estimated_minutes_per_order * queue_position`. Returns minutes as integer.
+- **`get_estimated_wait(restaurant, queue_position)`** — If cached completed order count >= 50, uses cached `avg_prep_time * queue_position`. Otherwise, uses `estimated_minutes_per_order * queue_position`. Returns minutes as integer. Note: this is a known simplification that treats orders as sequential. Kitchens process orders in parallel, so actual wait times will be shorter. This is acceptable for v1 — estimates are conservative, and historical averages will naturally account for parallelism once enough data exists.
 
-- **`get_busyness(restaurant)`** — Reads cached `active_count` and maps to traffic light:
-  - **Green**: 0-5 active orders (or < 15 min estimated wait)
-  - **Yellow**: 6-15 active orders (or 15-30 min)
-  - **Red**: 16+ active orders (or 30+ min)
+- **`get_busyness(restaurant)`** — Reads cached `active_count` and estimated wait, using **estimated wait as the primary signal**:
+  - **Green**: < 15 min estimated wait
+  - **Yellow**: 15-30 min estimated wait
+  - **Red**: > 30 min estimated wait
+  - Estimated wait = `active_count * avg_prep_time` (or `active_count * estimated_minutes_per_order` pre-threshold)
   - Thresholds hardcoded for v1.
 
 - **`get_restaurant_queue_info(restaurant)`** — Returns busyness level + estimated wait for ConfirmationStep. Reads from Redis cache.
@@ -67,9 +82,13 @@ These timestamps power historical wait time calculations.
 1. Count active orders → cache `active_count`
 2. Compute rolling average prep time from last 50 completed orders (within last 30 days) → cache `avg_prep_time`
 3. Compute busyness level → cache `busyness`
-4. Check if restaurant has 50+ completed orders and flip `use_historical_estimates` if needed
+4. Cache completed order count for threshold check by `QueueService`
 
-This task only refreshes cached averages. Real-time queue position updates are pushed instantly via WebSocket when kitchen staff changes order status.
+This task lives in `backend/orders/tasks.py` alongside existing Celery tasks. It only refreshes cached averages. Real-time queue position updates are pushed instantly via WebSocket when kitchen staff changes order status.
+
+**`broadcast_queue_updates(restaurant_id, changed_order_id)`** — Celery task in `backend/orders/tasks.py`. Triggered on each order status change. Recalculates and pushes queue positions to all affected customer WebSocket groups. Runs asynchronously to avoid blocking kitchen staff responses. Uses `apply_async(countdown=2)` to debounce — if kitchen staff updates multiple orders in quick succession, rapid-fire fan-outs are coalesced by the 2-second delay.
+
+Note: `backend/orders/tasks.py` is a **new file** — no existing Celery tasks live in the orders app. The payout task lives in a separate app.
 
 ## API Endpoints
 
@@ -86,7 +105,7 @@ Response:
 }
 ```
 
-**`GET /api/order/<slug>/status/<order_id>/queue/`** — Order queue position (post-order, public; UUID serves as access token).
+**`GET /api/order/<slug>/queue/<order_id>/`** — Order queue position (post-order, public; UUID serves as access token). Registered as a separate URL pattern in `orders/urls.py` to avoid nesting under the existing `status/` path.
 
 Response:
 ```json
@@ -102,8 +121,9 @@ Response:
 
 **`CustomerOrderConsumer`** at `ws/order/<slug>/<order_id>/`
 
-- On connect: joins channel group `customer_{order_id}`
+- On connect: validates the order UUID exists in the database. If not found, rejects the connection. If valid, joins channel group `customer_{order_id}`. Immediately sends current queue state (position, wait, status) so the client has data without waiting for the next update.
 - No auth required (UUID order ID serves as access token)
+- Orders in `pending_payment` — connection accepted, but no queue data sent until status reaches `confirmed`. Orders already `completed` — connection accepted, final state sent, no further updates.
 - Receives pushed updates on status change or queue position shift
 - Message format:
 ```json
@@ -119,12 +139,12 @@ Response:
 
 Extend `broadcast_order_to_kitchen()` to also:
 1. Push update to `customer_{order_id}` group for the changed order
-2. Recalculate and push updated queue positions to all customers with orders ahead in the queue (orders at that restaurant with status `confirmed` or `preparing` and `created_at` after the changed order)
+2. Offload fan-out to a **Celery task** (`broadcast_queue_updates`): recalculate and push updated queue positions to all customers with active orders at that restaurant (status `confirmed` or `preparing`, `created_at` after the changed order). This keeps the kitchen staff's status update response fast.
 3. Skip orders already in `ready` or `completed` status
 
 ### Polling fallback
 
-If WebSocket connection fails, frontend polls `GET /api/order/<slug>/status/<order_id>/queue/` every 15 seconds.
+If WebSocket connection fails, frontend polls `GET /api/order/<slug>/queue/<order_id>/` every 15 seconds.
 
 ## Frontend Components
 
@@ -137,7 +157,7 @@ Add a busyness banner at the top of the page, above order items:
 
 ### SubmittedStep changes (`frontend/src/app/order/[slug]/components/SubmittedStep.tsx`)
 
-Replace current simple confirmation with a live order tracker:
+Extend the current SubmittedStep with a live order tracker (the existing account registration prompt remains below the tracker):
 - **Progress bar** — 4 steps: Confirmed → Preparing → Ready → Completed. Active step highlighted, completed steps checked.
 - **Queue position** — "You are #5 in line"
 - **Estimated wait** — "~15 minutes estimated wait"
@@ -169,6 +189,7 @@ Replace current simple confirmation with a live order tracker:
 | Order reaches "ready" | Queue position/wait disappear; show "Your order is ready for pickup!" |
 | Order reaches "completed" | Show "Order complete. Thank you!" |
 | Historical data staleness | Only use orders from last 30 days for averages |
+| Queue-info API failure | Hide busyness banner on ConfirmationStep; don't block ordering |
 
 ## Testing Strategy
 
