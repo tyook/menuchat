@@ -2,6 +2,9 @@ from django.urls import path
 
 from restaurants.views import (
     CancelSubscriptionView,
+    ConnectDashboardView,
+    ConnectOnboardView,
+    ConnectStatusView,
     CreateBillingPortalView,
     CreateCheckoutSessionView,
     CreateRestaurantView,
@@ -81,5 +84,21 @@ urlpatterns = [
         "restaurants/<slug:slug>/subscription/reactivate/",
         ReactivateSubscriptionView.as_view(),
         name="subscription-reactivate",
+    ),
+    # Connect (payout onboarding)
+    path(
+        "restaurants/<slug:slug>/connect/onboard/",
+        ConnectOnboardView.as_view(),
+        name="connect-onboard",
+    ),
+    path(
+        "restaurants/<slug:slug>/connect/status/",
+        ConnectStatusView.as_view(),
+        name="connect-status",
+    ),
+    path(
+        "restaurants/<slug:slug>/connect/dashboard/",
+        ConnectDashboardView.as_view(),
+        name="connect-dashboard",
     ),
 ]

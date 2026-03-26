@@ -193,3 +193,27 @@ class ReactivateSubscriptionView(RestaurantMixin, APIView):
         restaurant = self.get_restaurant()
         subscription = RestaurantService.reactivate_subscription(restaurant)
         return Response(SubscriptionSerializer(subscription).data)
+
+
+from restaurants.services import ConnectService
+
+
+class ConnectOnboardView(RestaurantMixin, APIView):
+    def post(self, request, slug):
+        restaurant = self.get_restaurant()
+        result = ConnectService.create_onboarding_link(restaurant)
+        return Response(result)
+
+
+class ConnectStatusView(RestaurantMixin, APIView):
+    def get(self, request, slug):
+        restaurant = self.get_restaurant()
+        result = ConnectService.get_connect_status(restaurant)
+        return Response(result)
+
+
+class ConnectDashboardView(RestaurantMixin, APIView):
+    def post(self, request, slug):
+        restaurant = self.get_restaurant()
+        result = ConnectService.create_dashboard_link(restaurant)
+        return Response(result)
