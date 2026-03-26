@@ -8,11 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { useOrderStore } from "@/stores/order-store";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function SubmittedStep() {
   const { orderId, tableIdentifier, customerName, customerPhone } = useOrderStore();
-  const { isAuthenticated, register } = useCustomerAuthStore();
+  const { isAuthenticated, register } = useAuthStore();
 
   const [showRegister, setShowRegister] = useState(false);
   const [registerForm, setRegisterForm] = useState({ email: "", password: "" });
