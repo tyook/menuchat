@@ -1,0 +1,24 @@
+@media print {
+  /* Hide everything via visibility (not display) so descendants can
+     override — display:none removes elements from the render tree
+     entirely, making child overrides impossible. */
+  body * {
+    visibility: hidden;
+  }
+  /* Show only the active receipt and its contents */
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible !important;
+  }
+  .print-receipt {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 80mm; /* standard thermal receipt width */
+    font-family: monospace;
+    font-size: 12px;
+    padding: 4mm;
+    z-index: 9999;
+    background: white;
+  }
+}

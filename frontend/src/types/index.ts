@@ -129,6 +129,7 @@ export interface OrderResponse {
     variant_price: string;
     quantity: number;
     special_requests: string;
+    modifiers?: { id: number; name: string; price_adjustment: string }[];
   }[];
 }
 
