@@ -626,6 +626,8 @@ class OrderService:
             payout.status = "failed"
             payout.save(update_fields=["status"])
             payout.orders.update(payout_status="pending", payout=None)
+            from restaurants.notifications import send_payout_failed_email
+            send_payout_failed_email(payout.restaurant, payout.amount)
 
     @staticmethod
     def _handle_payout_paid(data):
@@ -653,6 +655,8 @@ class OrderService:
             payout.stripe_payout_id = stripe_payout_id
             payout.save(update_fields=["status", "stripe_payout_id"])
             payout.orders.update(payout_status="paid_out")
+            from restaurants.notifications import send_payout_completed_email
+            send_payout_completed_email(account.restaurant, payout.amount)
 
     @staticmethod
     def _handle_payout_failed(data):
@@ -676,6 +680,8 @@ class OrderService:
         if payout:
             payout.status = "failed"
             payout.save(update_fields=["status"])
+            from restaurants.notifications import send_payout_failed_email
+            send_payout_failed_email(account.restaurant, payout.amount)
 
     @staticmethod
     def handle_stripe_connect_webhook(payload, sig_header):
