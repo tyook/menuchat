@@ -1236,7 +1236,7 @@ class TestSquareAdapter:
         result = adapter.push_order(setup["order"])
 
         assert result.success is True
-        call_body = mock_client.orders.create_order.call_args[0][0]
+        call_body = mock_client.orders.create_order.call_args.kwargs["body"]
         # Verify a tender was included for "paid externally"
         assert "tenders" in call_body["order"]
 
@@ -1272,6 +1272,58 @@ class TestSquareAdapter:
 
         adapter = SquareAdapter(setup["connection"])
         assert adapter.validate_connection() is False
+
+    @patch("integrations.adapters.square.SquareAdapter._get_client")
+    def test_get_order_status_success(self, mock_get_client, setup):
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.is_success.return_value = True
+        mock_result.body = {"order": {"state": "OPEN"}}
+        mock_client.orders.retrieve_order.return_value = mock_result
+        mock_get_client.return_value = mock_client
+
+        adapter = SquareAdapter(setup["connection"])
+        assert adapter.get_order_status("sq_order_123") == "OPEN"
+
+    @patch("integrations.adapters.square.SquareAdapter._get_client")
+    def test_get_order_status_failure(self, mock_get_client, setup):
+        mock_get_client.return_value.orders.retrieve_order.side_effect = Exception("API error")
+
+        adapter = SquareAdapter(setup["connection"])
+        assert adapter.get_order_status("sq_order_123") == "unknown"
+
+    @patch("integrations.adapters.square.SquareClient")
+    @patch("integrations.adapters.square.SquareAdapter._get_client")
+    def test_refresh_tokens_success(self, mock_get_client, mock_square_class, setup):
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.is_success.return_value = True
+        mock_result.body = {
+            "access_token": "new_access_token",
+            "refresh_token": "new_refresh_token",
+            "expires_at": "2026-05-01T00:00:00Z",
+        }
+        mock_client.o_auth.obtain_token.return_value = mock_result
+        mock_square_class.return_value = mock_client
+
+        adapter = SquareAdapter(setup["connection"])
+        assert adapter.refresh_tokens() is True
+
+        setup["connection"].refresh_from_db()
+        assert setup["connection"].oauth_token_expires_at is not None
+
+    @patch("integrations.adapters.square.SquareClient")
+    @patch("integrations.adapters.square.SquareAdapter._get_client")
+    def test_refresh_tokens_failure(self, mock_get_client, mock_square_class, setup):
+        mock_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.is_success.return_value = False
+        mock_result.body = {"errors": [{"detail": "Invalid refresh token"}]}
+        mock_client.o_auth.obtain_token.return_value = mock_result
+        mock_square_class.return_value = mock_client
+
+        adapter = SquareAdapter(setup["connection"])
+        assert adapter.refresh_tokens() is False
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -1301,6 +1353,7 @@ class SquareAdapter(BasePOSAdapter):
     def push_order(self, order) -> PushResult:
         client = self._get_client()
         location_id = self.connection.external_location_id
+        currency = order.restaurant.currency.upper()
 
         line_items = []
         for item in order.items.select_related("variant").prefetch_related("modifiers"):
@@ -1309,7 +1362,7 @@ class SquareAdapter(BasePOSAdapter):
                 "quantity": str(item.quantity),
                 "base_price_money": {
                     "amount": int(item.variant.price * 100),
-                    "currency": "USD",
+                    "currency": currency,
                 },
             }
             if item.modifiers.exists():
@@ -1318,7 +1371,7 @@ class SquareAdapter(BasePOSAdapter):
                         "name": mod.name,
                         "base_price_money": {
                             "amount": int(mod.price_adjustment * 100),
-                            "currency": "USD",
+                            "currency": currency,
                         },
                     }
                     for mod in item.modifiers.all()
@@ -1343,14 +1396,14 @@ class SquareAdapter(BasePOSAdapter):
                     "type": "OTHER",
                     "amount_money": {
                         "amount": int(order.total_price * 100),
-                        "currency": "USD",
+                        "currency": currency,
                     },
                     "note": "Paid via QR Ordering Platform",
                 }
             ]
 
         try:
-            result = client.orders.create_order(body)
+            result = client.orders.create_order(body=body)
         except Exception as e:
             return PushResult(success=False, error_message=str(e))
 
@@ -1419,6 +1472,11 @@ class SquareAdapter(BasePOSAdapter):
                 if "refresh_token" in result.body:
                     self.connection.oauth_refresh_token = encrypt_token(
                         result.body["refresh_token"]
+                    )
+                if "expires_at" in result.body:
+                    from django.utils.dateparse import parse_datetime
+                    self.connection.oauth_token_expires_at = parse_datetime(
+                        result.body["expires_at"]
                     )
                 self.connection.save()
                 return True
@@ -1603,6 +1661,7 @@ class POSSyncLogSerializer(serializers.ModelSerializer):
 ```python
 # backend/integrations/views.py
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -1618,7 +1677,10 @@ from restaurants.models import Restaurant
 
 class RestaurantPOSMixin:
     def get_restaurant(self, slug):
-        return Restaurant.objects.get(slug=slug, owner=self.request.user)
+        try:
+            return Restaurant.objects.get(slug=slug, owner=self.request.user)
+        except Restaurant.DoesNotExist:
+            raise NotFound("Restaurant not found.")
 
 
 class POSConnectionDetailView(RestaurantPOSMixin, APIView):
@@ -1636,7 +1698,10 @@ class POSConnectionDetailView(RestaurantPOSMixin, APIView):
 
     def patch(self, request, slug):
         restaurant = self.get_restaurant(slug)
-        connection = POSConnection.objects.get(restaurant=restaurant)
+        try:
+            connection = POSConnection.objects.get(restaurant=restaurant)
+        except POSConnection.DoesNotExist:
+            raise NotFound("No POS connection found for this restaurant.")
         serializer = POSConnectionUpdateSerializer(
             connection, data=request.data, partial=True
         )
@@ -1820,7 +1885,10 @@ class RetryOrderSyncView(RestaurantPOSMixin, APIView):
 
     def post(self, request, slug, order_id):
         restaurant = self.get_restaurant(slug)
-        order = Order.objects.get(id=order_id, restaurant=restaurant)
+        try:
+            order = Order.objects.get(id=order_id, restaurant=restaurant)
+        except Order.DoesNotExist:
+            raise NotFound("Order not found.")
         order.pos_sync_status = "pending"
         order.save(update_fields=["pos_sync_status"])
         dispatch_order_to_pos.delay(str(order.id))
@@ -1848,9 +1916,12 @@ class POSSyncLogDetailView(RestaurantPOSMixin, APIView):
 
     def patch(self, request, slug, log_id):
         restaurant = self.get_restaurant(slug)
-        log = POSSyncLog.objects.get(
-            id=log_id, pos_connection__restaurant=restaurant
-        )
+        try:
+            log = POSSyncLog.objects.get(
+                id=log_id, pos_connection__restaurant=restaurant
+            )
+        except POSSyncLog.DoesNotExist:
+            raise NotFound("Sync log not found.")
         new_status = request.data.get("status")
         if new_status == "manually_resolved":
             log.status = POSSyncLog.Status.MANUALLY_RESOLVED
@@ -1951,7 +2022,7 @@ class TestSquareOAuth:
         api_client.force_authenticate(user=user)
         return {"user": user, "restaurant": restaurant, "client": api_client}
 
-    @patch("integrations.views.settings")
+    @patch("integrations.views.django_settings")
     def test_initiate_square_connect(self, mock_settings, owner_setup):
         mock_settings.POS_SQUARE_CLIENT_ID = "sq_client_123"
         mock_settings.FRONTEND_URL = "http://localhost:3000"
@@ -1981,10 +2052,12 @@ class TestSquareOAuth:
         user = UserFactory()
         restaurant = RestaurantFactory(owner=user, slug="oauth-cb-test")
 
-        # Simulate the callback with state containing restaurant slug
+        # Simulate the callback with HMAC-signed state
+        from integrations.views import _sign_oauth_state
+        signed_state = _sign_oauth_state(f"{restaurant.slug}:{user.id}")
         response = api_client.get(
             "/api/integrations/oauth/square/callback/",
-            {"code": "auth_code_123", "state": f"{restaurant.slug}:{user.id}"},
+            {"code": "auth_code_123", "state": signed_state},
         )
         assert response.status_code == status.HTTP_302_FOUND
 
@@ -2061,6 +2134,7 @@ class POSConnectInitiateView(RestaurantPOSMixin, APIView):
 
 
 class SquareOAuthCallbackView(APIView):
+    authentication_classes = []
     permission_classes = []
 
     def get(self, request):
@@ -2080,7 +2154,13 @@ class SquareOAuthCallbackView(APIView):
                 {"error": "Invalid state parameter"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        restaurant = Restaurant.objects.get(slug=slug, owner_id=user_id)
+        try:
+            restaurant = Restaurant.objects.get(slug=slug, owner_id=user_id)
+        except Restaurant.DoesNotExist:
+            return Response(
+                {"error": "Restaurant not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         client = SquareClient(environment="production")
         result = client.o_auth.obtain_token(
@@ -2211,6 +2291,7 @@ git commit -m "feat: add Square OAuth connect flow with token encryption"
 # backend/integrations/tests/test_payment_mode.py
 import pytest
 from decimal import Decimal
+from unittest.mock import patch
 from rest_framework import status
 
 from integrations.tests.factories import POSConnectionFactory
@@ -2250,8 +2331,9 @@ class TestPaymentModeAwareness:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["payment_mode"] == "stripe"
 
-    def test_confirm_order_with_pos_collected(self, api_client, pos_collected_restaurant):
-        data = {
+    @pytest.fixture
+    def confirm_data(self, pos_collected_restaurant):
+        return {
             "items": [
                 {
                     "menu_item_id": pos_collected_restaurant["item"].id,
@@ -2263,12 +2345,24 @@ class TestPaymentModeAwareness:
             "raw_input": "one coffee",
             "table_identifier": "3",
         }
+
+    def test_confirm_order_with_pos_collected(self, api_client, pos_collected_restaurant, confirm_data):
         response = api_client.post(
-            "/api/order/pos-pay-test/confirm/", data, format="json"
+            "/api/order/pos-pay-test/confirm/", confirm_data, format="json"
         )
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["payment_status"] == "pos_collected"
         assert response.data["status"] == "confirmed"
+
+    @patch("orders.views.dispatch_order_to_pos")
+    def test_confirm_pos_collected_dispatches_to_pos(
+        self, mock_dispatch, api_client, pos_collected_restaurant, confirm_data
+    ):
+        response = api_client.post(
+            "/api/order/pos-pay-test/confirm/", confirm_data, format="json"
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        mock_dispatch.delay.assert_called_once_with(str(response.data["id"]))
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2317,25 +2411,68 @@ def get_public_menu(slug: str) -> dict:
 
 - [ ] **Step 4: Add pos_collected awareness to ConfirmOrderView**
 
-In `backend/orders/views.py`, in `ConfirmOrderView.post()` (line 33), add the payment mode check after the restaurant lookup (around line 37). Also ensure the POS dispatch is called for pos_collected orders (which skip the payment flow entirely):
+In `backend/orders/views.py`, modify `ConfirmOrderView.post()` (line 33). Add the import at the top of the file and update the method body:
 
 ```python
-# Add import at top of file:
+# Add imports at top of views.py (alongside existing imports):
 from integrations.models import POSConnection
-
-# Inside ConfirmOrderView.post(), after getting the restaurant (line ~37):
-try:
-    pos_connection = POSConnection.objects.get(restaurant=restaurant, is_active=True)
-    payment_mode = pos_connection.payment_mode
-except POSConnection.DoesNotExist:
-    payment_mode = "stripe"
-
-# When calling OrderService.create_order(), pass payment_status based on mode:
-# If pos_collected, set payment_status="pos_collected" instead of "pending"
-payment_status = "pos_collected" if payment_mode == "pos_collected" else "pending"
+from integrations.tasks import dispatch_order_to_pos
 ```
 
-Pass `payment_status` to `OrderService.create_order()`. The existing `dispatch_order_to_pos.delay(str(order.id))` call (added in Task 8, Step 3) already fires after order creation, so pos_collected orders will be dispatched to the POS correctly.
+Replace the current `ConfirmOrderView.post()` method body (as modified by Task 8, which added the dispatch hook) with:
+
+```python
+def post(self, request, slug):
+    restaurant = OrderService.get_restaurant_by_slug(slug)
+
+    serializer = ConfirmOrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+
+    validated_items, pricing = OrderService.validate_and_price_items(
+        restaurant, data["items"]
+    )
+    user = OrderService.resolve_user_from_request(request)
+
+    # Determine payment mode from POS connection
+    try:
+        pos_connection = POSConnection.objects.get(restaurant=restaurant, is_active=True)
+        payment_mode = pos_connection.payment_mode
+    except POSConnection.DoesNotExist:
+        payment_mode = "stripe"
+
+    payment_status = "pos_collected" if payment_mode == "pos_collected" else "pending"
+
+    order = OrderService.create_order(
+        restaurant,
+        validated_items,
+        pricing,
+        user=user,
+        order_status="confirmed",
+        payment_status=payment_status,
+        raw_input=data["raw_input"],
+        parsed_json=request.data,
+        language=data.get("language", "en"),
+        table_identifier=data.get("table_identifier"),
+        customer_name=data.get("customer_name", ""),
+        customer_phone=data.get("customer_phone", ""),
+    )
+
+    from orders.broadcast import broadcast_order_to_kitchen
+
+    broadcast_order_to_kitchen(order)
+
+    # POS dispatch — only for pos_collected orders, which skip the payment
+    # flow entirely. Stripe-mode orders are dispatched after payment
+    # confirmation (from ConfirmPaymentView / StripeWebhookView).
+    if payment_mode == "pos_collected":
+        dispatch_order_to_pos.delay(str(order.id))
+
+    return Response(
+        OrderResponseSerializer(order).data,
+        status=status.HTTP_201_CREATED,
+    )
+```
 
 - [ ] **Step 5: Run tests**
 
@@ -2398,6 +2535,8 @@ export interface POSSyncLog {
 ```
 
 - [ ] **Step 2: Add POS API functions**
+
+> **Note:** The spec uses `<id>` in endpoint paths, but the existing codebase consistently uses restaurant `slug` (not numeric ID) for URL routing (e.g., `/api/order/<slug>/menu/`). The backend URL patterns in Task 12 should accept `slug` as the restaurant identifier for consistency.
 
 Add to `frontend/src/lib/api.ts`:
 
@@ -2490,7 +2629,7 @@ git commit -m "feat: add POS integration API functions and types"
 
 **Files:**
 - Create: `frontend/src/hooks/use-pos-connection.ts`
-- Create: `frontend/src/app/account/restaurants/[slug]/integrations/page.tsx`
+- Create: `frontend/src/app/account/restaurants/[slug]/settings/integrations/page.tsx`
 
 - [ ] **Step 1: Create the React Query hook**
 
@@ -2547,10 +2686,15 @@ export function usePOSConnectionUpdate(slug: string) {
 - [ ] **Step 2: Create the POS settings page**
 
 ```typescript
-// frontend/src/app/account/restaurants/[slug]/integrations/page.tsx
+// frontend/src/app/account/restaurants/[slug]/settings/integrations/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   usePOSConnect,
   usePOSConnection,
@@ -2563,16 +2707,33 @@ export default function POSIntegrationsPage() {
   const searchParams = useSearchParams();
   const slug = params.slug;
 
-  const { data: connection, isLoading } = usePOSConnection(slug);
+  const { data: connection, isLoading, error } = usePOSConnection(slug);
   const connect = usePOSConnect();
   const disconnect = usePOSDisconnect(slug);
   const updateConnection = usePOSConnectionUpdate(slug);
+
+  // Local state for location ID input (avoid PATCH on every keystroke)
+  const [locationId, setLocationId] = useState("");
+
+  useEffect(() => {
+    if (connection?.external_location_id != null) {
+      setLocationId(connection.external_location_id);
+    }
+  }, [connection?.external_location_id]);
 
   const justConnected = searchParams.get("connected");
   const oauthError = searchParams.get("error");
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-destructive">
+        Failed to load POS connection. Please try again later.
+      </div>
+    );
   }
 
   const isConnected = connection?.is_connected ?? false;
@@ -2594,7 +2755,7 @@ export default function POSIntegrationsPage() {
       )}
 
       {/* Connection Status */}
-      <div className="rounded-lg border p-6">
+      <Card className="p-6">
         <h2 className="text-lg font-semibold">Connection Status</h2>
         <div className="mt-4 flex items-center gap-3">
           <span
@@ -2607,68 +2768,72 @@ export default function POSIntegrationsPage() {
               ? `Connected to ${connection?.pos_type}`
               : "No POS connected"}
           </span>
+          {isConnected && <Badge variant="outline">Active</Badge>}
         </div>
 
         {!isConnected && (
           <div className="mt-4 flex gap-3">
-            <button
+            <Button
               onClick={() => connect.mutate({ slug, posType: "square" })}
-              className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
               disabled={connect.isPending}
             >
               {connect.isPending ? "Connecting..." : "Connect Square"}
-            </button>
-            <button
-              disabled
-              className="rounded-md bg-gray-200 px-4 py-2 text-gray-400 cursor-not-allowed"
-              title="Coming soon"
-            >
+            </Button>
+            <Button variant="outline" disabled title="Coming soon">
               Connect Toast (Coming Soon)
-            </button>
+            </Button>
           </div>
         )}
 
         {isConnected && (
-          <button
+          <Button
+            variant="outline"
+            className="mt-4 border-destructive text-destructive hover:bg-destructive/10"
             onClick={() => {
               if (window.confirm("Disconnect POS? Orders will no longer sync.")) {
                 disconnect.mutate();
               }
             }}
-            className="mt-4 rounded-md border border-red-300 px-4 py-2 text-red-600 hover:bg-red-50"
             disabled={disconnect.isPending}
           >
             Disconnect
-          </button>
+          </Button>
         )}
-      </div>
+      </Card>
 
       {/* Location Selector (for multi-location POS accounts) */}
       {isConnected && (
-        <div className="rounded-lg border p-6">
+        <Card className="p-6">
           <h2 className="text-lg font-semibold">POS Location</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Enter the location ID from your POS dashboard for the location that should receive QR orders.
           </p>
           <div className="mt-4 flex gap-3">
-            <input
+            <Input
               type="text"
-              value={connection?.external_location_id ?? ""}
-              onChange={(e) =>
-                updateConnection.mutate({ external_location_id: e.target.value })
-              }
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
               placeholder="e.g., L1234ABC (Square) or GUID (Toast)"
-              className="flex-1 rounded-md border px-3 py-2 text-sm"
+              className="flex-1"
             />
+            <Button
+              onClick={() =>
+                updateConnection.mutate({ external_location_id: locationId })
+              }
+              disabled={updateConnection.isPending || locationId === (connection?.external_location_id ?? "")}
+            >
+              {updateConnection.isPending ? "Saving..." : "Save"}
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Payment Mode */}
+      {/* Payment Mode — uses raw radio inputs since shadcn/ui RadioGroup is not installed.
+         If adding it later: `npx shadcn@latest add radio-group` */}
       {isConnected && (
-        <div className="rounded-lg border p-6">
+        <Card className="p-6">
           <h2 className="text-lg font-semibold">Payment Mode</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Choose how payments are collected for QR orders.
           </p>
           <div className="mt-4 space-y-3">
@@ -2685,7 +2850,7 @@ export default function POSIntegrationsPage() {
               />
               <div>
                 <div className="font-medium">Pay online (Stripe)</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted-foreground">
                   Customers pay through the app. Orders appear as paid in your
                   POS.
                 </div>
@@ -2704,14 +2869,14 @@ export default function POSIntegrationsPage() {
               />
               <div>
                 <div className="font-medium">Pay at counter (POS)</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-muted-foreground">
                   Orders are sent to your POS. Customers pay at the counter or
                   table.
                 </div>
               </div>
             </label>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
@@ -2721,13 +2886,13 @@ export default function POSIntegrationsPage() {
 - [ ] **Step 3: Verify page renders**
 
 Run: `cd frontend && npm run dev`
-Navigate to: `http://localhost:3000/account/restaurants/[your-slug]/integrations`
+Navigate to: `http://localhost:3000/account/restaurants/[your-slug]/settings/integrations`
 Expected: Page renders with connection status and connect buttons.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add frontend/src/hooks/use-pos-connection.ts frontend/src/app/account/restaurants/\[slug\]/integrations/
+git add frontend/src/hooks/use-pos-connection.ts frontend/src/app/account/restaurants/\[slug\]/settings/integrations/
 git commit -m "feat: add POS connection settings page with Square OAuth connect"
 ```
 
@@ -2798,7 +2963,10 @@ export function useMarkResolved(slug: string) {
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   useMarkResolved,
   usePOSSyncLogs,
@@ -2806,12 +2974,12 @@ import {
   useRetrySync,
 } from "@/hooks/use-pos-sync-logs";
 
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  success: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  retrying: "bg-orange-100 text-orange-800",
-  manually_resolved: "bg-gray-100 text-gray-800",
+const STATUS_VARIANTS: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
+  pending: "secondary",
+  success: "default",
+  failed: "destructive",
+  retrying: "secondary",
+  manually_resolved: "outline",
 };
 
 export default function POSSyncLogsPage() {
@@ -2819,7 +2987,7 @@ export default function POSSyncLogsPage() {
   const slug = params.slug;
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
 
-  const { data: logs, isLoading } = usePOSSyncLogs(slug, statusFilter);
+  const { data: logs, isLoading, error } = usePOSSyncLogs(slug, statusFilter);
   const retrySync = useRetrySync(slug);
   const retryAll = useRetryAllSync(slug);
   const markResolved = useMarkResolved(slug);
@@ -2829,34 +2997,37 @@ export default function POSSyncLogsPage() {
     logs?.filter((l) => l.status === "pending" || l.status === "retrying")
       .length ?? 0;
 
+  if (error) {
+    return (
+      <div className="p-6 text-destructive">
+        Failed to load sync logs. Please try again later.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">POS Sync Status</h1>
         {failedCount > 0 && (
-          <button
+          <Button
             onClick={() => retryAll.mutate()}
             disabled={retryAll.isPending}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {retryAll.isPending
               ? "Retrying..."
               : `Retry All Failed (${failedCount})`}
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Summary bar */}
       <div className="flex gap-4">
         {failedCount > 0 && (
-          <span className="rounded-full bg-red-100 px-3 py-1 text-sm text-red-800">
-            {failedCount} failed
-          </span>
+          <Badge variant="destructive">{failedCount} failed</Badge>
         )}
         {pendingCount > 0 && (
-          <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800">
-            {pendingCount} pending
-          </span>
+          <Badge variant="secondary">{pendingCount} pending</Badge>
         )}
       </div>
 
@@ -2864,17 +3035,14 @@ export default function POSSyncLogsPage() {
       <div className="flex gap-2">
         {["all", "failed", "pending", "retrying", "success", "manually_resolved"].map(
           (s) => (
-            <button
+            <Button
               key={s}
+              variant={(s === "all" && !statusFilter) || statusFilter === s ? "default" : "outline"}
+              size="sm"
               onClick={() => setStatusFilter(s === "all" ? undefined : s)}
-              className={`rounded-md px-3 py-1 text-sm ${
-                (s === "all" && !statusFilter) || statusFilter === s
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
             >
               {s === "all" ? "All" : s.replace("_", " ")}
-            </button>
+            </Button>
           )
         )}
       </div>
@@ -2883,7 +3051,7 @@ export default function POSSyncLogsPage() {
         <div>Loading...</div>
       ) : (
         <table className="w-full text-left text-sm">
-          <thead className="border-b text-gray-500">
+          <thead className="border-b text-muted-foreground">
             <tr>
               <th className="pb-2">Order</th>
               <th className="pb-2">Date</th>
@@ -2898,43 +3066,46 @@ export default function POSSyncLogsPage() {
             {logs?.map((log) => (
               <tr key={log.id}>
                 <td className="py-3 font-mono text-xs">
-                  {log.order_id.slice(0, 8)}...
+                  <Link
+                    href={`/account/orders/${log.order_id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {log.order_id.slice(0, 8)}...
+                  </Link>
                 </td>
                 <td className="py-3">
                   {new Date(log.order_created_at).toLocaleString()}
                 </td>
                 <td className="py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      STATUS_COLORS[log.status] ?? ""
-                    }`}
-                  >
+                  <Badge variant={STATUS_VARIANTS[log.status] ?? "outline"}>
                     {log.status.replace("_", " ")}
-                  </span>
+                  </Badge>
                 </td>
                 <td className="py-3 font-mono text-xs">
                   {log.external_order_id ?? "-"}
                 </td>
                 <td className="py-3">{log.attempt_count}</td>
-                <td className="max-w-xs truncate py-3 text-xs text-gray-500">
+                <td className="max-w-xs truncate py-3 text-xs text-muted-foreground">
                   {log.last_error ?? "-"}
                 </td>
                 <td className="py-3">
                   <div className="flex gap-2">
                     {log.status === "failed" && (
                       <>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => retrySync.mutate(log.order_id)}
-                          className="text-xs text-blue-600 hover:underline"
                         >
                           Retry
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => markResolved.mutate(log.id)}
-                          className="text-xs text-gray-600 hover:underline"
                         >
                           Mark Resolved
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -2946,7 +3117,7 @@ export default function POSSyncLogsPage() {
       )}
 
       {logs?.length === 0 && (
-        <div className="py-12 text-center text-gray-500">
+        <div className="py-12 text-center text-muted-foreground">
           No sync logs found.
         </div>
       )}
@@ -3022,15 +3193,10 @@ const handleConfirm = () => {
     special_requests: item.special_requests,
   }));
 
-  const prefAllergies = allergyNote
-    ? allergyNote.split(",").map((a) => a.trim()).filter(Boolean)
-    : [];
-  const allAllergies = Array.from(new Set([...parsedAllergies, ...prefAllergies]));
-
   if (paymentMode === "pos_collected") {
     // Skip Stripe — just confirm the order
     confirmOrderMutation.mutate(
-      { items, rawInput, tableIdentifier, language, customerName, customerPhone, allergies: allAllergies },
+      { items, rawInput, tableIdentifier, language, customerName, customerPhone },
       {
         onSuccess: (result) => {
           setOrderId(result.id);
@@ -3044,7 +3210,7 @@ const handleConfirm = () => {
   } else {
     // Existing Stripe payment flow
     createPaymentMutation.mutate(
-      { items, rawInput, tableIdentifier, language, customerName, customerPhone, allergies: allAllergies },
+      { items, rawInput, tableIdentifier, language, customerName, customerPhone },
       {
         onSuccess: (result) => {
           setOrderId(result.id);
@@ -3060,24 +3226,89 @@ const handleConfirm = () => {
 };
 ```
 
-3. In `frontend/src/app/order/[slug]/page.tsx`, pass `paymentMode` to `ConfirmationStep` (line 79):
+3. Update the button's disabled/loading state to account for which mutation is active. Find the submit `<Button>` in `ConfirmationStep` and update:
+
+```typescript
+const isSubmitting = paymentMode === "pos_collected"
+  ? confirmOrderMutation.isPending
+  : createPaymentMutation.isPending;
+
+// In the JSX:
+<Button disabled={isSubmitting || !customerName.trim()} onClick={handleConfirm}>
+  {isSubmitting
+    ? (paymentMode === "pos_collected" ? "Placing order..." : "Setting up payment...")
+    : "Place Order"}
+</Button>
+```
+
+4. In `frontend/src/app/order/[slug]/page.tsx`, pass `paymentMode` to `ConfirmationStep` (line 79):
 
 ```typescript
 {step === "confirmation" && (
   <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />
 )}
+```
 
-- [ ] **Step 3: Verify the flow**
+- [ ] **Step 3: Add `paymentMode` to the order store**
+
+In `frontend/src/stores/order-store.ts`, add a `paymentMode` field to the store state and a setter action:
+
+```typescript
+// Add to the OrderState interface:
+paymentMode: "stripe" | "pos_collected";
+setPaymentMode: (mode: "stripe" | "pos_collected") => void;
+
+// Add to the create() initial state:
+paymentMode: "stripe",
+setPaymentMode: (mode) => set({ paymentMode: mode }),
+```
+
+Then in `ConfirmationStep`, call `setPaymentMode(paymentMode)` before transitioning to `"submitted"`:
+
+```typescript
+// Inside the pos_collected branch of handleConfirm, before setStep:
+const { setOrderId, setStep, setPaymentMode } = useOrderStore();
+
+// In onSuccess:
+onSuccess: (result) => {
+  setOrderId(result.id);
+  setPaymentMode("pos_collected");
+  setStep("submitted");
+},
+```
+
+- [ ] **Step 4: Update SubmittedStep for pos_collected mode**
+
+The `SubmittedStep` component (`frontend/src/app/order/[slug]/components/SubmittedStep.tsx`) currently always shows "Your order has been sent to the kitchen." For pos_collected restaurants, it must also show "Please pay at the counter."
+
+Modify `SubmittedStep.tsx`:
+
+```typescript
+// Add to useOrderStore destructuring (line 14):
+const { orderId, tableIdentifier, customerName, customerPhone, paymentMode } = useOrderStore();
+
+// Replace the kitchen message (line 57-59):
+<p className="text-sm text-muted-foreground mt-4">
+  Your order has been sent to the kitchen.
+  {paymentMode === "pos_collected" && (
+    <span className="block mt-1 font-medium text-foreground">
+      Please pay at the counter.
+    </span>
+  )}
+</p>
+```
+
+- [ ] **Step 5: Verify the flow**
 
 1. Set up a restaurant with `payment_mode = "pos_collected"` in the database
 2. Navigate to the order page for that restaurant
 3. Submit an order
-4. Expected: No Stripe payment form appears. Instead, see "Your order has been sent. Please pay at the counter."
+4. Expected: No Stripe payment form appears. Instead, see "Your order has been sent to the kitchen. Please pay at the counter."
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add frontend/src/app/order/ frontend/src/hooks/
+git add frontend/src/app/order/ frontend/src/hooks/ frontend/src/stores/order-store.ts
 git commit -m "feat: skip Stripe payment UI when restaurant uses POS-collected payment mode"
 ```
 
@@ -3086,8 +3317,14 @@ git commit -m "feat: skip Stripe payment UI when restaurant uses POS-collected p
 ### Task 18: Kitchen Display Print Button
 
 **Files:**
+- Modify: `frontend/src/types/index.ts` — add `modifiers` to order item type
 - Modify: `frontend/src/app/kitchen/[slug]/components/OrderCard.tsx` — add print button and hidden print template
 - Create: `frontend/src/app/kitchen/[slug]/print.css` — print-specific CSS
+
+> **Type prerequisite:** Before implementing the print receipt, add `modifiers` to the order item type in `frontend/src/types/index.ts`. Find the order item interface and add:
+> ```typescript
+> modifiers?: { id: number; name: string; price_adjustment: string }[];
+> ```
 
 The kitchen display has this component structure:
 - `frontend/src/app/kitchen/[slug]/page.tsx` — main page with WebSocket connection
@@ -3100,21 +3337,27 @@ Create `frontend/src/app/kitchen/[slug]/print.css`:
 
 ```css
 @media print {
+  /* Hide everything via visibility (not display) so descendants can
+     override — display:none removes elements from the render tree
+     entirely, making child overrides impossible. */
   body * {
-    display: none !important;
+    visibility: hidden;
   }
+  /* Show only the active receipt and its contents */
   .print-receipt,
   .print-receipt * {
-    display: block !important;
+    visibility: visible !important;
   }
   .print-receipt {
-    position: absolute;
+    position: fixed;
     left: 0;
     top: 0;
     width: 80mm; /* standard thermal receipt width */
     font-family: monospace;
     font-size: 12px;
     padding: 4mm;
+    z-index: 9999;
+    background: white;
   }
 }
 ```
@@ -3135,6 +3378,7 @@ Add the print handler function inside the component (before the return statement
 // frontend/src/app/kitchen/[slug]/components/OrderCard.tsx
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { OrderResponse } from "@/types";
@@ -3192,12 +3436,14 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handlePrint}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="text-xs"
           >
             Print
-          </button>
+          </Button>
           <span className="text-xs text-muted-foreground">
             {timeSince(order.created_at)}
           </span>
@@ -3242,6 +3488,9 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
         {order.items.map((item) => (
           <div key={item.id}>
             {item.quantity}x {item.name} ({item.variant_label})
+            {item.modifiers?.map((mod) => (
+              <div key={mod.id}>  + {mod.name}</div>
+            ))}
             {item.special_requests && <div>  Note: {item.special_requests}</div>}
           </div>
         ))}
@@ -3280,7 +3529,9 @@ git commit -m "feat: add print button to kitchen order cards for receipt printin
 
 ---
 
-### Task 19: Admin Registration for POS Models
+### Task 19: Admin Registration for POS Models (Backend)
+
+> **Note:** This is a small backend task included in Chunk 3 for convenience — it has no frontend dependencies and can be done at any point.
 
 **Files:**
 - Modify: `backend/integrations/admin.py`
