@@ -91,6 +91,8 @@ import type {
   OrderDetail,
   SavedPaymentMethod,
   Subscription,
+  POSConnectionResponse,
+  POSSyncLog,
 } from "@/types";
 
 // ── Auth ──
@@ -341,5 +343,79 @@ export async function reactivateSubscription(
   return apiFetch<Subscription>(
     `/api/restaurants/${slug}/subscription/reactivate/`,
     { method: "POST" }
+  );
+}
+
+// ── POS Integration ──
+export async function fetchPOSConnection(
+  slug: string
+): Promise<POSConnectionResponse> {
+  return apiFetch<POSConnectionResponse>(
+    `/api/restaurants/${slug}/pos/connection/`
+  );
+}
+
+export async function initiatePOSConnect(
+  slug: string,
+  posType: string
+): Promise<{ auth_url: string }> {
+  return apiFetch<{ auth_url: string }>(
+    `/api/restaurants/${slug}/pos/connect/`,
+    { method: "POST", body: JSON.stringify({ pos_type: posType }) }
+  );
+}
+
+export async function disconnectPOS(slug: string): Promise<void> {
+  await apiFetch(`/api/restaurants/${slug}/pos/connection/`, {
+    method: "DELETE",
+  });
+}
+
+export async function updatePOSConnection(
+  slug: string,
+  data: { payment_mode?: string; external_location_id?: string }
+): Promise<POSConnectionResponse> {
+  return apiFetch<POSConnectionResponse>(
+    `/api/restaurants/${slug}/pos/connection/`,
+    { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
+export async function fetchPOSSyncLogs(
+  slug: string,
+  statusFilter?: string
+): Promise<POSSyncLog[]> {
+  const query = statusFilter ? `?status=${statusFilter}` : "";
+  return apiFetch<POSSyncLog[]>(
+    `/api/restaurants/${slug}/pos/sync-logs/${query}`
+  );
+}
+
+export async function retryPOSSync(
+  slug: string,
+  orderId: string
+): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>(
+    `/api/restaurants/${slug}/pos/retry/${orderId}/`,
+    { method: "POST" }
+  );
+}
+
+export async function retryAllPOSSync(
+  slug: string
+): Promise<{ status: string; count: number }> {
+  return apiFetch<{ status: string; count: number }>(
+    `/api/restaurants/${slug}/pos/retry-all/`,
+    { method: "POST" }
+  );
+}
+
+export async function markSyncResolved(
+  slug: string,
+  logId: string
+): Promise<POSSyncLog> {
+  return apiFetch<POSSyncLog>(
+    `/api/restaurants/${slug}/pos/sync-logs/${logId}/`,
+    { method: "PATCH", body: JSON.stringify({ status: "manually_resolved" }) }
   );
 }

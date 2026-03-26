@@ -1,5 +1,6 @@
 "use client";
 
+import "./print.css";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useKitchenStore } from "@/stores/kitchen-store";

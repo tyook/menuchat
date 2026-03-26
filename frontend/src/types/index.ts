@@ -78,6 +78,7 @@ export interface MenuCategory {
 export interface PublicMenu {
   restaurant_name: string;
   tax_rate: string;
+  payment_mode: "stripe" | "pos_collected";
   categories: MenuCategory[];
 }
 
@@ -129,6 +130,7 @@ export interface OrderResponse {
     variant_price: string;
     quantity: number;
     special_requests: string;
+    modifiers?: { id: number; name: string; price_adjustment: string }[];
   }[];
 }
 
@@ -156,4 +158,28 @@ export interface SavedPaymentMethod {
   last4: string;
   exp_month: number;
   exp_year: number;
+}
+
+// POS Integration types
+export interface POSConnectionResponse {
+  id: string;
+  pos_type: "square" | "toast" | "middleware" | "none";
+  is_active: boolean;
+  payment_mode: "stripe" | "pos_collected";
+  external_location_id: string | null;
+  is_connected: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface POSSyncLog {
+  id: string;
+  order_id: string;
+  order_created_at: string;
+  status: "pending" | "success" | "failed" | "retrying" | "manually_resolved";
+  external_order_id: string | null;
+  attempt_count: number;
+  last_error: string | null;
+  next_retry_at: string | null;
+  created_at: string;
 }
