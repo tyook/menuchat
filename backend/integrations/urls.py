@@ -3,10 +3,12 @@ from django.urls import path
 
 from integrations.views import (
     POSConnectionDetailView,
+    POSConnectInitiateView,
     POSSyncLogDetailView,
     POSSyncLogListView,
     RetryAllSyncView,
     RetryOrderSyncView,
+    SquareOAuthCallbackView,
 )
 
 urlpatterns = [
@@ -14,6 +16,11 @@ urlpatterns = [
         "restaurants/<slug:slug>/pos/connection/",
         POSConnectionDetailView.as_view(),
         name="pos-connection-detail",
+    ),
+    path(
+        "restaurants/<slug:slug>/pos/connect/",
+        POSConnectInitiateView.as_view(),
+        name="pos-connect-initiate",
     ),
     path(
         "restaurants/<slug:slug>/pos/sync-logs/",
@@ -34,5 +41,10 @@ urlpatterns = [
         "restaurants/<slug:slug>/pos/sync-logs/<uuid:log_id>/",
         POSSyncLogDetailView.as_view(),
         name="pos-sync-log-detail",
+    ),
+    path(
+        "integrations/oauth/square/callback/",
+        SquareOAuthCallbackView.as_view(),
+        name="square-oauth-callback",
     ),
 ]

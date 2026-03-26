@@ -121,3 +121,127 @@ class POSSyncLogDetailView(RestaurantPOSMixin, APIView):
                 pos_sync_status="manually_resolved"
             )
         return Response(POSSyncLogSerializer(log).data)
+
+
+from django.conf import settings as django_settings
+from django.http import HttpResponseRedirect
+from django.utils.dateparse import parse_datetime
+from square import Square as SquareClient
+
+import hashlib
+import hmac
+
+from integrations.encryption import encrypt_token
+
+
+def _sign_oauth_state(payload: str) -> str:
+    """HMAC-sign an OAuth state string to prevent tampering."""
+    from django.conf import settings as s
+    key = s.SECRET_KEY.encode()
+    sig = hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{payload}:{sig}"
+
+
+def _verify_oauth_state(state: str) -> tuple[str, str]:
+    """Verify and parse an HMAC-signed OAuth state. Returns (slug, user_id)."""
+    from django.conf import settings as s
+    parts = state.rsplit(":", 2)
+    if len(parts) != 3:
+        raise ValueError("Invalid OAuth state format")
+    slug, user_id, sig = parts
+    key = s.SECRET_KEY.encode()
+    expected = hmac.new(key, f"{slug}:{user_id}".encode(), hashlib.sha256).hexdigest()[:16]
+    if not hmac.compare_digest(sig, expected):
+        raise ValueError("Invalid OAuth state signature")
+    return slug, user_id
+
+
+class POSConnectInitiateView(RestaurantPOSMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, slug):
+        restaurant = self.get_restaurant(slug)
+        pos_type = request.data.get("pos_type")
+
+        if pos_type == "square":
+            state = _sign_oauth_state(f"{restaurant.slug}:{request.user.id}")
+            auth_url = (
+                f"https://connect.squareup.com/oauth2/authorize"
+                f"?client_id={django_settings.POS_SQUARE_CLIENT_ID}"
+                f"&scope=ORDERS_WRITE+ORDERS_READ+MERCHANT_PROFILE_READ"
+                f"&state={state}"
+                f"&session=false"
+            )
+            return Response({"auth_url": auth_url})
+
+        return Response(
+            {"error": f"Unsupported POS type: {pos_type}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class SquareOAuthCallbackView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        code = request.query_params.get("code")
+        state = request.query_params.get("state")
+
+        if not code or not state:
+            return Response(
+                {"error": "Missing code or state"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            slug, user_id = _verify_oauth_state(state)
+        except ValueError:
+            return Response(
+                {"error": "Invalid state parameter"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            restaurant = Restaurant.objects.get(slug=slug, owner_id=user_id)
+        except Restaurant.DoesNotExist:
+            return Response(
+                {"error": "Restaurant not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        client = SquareClient(environment="production")
+        result = client.o_auth.obtain_token(
+            body={
+                "client_id": django_settings.POS_SQUARE_CLIENT_ID,
+                "client_secret": django_settings.POS_SQUARE_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+            }
+        )
+
+        if not result.is_success():
+            frontend_url = getattr(django_settings, "FRONTEND_URL", "http://localhost:3000")
+            return HttpResponseRedirect(
+                f"{frontend_url}/account/restaurants/{slug}/integrations?error=oauth_failed"
+            )
+
+        token_data = result.body
+        connection, _ = POSConnection.objects.update_or_create(
+            restaurant=restaurant,
+            defaults={
+                "pos_type": POSConnection.POSType.SQUARE,
+                "is_active": True,
+                "oauth_access_token": encrypt_token(token_data["access_token"]),
+                "oauth_refresh_token": encrypt_token(
+                    token_data.get("refresh_token", "")
+                ),
+                "oauth_token_expires_at": parse_datetime(
+                    token_data.get("expires_at", "")
+                ),
+            },
+        )
+
+        frontend_url = getattr(django_settings, "FRONTEND_URL", "http://localhost:3000")
+        return HttpResponseRedirect(
+            f"{frontend_url}/account/restaurants/{slug}/integrations?connected=square"
+        )
