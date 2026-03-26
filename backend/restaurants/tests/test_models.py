@@ -2,8 +2,9 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 
-from restaurants.models import MenuCategory, MenuItem, MenuItemModifier, MenuItemVariant, Restaurant, RestaurantStaff
+from restaurants.models import ConnectedAccount, MenuCategory, MenuItem, MenuItemModifier, MenuItemVariant, Restaurant, RestaurantStaff
 from restaurants.tests.factories import (
     MenuItemVariantFactory,
     UserFactory,
@@ -107,6 +108,37 @@ class TestMenuModels:
         cat = MenuCategory.objects.create(restaurant=restaurant, name="Drinks", sort_order=2)
         item = MenuItem.objects.create(category=cat, name="Coke", description="", sort_order=1)
         assert item.category.restaurant == restaurant
+
+
+@pytest.mark.django_db
+class TestConnectedAccount:
+    @pytest.fixture
+    def restaurant(self):
+        owner = User.objects.create_user(email="caowner@example.com", password="testpass123")
+        return Restaurant.objects.create(name="CA Test", slug="ca-test", owner=owner)
+
+    def test_create_connected_account(self, restaurant):
+        account = ConnectedAccount.objects.create(
+            restaurant=restaurant,
+            stripe_account_id="acct_test123",
+        )
+        assert account.stripe_account_id == "acct_test123"
+        assert account.onboarding_complete is False
+        assert account.payouts_enabled is False
+        assert account.charges_enabled is False
+        assert account.pending_refund_balance == 0
+        assert account.restaurant == restaurant
+
+    def test_one_to_one_constraint(self, restaurant):
+        ConnectedAccount.objects.create(
+            restaurant=restaurant,
+            stripe_account_id="acct_test123",
+        )
+        with pytest.raises(IntegrityError):
+            ConnectedAccount.objects.create(
+                restaurant=restaurant,
+                stripe_account_id="acct_test456",
+            )
 
 
 @pytest.mark.django_db

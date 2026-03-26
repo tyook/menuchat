@@ -142,3 +142,22 @@ class MenuItemModifier(models.Model):
 
     def __str__(self):
         return f"{self.menu_item.name} + {self.name} (${self.price_adjustment})"
+
+
+class ConnectedAccount(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    restaurant = models.OneToOneField(
+        Restaurant, on_delete=models.CASCADE, related_name="connected_account"
+    )
+    stripe_account_id = models.CharField(max_length=255, unique=True)
+    onboarding_complete = models.BooleanField(default=False)
+    payouts_enabled = models.BooleanField(default=False)
+    charges_enabled = models.BooleanField(default=False)
+    pending_refund_balance = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ConnectedAccount({self.restaurant.name}, {self.stripe_account_id})"
