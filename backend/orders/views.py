@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from orders.broadcast import broadcast_order_to_customer
 from orders.models import Order
 from orders.queue_service import QueueService
 from orders.serializers import ConfirmOrderSerializer, OrderResponseSerializer, ParseInputSerializer
@@ -65,6 +66,11 @@ class ConfirmOrderView(APIView):
         from orders.broadcast import broadcast_order_to_kitchen
 
         broadcast_order_to_kitchen(order)
+        broadcast_order_to_customer(order)
+        from orders.tasks import broadcast_queue_updates
+        broadcast_queue_updates.apply_async(
+            args=[str(order.restaurant_id), str(order.id)],
+        )
 
         return Response(
             OrderResponseSerializer(order).data,
@@ -128,6 +134,12 @@ class CreatePaymentView(APIView):
             order.save(update_fields=["status", "payment_status"])
             response_data["status"] = "confirmed"
             response_data["payment_status"] = "paid"
+            OrderService.set_status_timestamp(order, "confirmed")
+            broadcast_order_to_customer(order)
+            from orders.tasks import broadcast_queue_updates
+            broadcast_queue_updates.apply_async(
+                args=[str(order.restaurant_id), str(order.id)],
+            )
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
