@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, LogOut, UtensilsCrossed, User } from "lucide-react";
+import {
+  CreditCard,
+  LogOut,
+  ShoppingBag,
+  Store,
+  UtensilsCrossed,
+  User as UserIcon,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,8 +31,8 @@ export function Header() {
     setMounted(true);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 
@@ -40,12 +47,26 @@ export function Header() {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1 text-sm">
-          <Link href="/admin">
+          <Link href="/account/orders">
             <Button variant="ghost" size="sm" className="gap-1.5">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
+              <ShoppingBag className="h-4 w-4" />
+              Orders
             </Button>
           </Link>
+          <Link href="/account/profile">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <UserIcon className="h-4 w-4" />
+              Profile
+            </Button>
+          </Link>
+          {mounted && user?.is_restaurant_owner && (
+            <Link href="/account/restaurants">
+              <Button variant="ghost" size="sm" className="gap-1.5">
+                <Store className="h-4 w-4" />
+                My Restaurants
+              </Button>
+            </Link>
+          )}
         </nav>
 
         {/* Spacer */}
@@ -58,7 +79,7 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
-                <User className="h-5 w-5" />
+                <UserIcon className="h-5 w-5" />
                 <span className="sr-only">User menu</span>
               </Button>
             </DropdownMenuTrigger>
@@ -67,9 +88,7 @@ export function Header() {
                 <>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">
-                        {user.first_name} {user.last_name}
-                      </p>
+                      <p className="text-sm font-medium">{user.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {user.email}
                       </p>
@@ -78,10 +97,28 @@ export function Header() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem onClick={() => router.push("/admin")}>
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Dashboard
+              <DropdownMenuItem onClick={() => router.push("/account/orders")}>
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Orders
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/account/profile")}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/account/payment-methods")}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Payment Methods
+              </DropdownMenuItem>
+              {user?.is_restaurant_owner && (
+                <DropdownMenuItem
+                  onClick={() => router.push("/account/restaurants")}
+                >
+                  <Store className="mr-2 h-4 w-4" />
+                  My Restaurants
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -90,7 +127,7 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Link href="/admin/login">
+          <Link href="/account/login">
             <Button size="sm">Log in</Button>
           </Link>
         )}
