@@ -9,7 +9,7 @@ from django.db import models as db_models
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
-from orders.broadcast import broadcast_order_to_kitchen
+from orders.broadcast import broadcast_order_to_customer, broadcast_order_to_kitchen
 from orders.llm.agent import OrderParsingAgent
 from orders.llm.base import ParsedOrder
 from orders.llm.menu_context import build_menu_context
@@ -442,6 +442,12 @@ class OrderService:
             if updated:
                 broadcast_order_to_kitchen(order)
                 OrderService.set_status_timestamp(order, "confirmed")
+                broadcast_order_to_customer(order)
+                from orders.tasks import broadcast_queue_updates
+                broadcast_queue_updates.apply_async(
+                    args=[str(order.restaurant_id), str(order.id)],
+                    countdown=2,
+                )
         elif intent.status in ("requires_payment_method", "canceled"):
             Order.objects.filter(
                 id=order.id, payment_status="pending"
@@ -479,6 +485,14 @@ class OrderService:
         order.save()
         OrderService.set_status_timestamp(order, new_status)
         broadcast_order_to_kitchen(order)
+        broadcast_order_to_customer(order)
+
+        # Trigger fan-out to other waiting customers
+        from orders.tasks import broadcast_queue_updates
+        broadcast_queue_updates.apply_async(
+            args=[str(order.restaurant_id), str(order.id)],
+            countdown=2,
+        )
         return order
 
     # ── Stripe Webhook Handling ────────────────────────────────────
@@ -531,6 +545,12 @@ class OrderService:
             broadcast_order_to_kitchen(order)
             order.refresh_from_db()
             OrderService.set_status_timestamp(order, "confirmed")
+            broadcast_order_to_customer(order)
+            from orders.tasks import broadcast_queue_updates
+            broadcast_queue_updates.apply_async(
+                args=[str(order.restaurant_id), str(order.id)],
+                countdown=2,
+            )
 
     @staticmethod
     def _handle_payment_failed(intent: dict) -> None:
