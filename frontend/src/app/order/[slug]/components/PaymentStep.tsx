@@ -10,7 +10,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { confirmPayment, createPayment, saveCardConsent } from "@/lib/api";
 import type { SavedPaymentMethod, ConfirmOrderItem } from "@/types";
@@ -144,7 +144,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
     orderId,
     setOrderId,
   } = useOrderStore();
-  const { isAuthenticated } = useCustomerAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { data: savedMethods } = usePaymentMethods();
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [useNewCard, setUseNewCard] = useState(false);

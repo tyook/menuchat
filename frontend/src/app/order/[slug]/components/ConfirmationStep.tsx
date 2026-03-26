@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
-import { useCustomerProfile } from "@/hooks/use-customer-profile";
+import { useAuthStore } from "@/stores/auth-store";
+import { useProfile } from "@/hooks/use-profile";
 import { useCreatePayment } from "@/hooks/use-create-payment";
 import type { ConfirmOrderItem } from "@/types";
 
@@ -38,8 +38,8 @@ export function ConfirmationStep({ slug, taxRate }: ConfirmationStepProps) {
     updateItemQuantity,
   } = useOrderStore();
   const { allergyNote } = usePreferencesStore();
-  const { isAuthenticated } = useCustomerAuthStore();
-  const { data: profile } = useCustomerProfile();
+  const { isAuthenticated } = useAuthStore();
+  const { data: profile } = useProfile();
   const createPaymentMutation = useCreatePayment(slug);
 
   // Auto-fill name and phone if customer is logged in

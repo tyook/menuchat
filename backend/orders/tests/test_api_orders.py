@@ -180,7 +180,7 @@ class TestKitchenOrderUpdate:
     @pytest.fixture
     def kitchen_setup(self):
         restaurant = RestaurantFactory(slug="kitchen-test")
-        kitchen_user = UserFactory(role="staff")
+        kitchen_user = UserFactory()
         RestaurantStaffFactory(user=kitchen_user, restaurant=restaurant, role="kitchen")
         order = OrderFactory(restaurant=restaurant, status="confirmed")
         return restaurant, kitchen_user, order

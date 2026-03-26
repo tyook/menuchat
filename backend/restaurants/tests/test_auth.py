@@ -19,8 +19,11 @@ class TestRegister:
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
-        assert "access" in response.data
-        assert "refresh" in response.data
+        assert "user" in response.data
+        assert response.data["user"]["email"] == "new@example.com"
+        # Tokens are now set as httpOnly cookies, not in response body
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
         assert User.objects.filter(email="new@example.com").exists()
 
     def test_register_rejects_duplicate_email(self, api_client):
@@ -53,7 +56,7 @@ class TestRegister:
 
 @pytest.mark.django_db
 class TestLogin:
-    def test_login_returns_tokens(self, api_client):
+    def test_login_returns_user_and_sets_cookies(self, api_client):
         User.objects.create_user(email="login@example.com", password="testpass123")
         response = api_client.post(
             "/api/auth/login/",
@@ -61,8 +64,10 @@ class TestLogin:
             format="json",
         )
         assert response.status_code == status.HTTP_200_OK
-        assert "access" in response.data
-        assert "refresh" in response.data
+        assert "user" in response.data
+        assert response.data["user"]["email"] == "login@example.com"
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
 
     def test_login_rejects_wrong_password(self, api_client):
         User.objects.create_user(email="wrong@example.com", password="testpass123")
@@ -76,18 +81,17 @@ class TestLogin:
 
 @pytest.mark.django_db
 class TestTokenRefresh:
-    def test_refresh_returns_new_access_token(self, api_client):
+    def test_refresh_returns_new_cookies(self, api_client):
         User.objects.create_user(email="refresh@example.com", password="testpass123")
         login = api_client.post(
             "/api/auth/login/",
             {"email": "refresh@example.com", "password": "testpass123"},
             format="json",
         )
-        refresh_token = login.data["refresh"]
-        response = api_client.post(
-            "/api/auth/refresh/",
-            {"refresh": refresh_token},
-            format="json",
-        )
+        refresh_token = login.cookies["refresh_token"].value
+        # Set the refresh cookie for the next request
+        api_client.cookies["refresh_token"] = refresh_token
+        response = api_client.post("/api/auth/refresh/", format="json")
         assert response.status_code == status.HTTP_200_OK
-        assert "access" in response.data
+        assert "user" in response.data
+        assert "access_token" in response.cookies

@@ -1,32 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
-import { useCustomerOrders } from "@/hooks/use-customer-orders";
+import { useRequireAuth } from "@/hooks/use-auth";
+import { useOrderHistory } from "@/hooks/use-orders";
 
 export default function CustomerOrdersPage() {
   const router = useRouter();
-  const { isAuthenticated, checkAuth } = useCustomerAuthStore();
-  const { data: orders, isLoading, error } = useCustomerOrders();
+  const isAuthenticated = useRequireAuth();
+  const { data: orders, isLoading, error } = useOrderHistory();
 
-  useEffect(() => {
-    if (!checkAuth()) {
-      router.push("/account/login");
-    }
-  }, [checkAuth, router]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (isLoading) {
+  if (isAuthenticated === null || isLoading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
       </div>
     );
+  }
+
+  if (isAuthenticated === false) {
+    return null;
   }
 
   if (error) {

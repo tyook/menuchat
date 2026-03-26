@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface AppleAuthResponse {
   authorization: { id_token: string };
@@ -29,7 +29,7 @@ export function SocialLoginButtons({
   onError,
   disabled,
 }: SocialLoginButtonsProps) {
-  const { googleLogin, appleLogin } = useCustomerAuthStore();
+  const { googleLogin, appleLogin } = useAuthStore();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
   const [mounted, setMounted] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);

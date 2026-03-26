@@ -23,7 +23,6 @@ class TestUserModel:
         )
         assert user.email == "test@example.com"
         assert user.check_password("testpass123")
-        assert user.role == "owner"
 
     def test_user_has_uuid_pk(self):
         import uuid
@@ -74,7 +73,7 @@ class TestRestaurantStaffModel:
     def test_create_staff(self):
         owner = User.objects.create_user(email="staffowner@example.com", password="testpass123")
         restaurant = Restaurant.objects.create(name="Staff Test", slug="staff-test", owner=owner)
-        staff_user = User.objects.create_user(email="kitchen@example.com", password="testpass123", role="staff")
+        staff_user = User.objects.create_user(email="kitchen@example.com", password="testpass123")
         staff = RestaurantStaff.objects.create(user=staff_user, restaurant=restaurant, role="kitchen")
         assert staff.role == "kitchen"
         assert staff.restaurant == restaurant

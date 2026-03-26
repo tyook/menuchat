@@ -25,9 +25,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     # Local
+    "accounts",
     "restaurants",
     "orders",
-    "customers",
 ]
 
 MIDDLEWARE = [
@@ -79,7 +79,7 @@ DATABASES = {
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
-AUTH_USER_MODEL = "restaurants.User"
+AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -93,7 +93,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "accounts.authentication.CookieJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -103,7 +103,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=12),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 
@@ -176,6 +176,18 @@ else:
         "http://localhost:3001",
     ]
 CORS_ALLOW_CREDENTIALS = True
+
+# ---------------------------------------------------------------------------
+# Cookie Auth
+# ---------------------------------------------------------------------------
+AUTH_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = False  # Frontend reads csrftoken cookie
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
 
 # ---------------------------------------------------------------------------
 # i18n

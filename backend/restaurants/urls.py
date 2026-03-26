@@ -1,5 +1,4 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
 
 from restaurants.views import (
     CancelSubscriptionView,
@@ -7,24 +6,18 @@ from restaurants.views import (
     CreateCheckoutSessionView,
     CreateRestaurantView,
     FullMenuView,
-    LoginView,
     MenuCategoryDetailView,
     MenuCategoryListCreateView,
     MenuItemDetailView,
     MenuItemListCreateView,
     MyRestaurantsView,
     ReactivateSubscriptionView,
-    RegisterView,
     RestaurantDetailView,
     RestaurantOrderListView,
     SubscriptionDetailView,
 )
 
 urlpatterns = [
-    # Auth
-    path("auth/register/", RegisterView.as_view(), name="register"),
-    path("auth/login/", LoginView.as_view(), name="login"),
-    path("auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Restaurants
     path("restaurants/me/", MyRestaurantsView.as_view(), name="my-restaurants"),
     path("restaurants/", CreateRestaurantView.as_view(), name="create-restaurant"),

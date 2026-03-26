@@ -27,6 +27,25 @@ export interface Restaurant {
   subscription?: Subscription;
 }
 
+// User types
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  name: string;
+  phone: string;
+  dietary_preferences: string[];
+  allergies: string[];
+  preferred_language: string;
+  auth_provider: string;
+  is_restaurant_owner: boolean;
+}
+
+export interface AuthResponse {
+  user: User;
+}
+
 // Menu types
 export interface MenuItemModifier {
   id: number;
@@ -117,35 +136,12 @@ export interface CreatePaymentResponse extends OrderResponse {
   client_secret: string;
 }
 
-// Customer types
-export interface CustomerProfile {
-  id: string;
-  email: string;
-  name: string;
-  phone: string;
-  dietary_preferences: string[];
-  allergies: string[];
-  preferred_language: string;
-  auth_provider: string;
-  created_at: string;
-}
-
-export interface CustomerAuthResponse {
-  customer: {
-    id: string;
-    email: string;
-    name: string;
-  };
-  access: string;
-  refresh: string;
-}
-
-export interface CustomerOrderHistoryItem extends OrderResponse {
+export interface OrderHistoryItem extends OrderResponse {
   restaurant_name: string;
   restaurant_slug: string;
 }
 
-export interface CustomerOrderDetail extends CustomerOrderHistoryItem {
+export interface OrderDetail extends OrderHistoryItem {
   payment_method: {
     brand: string;
     last4: string;

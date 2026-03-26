@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Settings, User } from "lucide-react";
 import { useOrderStore } from "@/stores/order-store";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useMenu } from "@/hooks/use-menu";
 import { Button } from "@/components/ui/button";
 import { PreferencesDialog } from "@/components/PreferencesDialog";
@@ -23,7 +23,7 @@ export default function OrderPage() {
   const step = useOrderStore((s) => s.step);
   const reset = useOrderStore((s) => s.reset);
   const { data: menu, isLoading, error } = useMenu(slug);
-  const { isAuthenticated } = useCustomerAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
