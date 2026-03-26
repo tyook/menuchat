@@ -1,11 +1,14 @@
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from orders.models import Order
+from orders.queue_service import QueueService
 from orders.serializers import ConfirmOrderSerializer, OrderResponseSerializer, ParseInputSerializer
 from orders.services import OrderService
+from restaurants.models import Restaurant
 
 
 class PublicMenuView(APIView):
@@ -217,6 +220,38 @@ class StripeConnectWebhookView(APIView):
             request.body, request.META.get("HTTP_STRIPE_SIGNATURE", "")
         )
         return Response(result)
+
+
+class QueueInfoView(APIView):
+    """GET /api/order/<slug>/queue-info/ — restaurant busyness (public)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        try:
+            restaurant = Restaurant.objects.get(slug=slug)
+        except Restaurant.DoesNotExist:
+            raise NotFound("Restaurant not found")
+
+        data = QueueService.get_restaurant_queue_info(restaurant)
+        return Response(data)
+
+
+class OrderQueueView(APIView):
+    """GET /api/order/<slug>/queue/<order_id>/ — order queue position (public)."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug, order_id):
+        try:
+            order = Order.objects.select_related("restaurant").get(
+                id=order_id, restaurant__slug=slug
+            )
+        except Order.DoesNotExist:
+            raise NotFound("Order not found")
+
+        data = QueueService.get_order_queue_info(order)
+        return Response(data)
 
 
 class KitchenOrderUpdateView(APIView):
