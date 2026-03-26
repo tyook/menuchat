@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
-import { useCustomerAuthStore } from "@/stores/customer-auth-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
-  const login = useCustomerAuthStore((s) => s.login);
+  const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
