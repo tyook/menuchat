@@ -116,10 +116,10 @@ class RestaurantService:
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=(
-                f"{django_settings.FRONTEND_URL}/admin/{restaurant.slug}"
+                f"{django_settings.FRONTEND_URL}/account/restaurants/{restaurant.slug}"
                 f"/billing?session_id={{CHECKOUT_SESSION_ID}}"
             ),
-            cancel_url=f"{django_settings.FRONTEND_URL}/admin/{restaurant.slug}/billing",
+            cancel_url=f"{django_settings.FRONTEND_URL}/account/restaurants/{restaurant.slug}/billing",
             metadata={
                 "restaurant_id": str(restaurant.id),
                 "plan": plan,
@@ -152,7 +152,7 @@ class RestaurantService:
 
         portal_session = stripe.billing_portal.Session.create(
             customer=subscription.stripe_customer_id,
-            return_url=f"{django_settings.FRONTEND_URL}/admin/{restaurant.slug}/billing",
+            return_url=f"{django_settings.FRONTEND_URL}/account/restaurants/{restaurant.slug}/billing",
         )
 
         return portal_session.url
