@@ -64,6 +64,26 @@ class Order(models.Model):
         null=True,
     )
 
+    class PayoutStatus(models.TextChoices):
+        PENDING = "pending"
+        TRANSFERRED = "transferred"
+        PAID_OUT = "paid_out"
+        FAILED = "failed"
+
+    payout_status = models.CharField(
+        max_length=20,
+        choices=PayoutStatus.choices,
+        default=PayoutStatus.PENDING,
+    )
+    payout = models.ForeignKey(
+        "restaurants.Payout",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+
     customer_allergies = models.JSONField(default=list, blank=True, help_text="Snapshot of customer allergies at time of order")
 
     created_at = models.DateTimeField(auto_now_add=True)

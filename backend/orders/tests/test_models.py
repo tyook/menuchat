@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from orders.models import Order, OrderItem
 from restaurants.models import (
@@ -74,3 +75,37 @@ class TestOrderModel:
         for status in ["pending", "confirmed", "preparing", "ready", "completed"]:
             order.status = status
             order.full_clean()  # Should not raise
+
+
+@pytest.mark.django_db
+class TestOrderPayoutFields:
+    @pytest.fixture
+    def restaurant(self):
+        owner = User.objects.create_user(email="payoutowner@example.com", password="testpass123")
+        return Restaurant.objects.create(name="Payout Test", slug="payout-test", owner=owner)
+
+    def test_default_payout_status(self, restaurant):
+        order = Order.objects.create(
+            restaurant=restaurant,
+            raw_input="test order",
+            subtotal=10.00,
+            tax_rate=0,
+            tax_amount=0,
+            total_price=10.00,
+        )
+        assert order.payout_status == "pending"
+        assert order.paid_at is None
+        assert order.payout is None
+
+    def test_set_paid_at(self, restaurant):
+        now = timezone.now()
+        order = Order.objects.create(
+            restaurant=restaurant,
+            raw_input="test order",
+            subtotal=10.00,
+            tax_rate=0,
+            tax_amount=0,
+            total_price=10.00,
+            paid_at=now,
+        )
+        assert order.paid_at == now
