@@ -11,6 +11,7 @@ from restaurants.tests.factories import (
     MenuItemFactory,
     MenuItemVariantFactory,
     MenuItemModifierFactory,
+    MenuVersionFactory,
     RestaurantFactory,
 )
 
@@ -26,7 +27,8 @@ class TestSquareAdapter:
             external_location_id="L123",
             oauth_access_token="sq_test_token",
         )
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         item = MenuItemFactory(category=cat, name="Burger")
         variant = MenuItemVariantFactory(
             menu_item=item, label="Regular", price=Decimal("12.99")

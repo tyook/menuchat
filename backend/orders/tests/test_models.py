@@ -7,6 +7,7 @@ from django.utils import timezone
 from orders.models import Order, OrderItem
 from restaurants.models import (
     MenuCategory,
+    MenuVersion,
     MenuItem,
     MenuItemModifier,
     MenuItemVariant,
@@ -22,7 +23,8 @@ class TestOrderModel:
     def menu_setup(self):
         owner = User.objects.create_user(email="orderowner@example.com", password="testpass123")
         restaurant = Restaurant.objects.create(name="Order Test", slug="order-test", owner=owner)
-        category = MenuCategory.objects.create(restaurant=restaurant, name="Mains", sort_order=1)
+        version = MenuVersion.objects.create(restaurant=restaurant, name="Default", source="manual", is_active=True)
+        category = MenuCategory.objects.create(version=version, name="Mains", sort_order=1)
         item = MenuItem.objects.create(category=category, name="Burger", description="Beef burger", sort_order=1)
         variant = MenuItemVariant.objects.create(
             menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True

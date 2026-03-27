@@ -6,13 +6,14 @@ from django.utils import timezone
 from rest_framework import status
 
 from restaurants.models import Subscription
-from restaurants.tests.factories import MenuCategoryFactory, MenuItemFactory, MenuItemVariantFactory, RestaurantFactory
+from restaurants.tests.factories import MenuCategoryFactory, MenuItemFactory, MenuItemVariantFactory, MenuVersionFactory, RestaurantFactory
 
 
 def _setup_restaurant_with_menu():
     """Create a restaurant with a menu item for parsing."""
     restaurant = RestaurantFactory()
-    category = MenuCategoryFactory(restaurant=restaurant)
+    version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+    category = MenuCategoryFactory(version=version)
     item = MenuItemFactory(category=category, name="Pizza")
     MenuItemVariantFactory(menu_item=item, label="Large", price=15.00)
     return restaurant

@@ -86,7 +86,7 @@ class OrderService:
             try:
                 menu_item = MenuItem.objects.get(
                     id=item_data["menu_item_id"],
-                    category__restaurant=restaurant,
+                    category__version__restaurant=restaurant,
                     is_active=True,
                 )
                 variant = MenuItemVariant.objects.get(
@@ -156,7 +156,7 @@ class OrderService:
             try:
                 menu_item = MenuItem.objects.get(
                     id=parsed_item.menu_item_id,
-                    category__restaurant=restaurant,
+                    category__version__restaurant=restaurant,
                     is_active=True,
                 )
                 variant = MenuItemVariant.objects.get(
@@ -776,11 +776,12 @@ class OrderService:
         except Restaurant.DoesNotExist:
             raise NotFound("Restaurant not found.")
 
+        active_version = restaurant.menu_versions.filter(is_active=True).first()
         categories = (
-            MenuCategory.objects.filter(restaurant=restaurant, is_active=True)
+            MenuCategory.objects.filter(version=active_version, is_active=True)
             .prefetch_related("items__variants", "items__modifiers")
             .order_by("sort_order")
-        )
+        ) if active_version else MenuCategory.objects.none()
 
         # Determine payment mode from POS connection
         from integrations.models import POSConnection

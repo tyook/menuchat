@@ -1,4 +1,4 @@
-from restaurants.models import MenuCategory, Restaurant
+from restaurants.models import MenuCategory, MenuVersion, Restaurant
 
 
 def build_menu_context(restaurant: Restaurant) -> str:
@@ -8,8 +8,12 @@ def build_menu_context(restaurant: Restaurant) -> str:
     """
     lines = [f"Restaurant: {restaurant.name}", ""]
 
+    active_version = restaurant.menu_versions.filter(is_active=True).first()
+    if not active_version:
+        return "\n".join(lines)
+
     categories = (
-        MenuCategory.objects.filter(restaurant=restaurant, is_active=True)
+        MenuCategory.objects.filter(version=active_version, is_active=True)
         .prefetch_related("items__variants", "items__modifiers")
         .order_by("sort_order")
     )

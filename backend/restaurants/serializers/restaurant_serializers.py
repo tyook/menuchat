@@ -140,10 +140,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
         modifiers_data = validated_data.pop("modifiers", [])
         category_id = validated_data.pop("category_id")
 
-        # Verify category belongs to the restaurant
-        restaurant = self.context["restaurant"]
+        # Verify category belongs to the active menu version
+        active_version = self.context.get("active_version")
+        if active_version is None:
+            raise serializers.ValidationError({"category_id": "No active menu version found."})
         try:
-            category = MenuCategory.objects.get(id=category_id, restaurant=restaurant)
+            category = MenuCategory.objects.get(id=category_id, version=active_version)
         except MenuCategory.DoesNotExist:
             raise serializers.ValidationError({"category_id": "Invalid category."}) from None
 

@@ -6,6 +6,7 @@ from restaurants.tests.factories import (
     MenuItemFactory,
     MenuItemModifierFactory,
     MenuItemVariantFactory,
+    MenuVersionFactory,
     RestaurantFactory,
 )
 
@@ -14,7 +15,8 @@ from restaurants.tests.factories import (
 class TestPublicMenu:
     def test_get_menu_no_auth_required(self, api_client):
         restaurant = RestaurantFactory(slug="public-test")
-        cat = MenuCategoryFactory(restaurant=restaurant, name="Mains")
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Mains")
         item = MenuItemFactory(category=cat, name="Burger")
         MenuItemVariantFactory(menu_item=item, label="Regular", price="10.99")
         MenuItemModifierFactory(menu_item=item, name="Extra Cheese")
@@ -27,7 +29,8 @@ class TestPublicMenu:
 
     def test_inactive_items_excluded(self, api_client):
         restaurant = RestaurantFactory(slug="inactive-test")
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         MenuItemFactory(category=cat, is_active=True)
         MenuItemFactory(category=cat, is_active=False)
 

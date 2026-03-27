@@ -11,6 +11,7 @@ from restaurants.tests.factories import (
     MenuItemFactory,
     MenuItemModifierFactory,
     MenuItemVariantFactory,
+    MenuVersionFactory,
     RestaurantFactory,
 )
 
@@ -41,7 +42,8 @@ class TestParsedOrder:
 class TestMenuContext:
     def test_build_menu_context_includes_items_and_prices(self):
         restaurant = RestaurantFactory()
-        cat = MenuCategoryFactory(restaurant=restaurant, name="Pizzas")
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Pizzas")
         item = MenuItemFactory(category=cat, name="Margherita")
         MenuItemVariantFactory(menu_item=item, label="Large", price=Decimal("14.99"))
         MenuItemModifierFactory(menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00"))
@@ -54,7 +56,8 @@ class TestMenuContext:
 
     def test_build_menu_context_excludes_inactive(self):
         restaurant = RestaurantFactory()
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         MenuItemFactory(category=cat, name="Active Item", is_active=True)
         MenuItemFactory(category=cat, name="Hidden Item", is_active=False)
 

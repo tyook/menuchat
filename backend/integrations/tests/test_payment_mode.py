@@ -8,6 +8,7 @@ from restaurants.tests.factories import (
     MenuCategoryFactory,
     MenuItemFactory,
     MenuItemVariantFactory,
+    MenuVersionFactory,
     RestaurantFactory,
 )
 
@@ -22,7 +23,8 @@ class TestPaymentModeAwareness:
             pos_type="square",
             payment_mode="pos_collected",
         )
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         item = MenuItemFactory(category=cat, name="Coffee")
         variant = MenuItemVariantFactory(
             menu_item=item, label="Regular", price=Decimal("4.50"), is_default=True

@@ -12,6 +12,7 @@ from restaurants.tests.factories import (
     MenuCategoryFactory,
     MenuItemFactory,
     MenuItemVariantFactory,
+    MenuVersionFactory,
     RestaurantFactory,
 )
 
@@ -26,7 +27,8 @@ class TestPOSIntegrationEndToEnd:
             pos_type="square",
             payment_mode="stripe",
         )
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         item = MenuItemFactory(category=cat, name="Burger")
         variant = MenuItemVariantFactory(
             menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True

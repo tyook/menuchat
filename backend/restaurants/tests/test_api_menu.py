@@ -4,6 +4,7 @@ from rest_framework import status
 from restaurants.tests.factories import (
     MenuCategoryFactory,
     MenuItemFactory,
+    MenuVersionFactory,
     RestaurantFactory,
     UserFactory,
 )
@@ -15,6 +16,7 @@ class TestMenuCategoryAPI:
     def owner_and_restaurant(self):
         owner = UserFactory()
         restaurant = RestaurantFactory(owner=owner)
+        MenuVersionFactory(restaurant=restaurant, is_active=True)
         return owner, restaurant
 
     def test_create_category(self, api_client, owner_and_restaurant):
@@ -30,7 +32,8 @@ class TestMenuCategoryAPI:
 
     def test_update_category(self, api_client, owner_and_restaurant):
         owner, restaurant = owner_and_restaurant
-        cat = MenuCategoryFactory(restaurant=restaurant, name="Old Name")
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Old Name")
         api_client.force_authenticate(user=owner)
         response = api_client.patch(
             f"/api/restaurants/{restaurant.slug}/categories/{cat.id}/",
@@ -61,7 +64,8 @@ class TestMenuItemAPI:
     def setup(self):
         owner = UserFactory()
         restaurant = RestaurantFactory(owner=owner)
-        category = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        category = MenuCategoryFactory(version=version)
         return owner, restaurant, category
 
     def test_create_item_with_variants_and_modifiers(self, api_client, setup):
@@ -117,7 +121,8 @@ class TestFullMenuAPI:
     def test_get_full_menu_includes_inactive(self, api_client):
         owner = UserFactory()
         restaurant = RestaurantFactory(owner=owner)
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         MenuItemFactory(category=cat, is_active=True)
         MenuItemFactory(category=cat, is_active=False)
 

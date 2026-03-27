@@ -33,8 +33,11 @@ class RestaurantService:
     @staticmethod
     def get_full_menu(restaurant: Restaurant) -> dict:
         """Return the full menu including inactive items."""
+        active_version = restaurant.menu_versions.filter(is_active=True).first()
+        if not active_version:
+            return {"restaurant_name": restaurant.name, "categories": []}
         categories = (
-            MenuCategory.objects.filter(restaurant=restaurant)
+            MenuCategory.objects.filter(version=active_version)
             .prefetch_related("items__variants", "items__modifiers")
             .order_by("sort_order")
         )

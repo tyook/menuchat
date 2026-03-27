@@ -13,6 +13,7 @@ from restaurants.tests.factories import (
     MenuItemFactory,
     MenuItemModifierFactory,
     MenuItemVariantFactory,
+    MenuVersionFactory,
     RestaurantFactory,
     RestaurantStaffFactory,
     UserFactory,
@@ -24,7 +25,8 @@ class TestParseOrder:
     @pytest.fixture
     def menu_setup(self):
         restaurant = RestaurantFactory(slug="parse-test")
-        cat = MenuCategoryFactory(restaurant=restaurant, name="Mains")
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Mains")
         item = MenuItemFactory(category=cat, name="Burger")
         variant = MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("12.99"), is_default=True)
         modifier = MenuItemModifierFactory(menu_item=item, name="Extra Bacon", price_adjustment=Decimal("2.00"))
@@ -90,7 +92,8 @@ class TestConfirmOrder:
     @pytest.fixture
     def menu_setup(self):
         restaurant = RestaurantFactory(slug="confirm-test")
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         item = MenuItemFactory(category=cat, name="Pizza")
         variant = MenuItemVariantFactory(menu_item=item, label="Large", price=Decimal("14.99"), is_default=True)
         modifier = MenuItemModifierFactory(menu_item=item, name="Extra Cheese", price_adjustment=Decimal("2.00"))
@@ -236,7 +239,8 @@ class TestCreatePayment:
     @pytest.fixture
     def menu_setup(self):
         restaurant = RestaurantFactory(slug="payment-test", tax_rate=Decimal("8.875"))
-        cat = MenuCategoryFactory(restaurant=restaurant)
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version)
         item = MenuItemFactory(category=cat, name="Burger")
         variant = MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("10.00"), is_default=True)
         return {

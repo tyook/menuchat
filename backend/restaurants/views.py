@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from restaurants.models import MenuCategory, MenuItem, Restaurant, RestaurantStaff, Subscription
+from restaurants.models import MenuCategory, MenuItem, MenuVersion, Restaurant, RestaurantStaff, Subscription
 from restaurants.serializers import (
     MenuCategorySerializer,
     MenuItemSerializer,
@@ -63,13 +63,23 @@ class RestaurantMixin:
 class MenuCategoryListCreateView(RestaurantMixin, generics.ListCreateAPIView):
     serializer_class = MenuCategorySerializer
 
+    def _get_active_version(self, restaurant):
+        return restaurant.menu_versions.filter(is_active=True).first()
+
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuCategory.objects.filter(restaurant=restaurant)
+        active_version = self._get_active_version(restaurant)
+        if not active_version:
+            return MenuCategory.objects.none()
+        return MenuCategory.objects.filter(version=active_version)
 
     def perform_create(self, serializer):
         restaurant = self.get_restaurant()
-        serializer.save(restaurant=restaurant)
+        active_version = self._get_active_version(restaurant)
+        if not active_version:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("No active menu version found. Please create and activate a menu version first.")
+        serializer.save(version=active_version)
 
 
 class MenuCategoryDetailView(RestaurantMixin, generics.RetrieveUpdateAPIView):
@@ -78,19 +88,30 @@ class MenuCategoryDetailView(RestaurantMixin, generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuCategory.objects.filter(restaurant=restaurant)
+        active_version = restaurant.menu_versions.filter(is_active=True).first()
+        if not active_version:
+            return MenuCategory.objects.none()
+        return MenuCategory.objects.filter(version=active_version)
 
 
 class MenuItemListCreateView(RestaurantMixin, generics.ListCreateAPIView):
     serializer_class = MenuItemSerializer
 
+    def _get_active_version(self, restaurant):
+        return restaurant.menu_versions.filter(is_active=True).first()
+
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuItem.objects.filter(category__restaurant=restaurant).prefetch_related("variants", "modifiers")
+        active_version = self._get_active_version(restaurant)
+        if not active_version:
+            return MenuItem.objects.none()
+        return MenuItem.objects.filter(category__version=active_version).prefetch_related("variants", "modifiers")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        ctx["restaurant"] = self.get_restaurant()
+        restaurant = self.get_restaurant()
+        ctx["restaurant"] = restaurant
+        ctx["active_version"] = self._get_active_version(restaurant)
         return ctx
 
     def perform_create(self, serializer):
@@ -101,13 +122,21 @@ class MenuItemDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView)
     serializer_class = MenuItemSerializer
     lookup_field = "pk"
 
+    def _get_active_version(self, restaurant):
+        return restaurant.menu_versions.filter(is_active=True).first()
+
     def get_queryset(self):
         restaurant = self.get_restaurant()
-        return MenuItem.objects.filter(category__restaurant=restaurant).prefetch_related("variants", "modifiers")
+        active_version = self._get_active_version(restaurant)
+        if not active_version:
+            return MenuItem.objects.none()
+        return MenuItem.objects.filter(category__version=active_version).prefetch_related("variants", "modifiers")
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        ctx["restaurant"] = self.get_restaurant()
+        restaurant = self.get_restaurant()
+        ctx["restaurant"] = restaurant
+        ctx["active_version"] = self._get_active_version(restaurant)
         return ctx
 
     def perform_destroy(self, instance):
