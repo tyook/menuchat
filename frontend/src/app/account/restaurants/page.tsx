@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRequireRestaurantAccess } from "@/hooks/use-auth";
 import { useMyRestaurants } from "@/hooks/use-my-restaurants";
@@ -19,7 +18,10 @@ export default function RestaurantsDashboard() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [newAddress, setNewAddress] = useState("");
+  const [newStreetAddress, setNewStreetAddress] = useState("");
+  const [newCity, setNewCity] = useState("");
+  const [newState, setNewState] = useState("");
+  const [newZipCode, setNewZipCode] = useState("");
   const [newHomepage, setNewHomepage] = useState("");
   const [newLogoUrl, setNewLogoUrl] = useState("");
 
@@ -33,7 +35,10 @@ export default function RestaurantsDashboard() {
         name: newName,
         slug: newSlug,
         phone: newPhone || undefined,
-        address: newAddress || undefined,
+        street_address: newStreetAddress || undefined,
+        city: newCity || undefined,
+        state: newState || undefined,
+        zip_code: newZipCode || undefined,
         homepage: newHomepage || undefined,
         logo_url: newLogoUrl || undefined,
       },
@@ -43,7 +48,10 @@ export default function RestaurantsDashboard() {
           setNewName("");
           setNewSlug("");
           setNewPhone("");
-          setNewAddress("");
+          setNewStreetAddress("");
+          setNewCity("");
+          setNewState("");
+          setNewZipCode("");
           setNewHomepage("");
           setNewLogoUrl("");
         },
@@ -116,13 +124,38 @@ export default function RestaurantsDashboard() {
                 />
               </div>
               <div>
-                <Label>Address <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                <Textarea
-                  value={newAddress}
-                  onChange={(e) => setNewAddress(e.target.value)}
-                  placeholder="123 Main St, City, State 12345"
-                  rows={2}
+                <Label>Street Address <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input
+                  value={newStreetAddress}
+                  onChange={(e) => setNewStreetAddress(e.target.value)}
+                  placeholder="123 Main St"
                 />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>City <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
+                    placeholder="San Francisco"
+                  />
+                </div>
+                <div>
+                  <Label>State <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input
+                    value={newState}
+                    onChange={(e) => setNewState(e.target.value)}
+                    placeholder="CA"
+                  />
+                </div>
+                <div>
+                  <Label>ZIP Code <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Input
+                    value={newZipCode}
+                    onChange={(e) => setNewZipCode(e.target.value)}
+                    placeholder="94102"
+                  />
+                </div>
               </div>
               <div>
                 <Label>Homepage URL <span className="text-muted-foreground text-xs">(optional)</span></Label>
