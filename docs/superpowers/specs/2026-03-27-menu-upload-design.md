@@ -21,13 +21,22 @@ Restaurant owners can upload photos of their physical menu, and an AI agent pars
 
 ### Changes to Existing Models
 
-- `MenuCategory` gains a required FK → `MenuVersion`.
-- `MenuItem` is unchanged (still FK → `MenuCategory`). Items are implicitly scoped to a version through their category.
+- `MenuCategory` gains a required FK → `MenuVersion`. The existing `restaurant` FK on `MenuCategory` is **removed** — restaurant is now derived via `category.version.restaurant`. All existing queries filtering `MenuCategory` by `restaurant` must be updated to filter by the active `MenuVersion` instead.
+- `MenuItem` is unchanged (still FK → `MenuCategory`). Items are implicitly scoped to a version through their category. The existing `is_active` field on `MenuItem` and `MenuCategory` is preserved and still respected — an item must be `is_active=True` AND belong to the active version to appear in the customer-facing menu.
 - `MenuItemVariant` and `MenuItemModifier` are unchanged.
+
+### Integration: Existing Menu Queries
+
+The following query paths must be updated to filter by active `MenuVersion` instead of directly by `Restaurant`:
+
+- `build_menu_context()` in `backend/orders/llm/menu_context.py` — used by the order parsing agent
+- Public menu API endpoint (`/api/order/<slug>/menu/`)
+- Admin menu API endpoint (`/api/restaurants/<slug>/menu/`)
+- Any other views/serializers that query `MenuCategory.objects.filter(restaurant=...)`
 
 ### Migration
 
-A data migration creates a `MenuVersion(name="Default", is_active=True, source="manual")` for each existing restaurant and reassigns all existing `MenuCategory` records to it.
+A data migration creates a `MenuVersion(name="Default", is_active=True, source="manual")` for each existing restaurant and reassigns all existing `MenuCategory` records to it. The `restaurant` FK column is dropped from `MenuCategory` after reassignment.
 
 ### Default Version Naming
 
@@ -39,10 +48,10 @@ Two agents, both following the existing `BaseAgent` pattern from `backend/ai/bas
 
 ### 1. MenuParsingAgent (Vision)
 
-- **Model:** `gpt-4o`
+- **Model:** `gpt-4o` (hardcoded, ignores `LLM_MODEL` setting — a vision-capable model is required)
 - **Input:** Single menu photo image
 - **Output:** `ParsedMenuPage` (structured Pydantic model)
-- **Behavior:** One instance per uploaded photo, all run in parallel
+- **Behavior:** One instance per uploaded photo, all run in parallel via `concurrent.futures.ThreadPoolExecutor`
 - **Prompt:** Instructed to extract categories, items with names/descriptions, and size/price variants
 
 ### 2. MenuMergeAgent (Text)
@@ -57,12 +66,12 @@ Two agents, both following the existing `BaseAgent` pattern from `backend/ai/bas
 ```python
 class ParsedMenuVariant(BaseModel):
     label: str        # e.g. "Regular", "Small", "Large"
-    price: Decimal
+    price: Decimal = Field(max_digits=8, decimal_places=2)
 
 class ParsedMenuItem(BaseModel):
     name: str
     description: str | None
-    variants: list[ParsedMenuVariant]  # At least one (default size + price)
+    variants: list[ParsedMenuVariant] = Field(min_length=1)
 
 class ParsedMenuCategory(BaseModel):
     name: str
@@ -89,6 +98,8 @@ All endpoints under `/api/restaurants/<slug>/`.
   2. Run `MenuParsingAgent` in parallel — one per photo
   3. Run `MenuMergeAgent` on combined results
   4. Return merged `ParsedMenu` JSON
+- **Timeout:** This is a synchronous request. With up to 10 photos, expect 10-30 seconds. The view sets a 120-second timeout. If any individual photo parse fails, it is excluded and the merge proceeds with successful results. If all fail, return `422`.
+- **Image validation:** Max 10MB per file. Accepted types: JPEG, PNG, HEIC/HEIF.
 - **Response:** `200 OK` with `ParsedMenu` body
 
 ### `POST /menu/upload/save/`
@@ -105,7 +116,7 @@ All endpoints under `/api/restaurants/<slug>/`.
   ```
 - **Flow:**
   - **Overwrite:** Create new `MenuVersion`, populate with parsed items, set as active. Previous version is deactivated but preserved.
-  - **Append:** Create new `MenuVersion`, copy all items from current active version, add parsed items, set as active.
+  - **Append:** Create new `MenuVersion`, bulk-copy all categories/items/variants/modifiers from current active version (using `bulk_create`), then add parsed items, set as active.
 - **Response:** `201 Created` with new `MenuVersion` and full menu data
 
 ### `GET /menu/versions/`
