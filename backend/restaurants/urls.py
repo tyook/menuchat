@@ -1,5 +1,12 @@
 from django.urls import path
 
+from restaurants.views_menu_upload import (
+    MenuUploadParseView,
+    MenuUploadSaveView,
+    MenuVersionActivateView,
+    MenuVersionDetailView,
+    MenuVersionListView,
+)
 from restaurants.views import (
     CancelSubscriptionView,
     ConnectDashboardView,
@@ -98,6 +105,12 @@ urlpatterns = [
         PayoutDetailView.as_view(),
         name="payout-detail",
     ),
+    # Menu Upload & Versions
+    path("restaurants/<slug:slug>/menu/upload/parse/", MenuUploadParseView.as_view(), name="menu-upload-parse"),
+    path("restaurants/<slug:slug>/menu/upload/save/", MenuUploadSaveView.as_view(), name="menu-upload-save"),
+    path("restaurants/<slug:slug>/menu/versions/", MenuVersionListView.as_view(), name="menu-versions"),
+    path("restaurants/<slug:slug>/menu/versions/<int:pk>/", MenuVersionDetailView.as_view(), name="menu-version-detail"),
+    path("restaurants/<slug:slug>/menu/versions/<int:pk>/activate/", MenuVersionActivateView.as_view(), name="menu-version-activate"),
     # Connect (payout onboarding)
     path(
         "restaurants/<slug:slug>/connect/onboard/",
