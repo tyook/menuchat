@@ -44,8 +44,8 @@ POSTGRES_HOST=localhost python manage.py migrate
 # 4. Create a superuser (optional)
 POSTGRES_HOST=localhost python manage.py createsuperuser
 
-# 5. Start the dev server
-POSTGRES_HOST=localhost python manage.py runserver
+# 5. Start the dev server on port 5005
+POSTGRES_HOST=localhost python manage.py runserver 5005
 ```
 
 The API will be available at `http://localhost:5005`.
