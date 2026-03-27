@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CreditCard,
+  ClipboardList,
   LogOut,
   ShoppingBag,
   Store,
@@ -94,6 +95,17 @@ export function Header() {
                       </p>
                     </div>
                   </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {user?.onboarding_completed === false && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/account/onboarding")}
+                  >
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    Complete your profile
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}

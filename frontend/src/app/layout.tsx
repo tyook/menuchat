@@ -42,6 +42,10 @@ export default function RootLayout({
           src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
           strategy="lazyOnload"
         />
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
+          strategy="lazyOnload"
+        />
         <QueryProvider>
           <ThemeProvider>
             <OnboardingBanner />
