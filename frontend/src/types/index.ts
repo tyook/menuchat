@@ -183,3 +183,33 @@ export interface POSSyncLog {
   next_retry_at: string | null;
   created_at: string;
 }
+
+// Menu Version types
+export interface MenuVersion {
+  id: number;
+  name: string;
+  is_active: boolean;
+  source: "manual" | "ai_upload";
+  created_at: string;
+  item_count: number;
+}
+
+export interface ParsedMenuVariant {
+  label: string;
+  price: string;
+}
+
+export interface ParsedMenuItem {
+  name: string;
+  description: string | null;
+  variants: ParsedMenuVariant[];
+}
+
+export interface ParsedMenuCategory {
+  name: string;
+  items: ParsedMenuItem[];
+}
+
+export interface ParsedMenu {
+  categories: ParsedMenuCategory[];
+}

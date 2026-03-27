@@ -29,7 +29,7 @@ export async function apiFetch<T>(
   const url = `${API_URL}${path}`;
   const method = (options.method || "GET").toUpperCase();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(!(options.body instanceof FormData) && { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -93,6 +93,8 @@ import type {
   Subscription,
   POSConnectionResponse,
   POSSyncLog,
+  MenuVersion,
+  ParsedMenu,
 } from "@/types";
 
 // ── Auth ──
@@ -418,4 +420,49 @@ export async function markSyncResolved(
     `/api/restaurants/${slug}/pos/sync-logs/${logId}/`,
     { method: "PATCH", body: JSON.stringify({ status: "manually_resolved" }) }
   );
+}
+
+// ── Menu Upload & Versions ──
+export async function parseMenuImages(slug: string, images: File[]): Promise<ParsedMenu> {
+  const formData = new FormData();
+  images.forEach((img) => formData.append("images", img));
+  return apiFetch<ParsedMenu>(`/api/restaurants/${slug}/menu/upload/parse/`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function saveUploadedMenu(
+  slug: string,
+  menu: ParsedMenu,
+  mode: "overwrite" | "append",
+  versionName?: string
+): Promise<MenuVersion> {
+  return apiFetch<MenuVersion>(`/api/restaurants/${slug}/menu/upload/save/`, {
+    method: "POST",
+    body: JSON.stringify({ menu, mode, version_name: versionName || "" }),
+  });
+}
+
+export async function fetchMenuVersions(slug: string): Promise<MenuVersion[]> {
+  return apiFetch<MenuVersion[]>(`/api/restaurants/${slug}/menu/versions/`);
+}
+
+export async function activateMenuVersion(slug: string, versionId: number): Promise<MenuVersion> {
+  return apiFetch<MenuVersion>(`/api/restaurants/${slug}/menu/versions/${versionId}/activate/`, {
+    method: "POST",
+  });
+}
+
+export async function renameMenuVersion(slug: string, versionId: number, name: string): Promise<MenuVersion> {
+  return apiFetch<MenuVersion>(`/api/restaurants/${slug}/menu/versions/${versionId}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteMenuVersion(slug: string, versionId: number): Promise<void> {
+  return apiFetch<void>(`/api/restaurants/${slug}/menu/versions/${versionId}/`, {
+    method: "DELETE",
+  });
 }
