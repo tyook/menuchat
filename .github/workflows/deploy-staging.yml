@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
+      - "backend/**"
   workflow_dispatch:
 
 concurrency:
@@ -54,3 +55,16 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_STAGING_PROJECT_ID }}
+
+  deploy-backend-staging:
+    name: Deploy Backend to Render (Staging)
+    runs-on: ubuntu-latest
+    environment: "Production – menuchat-staging"
+
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}" | grep -q "200" \
+            && echo "Deploy triggered successfully" \
+            || (echo "Failed to trigger deploy" && exit 1)
