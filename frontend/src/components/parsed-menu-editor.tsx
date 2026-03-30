@@ -74,10 +74,10 @@ export function ParsedMenuEditor({ menu, onChange }: ParsedMenuEditorProps) {
 
       <div className="space-y-3">
         {menu.categories.map((cat, catIndex) => (
-          <div key={catIndex} className="border rounded-lg">
+          <div key={catIndex} className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between bg-muted/50 px-4 py-2">
               <button
-                className="flex items-center gap-2 font-semibold text-sm"
+                className="flex items-center gap-2 text-foreground font-semibold text-sm"
                 onClick={() => toggleCategory(catIndex)}
               >
                 {collapsedCategories.has(catIndex) ? (
@@ -106,9 +106,9 @@ export function ParsedMenuEditor({ menu, onChange }: ParsedMenuEditorProps) {
             </div>
 
             {!collapsedCategories.has(catIndex) && (
-              <div className="divide-y">
+              <div className="divide-y divide-border">
                 {cat.items.map((item, itemIndex) => (
-                  <div key={itemIndex} className="px-4 py-3">
+                  <div key={itemIndex} className="border-b border-border p-3 hover:bg-muted/50 last:border-b-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-1">
                         <Input

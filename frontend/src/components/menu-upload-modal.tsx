@@ -128,7 +128,7 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              className="glass-card rounded-2xl p-6 border-dashed border-2 border-border hover:border-primary/30 transition-colors text-center cursor-pointer"
               onClick={() => document.getElementById("menu-file-input")?.click()}
             >
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
@@ -165,7 +165,8 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
             <Button
               onClick={handleParse}
               disabled={files.length === 0}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              variant="gradient"
+              className="w-full"
             >
               Parse Menu with AI
             </Button>
@@ -174,7 +175,7 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
 
         {step === "parsing" && (
           <div className="py-12 text-center">
-            <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin text-purple-600" />
+            <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin text-primary" />
             <p className="font-medium">Analyzing your menu photos...</p>
             <p className="text-sm text-muted-foreground mt-1">
               This usually takes 10-15 seconds
@@ -189,10 +190,10 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
             {hasExistingMenu && (
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  className={`border rounded-lg p-3 text-center transition-colors ${
+                  className={`glass-card rounded-xl p-3 text-center transition-colors cursor-pointer ${
                     mode === "overwrite"
-                      ? "border-purple-600 bg-purple-50 dark:bg-purple-950"
-                      : "border-border"
+                      ? "border-primary bg-primary/10"
+                      : "hover:border-primary/30"
                   }`}
                   onClick={() => setMode("overwrite")}
                 >
@@ -202,10 +203,10 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
                   </p>
                 </button>
                 <button
-                  className={`border rounded-lg p-3 text-center transition-colors ${
+                  className={`glass-card rounded-xl p-3 text-center transition-colors cursor-pointer ${
                     mode === "append"
-                      ? "border-purple-600 bg-purple-50 dark:bg-purple-950"
-                      : "border-border"
+                      ? "border-primary bg-primary/10"
+                      : "hover:border-primary/30"
                   }`}
                   onClick={() => setMode("append")}
                 >
@@ -226,6 +227,7 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
             <Button
               onClick={handleSave}
               disabled={saveMutation.isPending}
+              variant="gradient"
               className="w-full"
             >
               {saveMutation.isPending && (

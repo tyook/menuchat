@@ -96,7 +96,7 @@ export function PreferencesDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button variant="gradient" onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
