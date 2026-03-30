@@ -8,7 +8,7 @@
   }
 }
 
-/* Landing page animations */
+/* ── Animations ── */
 @keyframes glow-pulse {
   0%, 100% {
     opacity: 0.4;
@@ -40,6 +40,64 @@
   }
 }
 
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes waveform {
+  0%, 100% {
+    height: 12px;
+  }
+  50% {
+    height: var(--wave-height, 32px);
+  }
+}
+
+@keyframes blink-cursor {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+  25% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-12px) translateX(4px);
+    opacity: 0.3;
+  }
+  75% {
+    opacity: 0.5;
+  }
+}
+
+/* Animation utility classes */
 .animate-glow-pulse {
   animation: glow-pulse 4s ease-in-out infinite;
 }
@@ -68,7 +126,64 @@
   animation: float 3s ease-in-out infinite;
 }
 
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
 
+.animate-pulse-ring-delayed {
+  animation: pulse-ring 2s ease-out 0.5s infinite;
+}
+
+.animate-waveform {
+  animation: waveform 1.2s ease-in-out infinite;
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+.animate-slide-in-top {
+  animation: slide-in-top 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-float-particle {
+  animation: float-particle 4s ease-in-out infinite;
+}
+
+/* ── Utility classes ── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+}
+
+.glass-card {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.glow-primary {
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
+}
+
+.glow-primary-lg {
+  box-shadow: 0 0 60px rgba(124, 58, 237, 0.25);
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
 
 @layer base {
   /* ── Shared defaults ── */
