@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -118,30 +117,35 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <BusynessBanner slug={slug} />
-      <h2 className="text-xl font-semibold mb-4">Confirm Your Order</h2>
+
+      <div className="mb-6">
+        <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground mb-1">Your Order</p>
+        <h2 className="text-2xl font-semibold text-foreground">Review &amp; Confirm</h2>
+      </div>
 
       <div className="space-y-3 mb-6">
         {parsedItems.map((item, index) => (
-          <Card key={index} className="p-4">
+          <div key={index} className="glass-card rounded-2xl p-5">
             <div className="flex justify-between items-start">
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {item.variant.label} - ${item.variant.price}
+              <div className="flex-1 min-w-0 mr-4">
+                <p className="text-foreground font-semibold">{item.name}</p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  {item.variant.label} — ${item.variant.price}
                 </p>
                 {item.modifiers.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     + {item.modifiers.map((m) => m.name).join(", ")}
                   </p>
                 )}
                 {item.special_requests && (
-                  <p className="text-sm italic">Note: {item.special_requests}</p>
+                  <p className="text-muted-foreground text-xs italic mt-0.5">Note: {item.special_requests}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="bg-card border border-border rounded-lg"
                   onClick={() =>
                     item.quantity > 1
                       ? updateItemQuantity(index, item.quantity - 1)
@@ -150,20 +154,21 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
                 >
                   -
                 </Button>
-                <span className="w-6 text-center">{item.quantity}</span>
+                <span className="w-6 text-center font-semibold text-foreground">{item.quantity}</span>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="bg-primary/20 text-primary border-transparent rounded-lg hover:bg-primary/30"
                   onClick={() => updateItemQuantity(index, item.quantity + 1)}
                 >
                   +
                 </Button>
               </div>
             </div>
-            <p className="text-right text-sm font-medium mt-2">
+            <p className="text-right text-primary font-semibold mt-3">
               ${item.line_total}
             </p>
-          </Card>
+          </div>
         ))}
       </div>
 
@@ -207,22 +212,20 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
         </div>
       </div>
 
-      <Separator className="my-4" />
-
-      <div className="space-y-1 mb-6">
-        <div className="flex justify-between text-sm">
-          <span>Subtotal</span>
-          <span>${totalPrice}</span>
+      <div className="border-t border-border pt-4 mb-6">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-muted-foreground">Subtotal</span>
+          <span className="text-foreground">${totalPrice}</span>
         </div>
         {parseFloat(taxRate) > 0 && (
-          <div className="flex justify-between text-sm text-muted-foreground">
+          <div className="flex justify-between text-sm text-muted-foreground mb-1">
             <span>Tax ({taxRate}%)</span>
             <span>${(parseFloat(totalPrice) * parseFloat(taxRate) / 100).toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between text-lg font-bold pt-1">
-          <span>Total</span>
-          <span>
+        <div className="flex justify-between items-center pt-2">
+          <span className="text-foreground font-semibold">Total</span>
+          <span className="gradient-text text-xl font-bold">
             ${(parseFloat(totalPrice) + parseFloat(totalPrice) * parseFloat(taxRate) / 100).toFixed(2)}
           </span>
         </div>
@@ -230,16 +233,18 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
 
       <div className="flex gap-2">
         <Button variant="outline" onClick={() => setStep("input")}>
-          Add More Items
+          Add More
         </Button>
         <Button
-          className="flex-1"
+          variant="gradient"
+          size="lg"
+          className="flex-1 glow-primary"
           onClick={handleConfirm}
           disabled={isSubmitting || !customerName.trim()}
         >
           {isSubmitting
             ? (paymentMode === "pos_collected" ? "Placing order..." : "Setting up payment...")
-            : "Place Order"}
+            : "Proceed to Pay"}
         </Button>
       </div>
     </div>
