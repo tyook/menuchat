@@ -312,3 +312,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Accessibility: reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-glow-pulse,
+  .animate-float,
+  .animate-pulse-ring,
+  .animate-pulse-ring-delayed,
+  .animate-waveform,
+  .animate-float-particle,
+  .animate-blink-cursor,
+  .animate-slide-in-top {
+    animation: none;
+  }
+  .animate-fade-in-up,
+  .animate-fade-in-up-delay-1,
+  .animate-fade-in-up-delay-2,
+  .animate-fade-in-up-delay-3 {
+    animation: none;
+    opacity: 1;
+  }
+}

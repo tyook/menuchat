@@ -173,11 +173,11 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
       </div>
 
       {(parsedAllergies.length > 0 || allergyNote) && (
-        <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm dark:border-orange-800 dark:bg-orange-950">
-          <p className="font-medium text-orange-800 dark:text-orange-200">
+        <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
+          <p className="font-medium text-amber-300">
             Allergies noted:
           </p>
-          <p className="text-orange-700 dark:text-orange-300">
+          <p className="text-amber-400/80">
             {Array.from(new Set([
               ...parsedAllergies,
               ...(allergyNote ? allergyNote.split(",").map((a) => a.trim()).filter(Boolean) : []),

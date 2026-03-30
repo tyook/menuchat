@@ -10,23 +10,23 @@ const BUSYNESS_CONFIG = {
   green: {
     emoji: "\u{1F7E2}",
     label: "Short wait",
-    bg: "bg-green-50",
-    border: "border-green-200",
-    text: "text-green-800",
+    bg: "bg-green-500/10",
+    border: "border-green-500/20",
+    text: "text-green-400",
   },
   yellow: {
     emoji: "\u{1F7E1}",
     label: "Moderate wait",
-    bg: "bg-yellow-50",
-    border: "border-yellow-200",
-    text: "text-yellow-800",
+    bg: "bg-yellow-500/10",
+    border: "border-yellow-500/20",
+    text: "text-yellow-400",
   },
   red: {
     emoji: "\u{1F534}",
     label: "Busy",
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-800",
+    bg: "bg-red-500/10",
+    border: "border-red-500/20",
+    text: "text-red-400",
   },
 } as const;
 
@@ -42,7 +42,7 @@ export function BusynessBanner({ slug }: BusynessBannerProps) {
       <span className="text-xl">{config.emoji}</span>
       <div>
         <div className={`font-semibold text-sm ${config.text}`}>{config.label}</div>
-        <div className="text-xs text-gray-600">
+        <div className="text-xs text-muted-foreground">
           {estimatedWait
             ? `~${estimatedWait} min estimated wait right now`
             : "No wait right now"}

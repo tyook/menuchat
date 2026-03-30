@@ -234,7 +234,7 @@ export function PreferencesStep({ onNext, onSkip }: PreferencesStepProps) {
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <Button onClick={handleSave} className="flex-1" disabled={updateProfile.isPending}>
+        <Button variant="gradient" onClick={handleSave} className="flex-1" disabled={updateProfile.isPending}>
           {updateProfile.isPending ? "Saving..." : "Save & Continue"}
         </Button>
         <Button variant="ghost" onClick={onSkip}>

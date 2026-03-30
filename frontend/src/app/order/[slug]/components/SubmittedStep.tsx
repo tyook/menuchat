@@ -165,7 +165,7 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
                 <p className="text-destructive text-sm">{registerError}</p>
               )}
               <div className="flex gap-2">
-                <Button type="submit" className="flex-1" disabled={registerLoading}>
+                <Button type="submit" variant="gradient" className="flex-1" disabled={registerLoading}>
                   {registerLoading ? "Creating account..." : "Create Account"}
                 </Button>
                 <Button
