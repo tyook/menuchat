@@ -113,15 +113,15 @@ export default function MenuManagementPage() {
             <VersionPicker slug={params.slug} />
           </div>
           <Button
+            variant="gradient"
             onClick={() => setUploadOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700"
           >
             Upload Menu Photos
           </Button>
         </div>
 
         {/* Add Category */}
-        <Card className="p-4 mb-6">
+        <Card className="bg-card border border-border rounded-2xl p-4 mb-6">
           <form onSubmit={handleAddCategory} className="flex gap-2">
             <Input
               value={newCategoryName}
@@ -144,7 +144,7 @@ export default function MenuManagementPage() {
               {cat.items.map((item) => (
                 <Card
                   key={item.id}
-                  className={`p-4 ${!item.is_active ? "opacity-50" : ""}`}
+                  className={`bg-card border border-border rounded-2xl p-4 hover:bg-muted/50 transition-colors ${!item.is_active ? "opacity-50" : ""}`}
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -193,7 +193,7 @@ export default function MenuManagementPage() {
 
             {/* Add Item Form */}
             {showAddItem === cat.id ? (
-              <Card className="p-4">
+              <Card className="bg-card border border-border rounded-2xl p-4">
                 <div className="space-y-3">
                   <div>
                     <Label>Item Name</Label>

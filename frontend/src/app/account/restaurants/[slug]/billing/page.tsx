@@ -95,12 +95,12 @@ export default function BillingPage() {
 
         {/* Current Plan */}
         {subscription && (
-          <Card className="p-6 mb-6">
+          <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-lg font-semibold">Current Plan</h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl font-bold">
+                  <span className="text-2xl font-bold text-foreground">
                     {subscription.plan_name}
                   </span>
                   <StatusBadge status={subscription.status} />
@@ -218,7 +218,7 @@ export default function BillingPage() {
             return (
               <Card
                 key={plan.id}
-                className={`p-6 ${isCurrent ? "border-primary border-2" : ""}`}
+                className={`bg-card border border-border rounded-2xl p-6 ${isCurrent ? "border-primary border-2" : "hover:border-primary/30 transition-colors"}`}
               >
                 <h3 className="text-lg font-semibold">{plan.name}</h3>
                 <p className="text-sm text-muted-foreground mb-3">
@@ -245,6 +245,7 @@ export default function BillingPage() {
                 ) : (
                   <div className="space-y-2">
                     <Button
+                      variant="gradient"
                       className="w-full"
                       onClick={() =>
                         createCheckout.mutate({

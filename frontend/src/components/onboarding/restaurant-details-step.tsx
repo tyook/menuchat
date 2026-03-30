@@ -90,9 +90,9 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="glass-card rounded-2xl p-6 space-y-4">
         <div>
-          <Label htmlFor="restaurant-name">Restaurant Name</Label>
+          <Label htmlFor="restaurant-name" className="text-foreground text-sm font-medium">Restaurant Name</Label>
           <Input
             id="restaurant-name"
             value={name}
@@ -102,7 +102,7 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
         </div>
 
         <div>
-          <Label htmlFor="restaurant-slug">URL Slug</Label>
+          <Label htmlFor="restaurant-slug" className="text-foreground text-sm font-medium">URL Slug</Label>
           <Input
             id="restaurant-slug"
             value={slug}
@@ -115,7 +115,7 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
         </div>
 
         <div>
-          <Label htmlFor="restaurant-phone">Phone (optional)</Label>
+          <Label htmlFor="restaurant-phone" className="text-foreground text-sm font-medium">Phone (optional)</Label>
           <Input
             id="restaurant-phone"
             type="tel"
@@ -126,7 +126,7 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
         </div>
 
         <div>
-          <Label>Address (optional)</Label>
+          <Label className="text-foreground text-sm font-medium">Address (optional)</Label>
           <GooglePlacesAutocomplete onSelect={handleAddressSelect} />
         </div>
 

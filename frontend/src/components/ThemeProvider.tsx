@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
-type ThemeName = "customer" | "admin";
+type ThemeName = "customer" | "admin" | "kitchen";
 
 interface ThemeContextValue {
   theme: ThemeName;
@@ -12,7 +12,10 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue>({ theme: "customer" });
 
 function resolveTheme(pathname: string): ThemeName {
-  if (pathname.startsWith("/account/restaurants") || pathname.startsWith("/kitchen")) {
+  if (pathname.startsWith("/kitchen")) {
+    return "kitchen";
+  }
+  if (pathname.startsWith("/account/restaurants")) {
     return "admin";
   }
   return "customer";

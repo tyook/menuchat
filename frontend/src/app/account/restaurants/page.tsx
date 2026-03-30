@@ -77,7 +77,7 @@ export default function RestaurantsDashboard() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">My Restaurants</h1>
           <div className="flex gap-2">
-            <Button onClick={() => setShowCreate(!showCreate)}>
+            <Button variant="gradient" onClick={() => setShowCreate(!showCreate)}>
               + New Restaurant
             </Button>
             <Button variant="outline" onClick={logout}>
@@ -87,7 +87,7 @@ export default function RestaurantsDashboard() {
         </div>
 
         {showCreate && (
-          <Card className="p-6 mb-6">
+          <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <Label>Restaurant Name</Label>
@@ -175,7 +175,7 @@ export default function RestaurantsDashboard() {
                   type="url"
                 />
               </div>
-              <Button type="submit" disabled={createRestaurant.isPending}>
+              <Button variant="gradient" type="submit" disabled={createRestaurant.isPending}>
                 {createRestaurant.isPending ? "Creating..." : "Create"}
               </Button>
             </form>
@@ -184,10 +184,10 @@ export default function RestaurantsDashboard() {
 
         <div className="grid gap-4">
           {restaurants?.map((r) => (
-            <Card key={r.id} className="p-6">
+            <Card key={r.id} className="bg-card border border-border rounded-2xl p-5 hover:border-primary/30 transition-colors">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-semibold">{r.name}</h2>
+                  <h2 className="text-xl font-semibold text-foreground">{r.name}</h2>
                   <p className="text-sm text-muted-foreground">/{r.slug}</p>
                   {r.subscription && (
                     <div className="flex items-center gap-2 mt-1">

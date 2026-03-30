@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { useAuthStore } from "@/stores/auth-store";
@@ -38,9 +37,12 @@ export default function CustomerRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">Create Account</h1>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
+      {/* Ambient glow orb */}
+      <div className="absolute w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none" />
+
+      <div className="glass-card rounded-2xl p-8 max-w-md w-full relative z-10">
+        <h1 className="text-2xl font-bold mb-6 text-center gradient-text">Create Account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
@@ -82,7 +84,7 @@ export default function CustomerRegisterPage() {
             />
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={loading}>
             {loading ? "Creating account..." : "Create Account"}
           </Button>
         </form>
@@ -99,15 +101,16 @@ export default function CustomerRegisterPage() {
         <SocialLoginButtons
           onSuccess={() => router.push("/account/orders")}
           onError={(err) => setError(err)}
+          buttonClassName="bg-card border border-border rounded-xl hover:bg-card/80"
         />
 
         <p className="text-sm text-center mt-4 text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/account/login" className="text-primary underline">
+          <Link href="/account/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </p>
-      </Card>
+      </div>
     </div>
   );
 }

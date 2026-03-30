@@ -109,8 +109,8 @@ export function PreferencesStep({ onNext, onSkip }: PreferencesStepProps) {
       </div>
 
       {/* Dietary Preferences */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium">Dietary Restrictions</h2>
+      <div className="glass-card rounded-2xl p-4 space-y-3">
+        <h2 className="text-foreground font-medium text-sm">Dietary Restrictions</h2>
         <div className="flex flex-wrap gap-2">
           {PREDEFINED_DIETARY_PREFERENCES.map((pref) => (
             <Badge
@@ -164,8 +164,8 @@ export function PreferencesStep({ onNext, onSkip }: PreferencesStepProps) {
       </div>
 
       {/* Allergies */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium">Allergies</h2>
+      <div className="glass-card rounded-2xl p-4 space-y-3">
+        <h2 className="text-foreground font-medium text-sm">Allergies</h2>
         <div className="flex flex-wrap gap-2">
           {PREDEFINED_ALLERGIES.map((allergy) => (
             <Badge
@@ -217,8 +217,8 @@ export function PreferencesStep({ onNext, onSkip }: PreferencesStepProps) {
       </div>
 
       {/* Preferred Language */}
-      <div className="space-y-2">
-        <h2 className="text-sm font-medium">Preferred Language</h2>
+      <div className="glass-card rounded-2xl p-4 space-y-2">
+        <h2 className="text-foreground font-medium text-sm">Preferred Language</h2>
         <select
           value={preferredLanguage}
           onChange={(e) => setPreferredLanguage(e.target.value)}
@@ -234,7 +234,7 @@ export function PreferencesStep({ onNext, onSkip }: PreferencesStepProps) {
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <Button onClick={handleSave} className="flex-1" disabled={updateProfile.isPending}>
+        <Button variant="gradient" onClick={handleSave} className="flex-1" disabled={updateProfile.isPending}>
           {updateProfile.isPending ? "Saving..." : "Save & Continue"}
         </Button>
         <Button variant="ghost" onClick={onSkip}>

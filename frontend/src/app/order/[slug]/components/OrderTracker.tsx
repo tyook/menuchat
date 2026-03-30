@@ -79,22 +79,22 @@ export function OrderTracker({ slug, orderId }: OrderTrackerProps) {
 
       {/* Queue info */}
       {isReady ? (
-        <div className="bg-green-50 rounded-xl p-5 text-center mb-4">
-          <div className="text-lg font-bold text-green-800">Your order is ready for pickup!</div>
+        <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-5 text-center mb-4">
+          <div className="text-lg font-bold text-green-400">Your order is ready for pickup!</div>
         </div>
       ) : isCompleted ? (
-        <div className="bg-gray-50 rounded-xl p-5 text-center mb-4">
-          <div className="text-lg font-bold text-gray-800">Order complete. Thank you!</div>
+        <div className="glass-card rounded-xl p-5 text-center mb-4">
+          <div className="text-lg font-bold text-foreground">Order complete. Thank you!</div>
         </div>
       ) : queuePosition !== null ? (
-        <div className="bg-gray-50 rounded-xl p-5 text-center mb-4">
-          <div className="text-3xl font-extrabold text-gray-900">#{queuePosition}</div>
-          <div className="text-sm text-gray-500 mb-3">in line</div>
+        <div className="glass-card rounded-xl p-5 text-center mb-4">
+          <div className="text-3xl font-extrabold text-foreground">#{queuePosition}</div>
+          <div className="text-sm text-muted-foreground mb-3">in line</div>
           {estimatedWait !== null && (
             <>
-              <div className="w-12 h-px bg-gray-300 mx-auto mb-3" />
-              <div className="text-xl font-bold text-yellow-700">~{estimatedWait} min</div>
-              <div className="text-sm text-gray-500">estimated wait</div>
+              <div className="w-12 h-px bg-border mx-auto mb-3" />
+              <div className="text-xl font-bold text-amber-400">~{estimatedWait} min</div>
+              <div className="text-sm text-muted-foreground">estimated wait</div>
             </>
           )}
         </div>

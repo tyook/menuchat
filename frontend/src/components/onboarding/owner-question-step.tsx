@@ -22,10 +22,10 @@ export function OwnerQuestionStep({ onYes, onNo, onBack }: OwnerQuestionStepProp
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={onYes}
-          className="flex flex-col items-center gap-3 rounded-lg border-2 border-muted bg-card p-6 text-center transition-colors hover:border-primary hover:bg-accent"
+          className="glass-card rounded-2xl p-5 flex flex-col items-center gap-3 text-center hover:border-primary/30 cursor-pointer transition-colors"
         >
           <Store className="h-8 w-8 text-primary" />
-          <span className="text-lg font-semibold">Yes, I do</span>
+          <span className="text-lg font-semibold text-foreground">Yes, I do</span>
           <span className="text-xs text-muted-foreground">
             Set up your restaurant
           </span>
@@ -33,10 +33,10 @@ export function OwnerQuestionStep({ onYes, onNo, onBack }: OwnerQuestionStepProp
 
         <button
           onClick={onNo}
-          className="flex flex-col items-center gap-3 rounded-lg border-2 border-muted bg-card p-6 text-center transition-colors hover:border-primary hover:bg-accent"
+          className="glass-card rounded-2xl p-5 flex flex-col items-center gap-3 text-center hover:border-primary/30 cursor-pointer transition-colors"
         >
           <User className="h-8 w-8 text-primary" />
-          <span className="text-lg font-semibold">No, just dining</span>
+          <span className="text-lg font-semibold text-foreground">No, just dining</span>
           <span className="text-xs text-muted-foreground">
             Start ordering right away
           </span>

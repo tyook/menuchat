@@ -9,6 +9,7 @@ import { PreferencesStep } from "@/components/onboarding/preferences-step";
 import { OwnerQuestionStep } from "@/components/onboarding/owner-question-step";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
 import { MenuUploadStep } from "@/components/onboarding/menu-upload-step";
+import { cn } from "@/lib/utils";
 
 type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload";
 
@@ -36,47 +37,76 @@ export default function OnboardingPage() {
     });
   };
 
-  const progressPercent = (currentStep / totalSteps) * 100;
-
   return (
-    <div className="max-w-xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+    <div className="min-h-screen bg-background flex items-start justify-center px-4 py-8 relative overflow-hidden">
+      {/* Ambient glow orb */}
+      <div className="absolute w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(124,58,237,0.10),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none top-1/4 left-1/2 -translate-x-1/2" />
+
+      <div className="w-full max-w-xl relative z-10">
+        {/* Step indicators */}
+        <div className="mb-8 flex items-center justify-center gap-3">
+          {Array.from({ length: totalSteps }, (_, i) => {
+            const stepIndex = i + 1;
+            const isCompleted = stepIndex < currentStep;
+            const isCurrent = stepIndex === currentStep;
+            return (
+              <div key={stepIndex} className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all",
+                    isCompleted && "bg-primary text-primary-foreground",
+                    isCurrent && "border-2 border-primary text-primary",
+                    !isCompleted && !isCurrent && "border border-border text-muted-foreground"
+                  )}
+                >
+                  {isCompleted ? (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M2 7l3.5 3.5L12 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    stepIndex
+                  )}
+                </div>
+                {stepIndex < totalSteps && (
+                  <div className={cn("h-px w-8", isCompleted ? "bg-primary" : "bg-border")} />
+                )}
+              </div>
+            );
+          })}
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground text-center mb-6">
           Step {currentStep} of {totalSteps}
         </p>
-      </div>
 
-      {step === "preferences" && (
-        <PreferencesStep onNext={() => setStep("owner-question")} onSkip={() => setStep("owner-question")} />
-      )}
-      {step === "owner-question" && (
-        <OwnerQuestionStep
-          onYes={() => {
-            if (user.owns_restaurant) {
-              handleComplete();
-            } else {
-              setStep("restaurant-details");
-            }
-          }}
-          onNo={handleComplete}
-          onBack={() => setStep("preferences")}
-        />
-      )}
-      {step === "restaurant-details" && (
-        <RestaurantDetailsStep
-          onCreated={(slug) => { setRestaurantSlug(slug); setStep("menu-upload"); }}
-          onBack={() => setStep("owner-question")}
-        />
-      )}
-      {step === "menu-upload" && restaurantSlug && (
-        <MenuUploadStep slug={restaurantSlug} onComplete={handleComplete} onSkip={handleComplete} />
-      )}
+        {/* Step content inside glass card */}
+        <div className="glass-card rounded-2xl p-8">
+          {step === "preferences" && (
+            <PreferencesStep onNext={() => setStep("owner-question")} onSkip={() => setStep("owner-question")} />
+          )}
+          {step === "owner-question" && (
+            <OwnerQuestionStep
+              onYes={() => {
+                if (user.owns_restaurant) {
+                  handleComplete();
+                } else {
+                  setStep("restaurant-details");
+                }
+              }}
+              onNo={handleComplete}
+              onBack={() => setStep("preferences")}
+            />
+          )}
+          {step === "restaurant-details" && (
+            <RestaurantDetailsStep
+              onCreated={(slug) => { setRestaurantSlug(slug); setStep("menu-upload"); }}
+              onBack={() => setStep("owner-question")}
+            />
+          )}
+          {step === "menu-upload" && restaurantSlug && (
+            <MenuUploadStep slug={restaurantSlug} onComplete={handleComplete} onSkip={handleComplete} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
