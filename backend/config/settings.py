@@ -76,6 +76,9 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_PASSWORD", default="aiqr_dev_password"),
         "HOST": config("POSTGRES_HOST", default="localhost"),
         "PORT": config("POSTGRES_PORT", default="5432"),
+        "OPTIONS": {
+            "sslmode": config("POSTGRES_SSLMODE", default="prefer"),
+        },
     }
 }
 
