@@ -62,25 +62,29 @@ export function SocialLoginButtons({
             id: {
               initialize: (config: Record<string, unknown>) => void;
               renderButton: (element: HTMLElement, config: Record<string, unknown>) => void;
+              prompt: (callback?: (notification: { isSkippedMoment: () => boolean }) => void) => void;
             };
           };
         }
       | undefined;
 
-    if (!google || !googleBtnRef.current) return;
+    if (!google) return;
 
     google.accounts.id.initialize({
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
       callback: (response: { credential?: string }) => {
         googleCallbackRef.current?.(response);
       },
+      ux_mode: "popup",
     });
 
-    // Render a hidden Google button that we'll click programmatically
-    google.accounts.id.renderButton(googleBtnRef.current, {
-      type: "icon",
-      size: "large",
-    });
+    // Also render a hidden button as fallback
+    if (googleBtnRef.current) {
+      google.accounts.id.renderButton(googleBtnRef.current, {
+        type: "icon",
+        size: "large",
+      });
+    }
 
     setGoogleReady(true);
   }, []);
@@ -106,10 +110,30 @@ export function SocialLoginButtons({
       onError?.("Google Sign-In is still loading. Please try again.");
       return;
     }
-    // Click the hidden Google rendered button to open the consent popup
-    const iframe = googleBtnRef.current?.querySelector("div[role='button']") as HTMLElement | null;
-    if (iframe) {
-      iframe.click();
+
+    const google = (window as unknown as Record<string, unknown>).google as
+      | {
+          accounts: {
+            id: {
+              prompt: (callback?: (notification: { isSkippedMoment: () => boolean }) => void) => void;
+            };
+          };
+        }
+      | undefined;
+
+    if (google) {
+      // Use prompt() to trigger the Google Sign-In popup
+      google.accounts.id.prompt((notification) => {
+        if (notification.isSkippedMoment()) {
+          // Fallback: try the hidden rendered button
+          const btn = googleBtnRef.current?.querySelector("div[role='button']") as HTMLElement | null;
+          if (btn) {
+            btn.click();
+          } else {
+            onError?.("Google Sign-In was dismissed. Please try again or use email login.");
+          }
+        }
+      });
     } else {
       onError?.("Google Sign-In is not available");
     }
