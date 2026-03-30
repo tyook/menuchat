@@ -98,3 +98,54 @@ stripe listen --forward-to localhost:5005/api/order/webhook/stripe/
 |----------|-------------------------|
 | Backend  | http://localhost:5005   |
 | Frontend | http://localhost:3001   |
+
+## Mobile App (Capacitor)
+
+The frontend is wrapped with [Capacitor](https://capacitorjs.com/) to produce native Android and iOS apps from the same codebase. Native features include push notifications, QR code scanning, and over-the-air live updates.
+
+### Prerequisites
+
+- Android Studio (for Android builds)
+- Xcode (for iOS builds, macOS only)
+- CocoaPods (`sudo gem install cocoapods`)
+
+### Setup
+
+1. Build the static frontend and sync with native projects:
+   ```
+   cd frontend
+   npm run build:mobile
+   ```
+
+2. Open in your IDE:
+   ```
+   npm run open:android   # Opens Android Studio
+   npm run open:ios       # Opens Xcode
+   ```
+
+3. For local development, set your machine's IP so the app can reach the backend:
+   ```
+   NEXT_PUBLIC_API_URL=http://192.168.x.x:5005 npm run build:mobile
+   ```
+
+### Build Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run build:mobile` | Static export + Capacitor sync |
+| `npm run open:android` | Open project in Android Studio |
+| `npm run open:ios` | Open project in Xcode |
+| `npm run deploy:mobile` | Build and push OTA live update |
+
+### Live Updates
+
+Code changes can be pushed to users' devices without an App Store resubmission using [Capawesome Live Update](https://github.com/capawesome-team/capacitor-plugins). Run `npm run deploy:mobile` to build and upload a new bundle. Users receive the update on next app launch.
+
+Store resubmission is only required when:
+- Adding or removing Capacitor native plugins
+- Changing `capacitor.config.ts`
+- Updating native project files (`android/`, `ios/`)
+
+### Architecture
+
+See [Capacitor Mobile Design Spec](docs/superpowers/specs/2026-03-30-capacitor-mobile-design.md) for full details.
