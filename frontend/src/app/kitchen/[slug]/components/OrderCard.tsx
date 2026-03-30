@@ -1,13 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { OrderResponse } from "@/types";
+
+type ColumnType = "new" | "preparing" | "ready";
 
 interface OrderCardProps {
   order: OrderResponse;
   onAdvance: (orderId: string) => void;
+  columnType: ColumnType;
 }
 
 function timeSince(dateString: string): string {
@@ -21,13 +23,19 @@ function timeSince(dateString: string): string {
   return `${hours}h ago`;
 }
 
-const statusLabels: Record<string, string> = {
-  confirmed: "Start Preparing",
-  preparing: "Mark Ready",
-  ready: "Complete",
+const cardStyles: Record<ColumnType, string> = {
+  new: "bg-primary/[0.08] border border-primary/15 rounded-xl p-4 animate-slide-in-top",
+  preparing: "bg-amber-500/[0.06] border border-amber-500/12 rounded-xl p-4",
+  ready: "bg-green-500/[0.06] border border-green-500/12 rounded-xl p-4",
 };
 
-export function OrderCard({ order, onAdvance }: OrderCardProps) {
+const orderNumberStyles: Record<ColumnType, string> = {
+  new: "font-bold text-sm text-primary",
+  preparing: "font-bold text-sm text-amber-400",
+  ready: "font-bold text-sm text-green-400",
+};
+
+export function OrderCard({ order, onAdvance, columnType }: OrderCardProps) {
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
     const printEl = document.getElementById(`print-receipt-${order.id}`);
@@ -42,19 +50,16 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
   };
 
   return (
-    <Card
-      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => onAdvance(order.id)}
-    >
+    <div className={cardStyles[columnType]}>
       <div className="flex justify-between items-start mb-2">
-        <div>
-          <span className="font-bold text-sm">
+        <div className="flex items-center gap-2">
+          <span className={orderNumberStyles[columnType]}>
             #{order.id.slice(0, 8)}
           </span>
           {order.table_identifier && (
-            <Badge variant="outline" className="ml-2">
+            <span className="text-muted-foreground text-xs">
               Table {order.table_identifier}
-            </Badge>
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -62,7 +67,7 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
             variant="ghost"
             size="sm"
             onClick={handlePrint}
-            className="text-xs"
+            className="text-xs h-auto py-0.5 px-2"
           >
             Print
           </Button>
@@ -85,18 +90,59 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
       <ul className="text-sm space-y-1 mb-3">
         {order.items.map((item) => (
           <li key={item.id}>
-            {item.quantity}x {item.name} ({item.variant_label})
+            <span className="text-foreground">
+              {item.quantity}x {item.name}
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {" "}({item.variant_label})
+            </span>
+            {item.modifiers && item.modifiers.length > 0 && (
+              <ul className="ml-4 mt-0.5 space-y-0.5">
+                {item.modifiers.map((mod) => (
+                  <li key={mod.id} className="text-xs text-muted-foreground">
+                    + {mod.name}
+                  </li>
+                ))}
+              </ul>
+            )}
             {item.special_requests && (
-              <span className="text-muted-foreground italic">
-                {" "}- {item.special_requests}
-              </span>
+              <div className="ml-4 text-xs text-muted-foreground italic">
+                Note: {item.special_requests}
+              </div>
             )}
           </li>
         ))}
       </ul>
 
-      <div className="text-xs text-center text-primary font-medium">
-        Tap to {statusLabels[order.status] || "update"}
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground text-xs">
+          {order.table_identifier ? `Table ${order.table_identifier}` : "No table"} · {timeSince(order.created_at)}
+        </span>
+        {columnType === "new" && (
+          <Button
+            variant="gradient"
+            size="sm"
+            onClick={() => onAdvance(order.id)}
+          >
+            Start Preparing
+          </Button>
+        )}
+        {columnType === "preparing" && (
+          <button
+            className="bg-amber-500/15 border border-amber-500/25 text-amber-400 rounded-lg hover:bg-amber-500/25 px-3 py-1.5 text-sm font-medium transition-colors"
+            onClick={() => onAdvance(order.id)}
+          >
+            Mark Ready
+          </button>
+        )}
+        {columnType === "ready" && (
+          <button
+            className="bg-green-500/15 border border-green-500/25 text-green-400 rounded-lg hover:bg-green-500/25 px-3 py-1.5 text-sm font-medium transition-colors"
+            onClick={() => onAdvance(order.id)}
+          >
+            Complete
+          </button>
+        )}
       </div>
 
       {/* Hidden receipt template — only visible during printing */}
@@ -129,6 +175,6 @@ export function OrderCard({ order, onAdvance }: OrderCardProps) {
             : "Paid online"}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

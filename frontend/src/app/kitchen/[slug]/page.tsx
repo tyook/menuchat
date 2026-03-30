@@ -10,7 +10,7 @@ import { useMyRestaurants } from "@/hooks/use-my-restaurants";
 import { useAdvanceOrder } from "@/hooks/use-advance-order";
 import { useRestaurantOrders } from "@/hooks/use-restaurant-orders";
 import { OrderColumn } from "./components/OrderColumn";
-import { Badge } from "@/components/ui/badge";
+import { ChefHat } from "lucide-react";
 import type { OrderResponse } from "@/types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:5005";
@@ -107,33 +107,49 @@ export default function KitchenPage() {
   const preparing = orders.filter((o) => o.status === "preparing");
   const ready = orders.filter((o) => o.status === "ready");
 
+  const restaurantName = restaurants?.find((r) => r.slug === slug)?.name ?? slug;
+
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Kitchen Dashboard</h1>
-        <Badge variant={isConnected ? "default" : "destructive"}>
-          {isConnected ? "Connected" : "Disconnected"}
-        </Badge>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="bg-card/50 border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <ChefHat className="w-5 h-5 text-primary" />
+          <span className="font-semibold text-foreground">{restaurantName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isConnected
+                ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+                : "bg-destructive"
+            }`}
+          />
+          <span className="text-xs text-muted-foreground">
+            {isConnected ? "Live" : "Disconnected"}
+          </span>
+        </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto">
+      {/* Kanban board */}
+      <div className="grid grid-cols-3 gap-3 p-4">
         <OrderColumn
-          title="New Orders"
+          title="New"
           orders={confirmed}
           onAdvance={handleAdvance}
-          variant="destructive"
+          columnType="new"
         />
         <OrderColumn
           title="Preparing"
           orders={preparing}
           onAdvance={handleAdvance}
-          variant="secondary"
+          columnType="preparing"
         />
         <OrderColumn
           title="Ready"
           orders={ready}
           onAdvance={handleAdvance}
-          variant="default"
+          columnType="ready"
         />
       </div>
     </div>
