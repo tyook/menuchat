@@ -81,12 +81,12 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
-    CapawesomeLiveUpdate: {
-      enabled: true,
-      autoUpdate: true,
-      // Set to actual manifest URL when hosting is decided
-      // url: 'https://your-cdn.com/updates/manifest.json',
-    },
+    // Live updates disabled until manifest URL is configured
+    // CapawesomeLiveUpdate: {
+    //   enabled: true,
+    //   autoUpdate: true,
+    //   url: 'https://your-cdn.com/updates/manifest.json',
+    // },
   },
 };
 
@@ -171,6 +171,8 @@ Use `Authorization: Bearer` header-based auth for native platforms from the star
 **Backend support:** The existing `CookieJWTAuthentication` class (`accounts/authentication.py`) already falls back to reading `Authorization: Bearer <token>` from the request header when no cookie is present. No backend auth class changes needed.
 
 **Backend change required:** Auth endpoints (`login`, `register`, `google`, `apple`, `refresh`) currently return tokens **only** as httpOnly cookies (not accessible to JavaScript). For native platforms, these endpoints must also return `access_token` and `refresh_token` in the JSON response body when a `X-Platform: mobile` header is present (or similar signal). This allows the frontend to store tokens in localStorage on native.
+
+Additionally, `RefreshView.post` currently only reads `refresh_token` from `request.COOKIES`. It must also accept `refresh_token` from the request body when the `X-Platform: mobile` header is present, since native apps cannot send httpOnly cookies.
 
 **Frontend approach:**
 - On native: auth endpoints send `X-Platform: mobile` header; store returned `access_token` and `refresh_token` in localStorage
@@ -284,7 +286,7 @@ The exact upload target will depend on the chosen hosting provider. This is a pl
 | `src/hooks/use-push-notifications.ts` | New hook — register + handle push notifications |
 | `src/hooks/use-qr-scanner.ts` | New hook — native barcode scanning |
 | Backend `settings.py` | Add Capacitor origins to CORS + Django Channels |
-| Backend auth endpoints | Return tokens in response body when `X-Platform: mobile` header present |
+| Backend auth endpoints | Return tokens in response body + accept refresh token from body when `X-Platform: mobile` |
 | Backend `POST /api/account/devices/` | New endpoint + `DeviceToken` model — store FCM device tokens |
 | Backend notifications | `firebase-admin` + Celery tasks to send push via FCM |
 | Backend Django Channels consumer | Accept token from query string for native WebSocket auth |
