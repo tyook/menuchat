@@ -21,6 +21,7 @@ interface SocialLoginButtonsProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;
   disabled?: boolean;
+  buttonClassName?: string;
 }
 
 export function SocialLoginButtons({
@@ -28,6 +29,7 @@ export function SocialLoginButtons({
   onSuccess,
   onError,
   disabled,
+  buttonClassName,
 }: SocialLoginButtonsProps) {
   const { googleLogin, appleLogin } = useAuthStore();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
@@ -147,7 +149,7 @@ export function SocialLoginButtons({
       <div ref={googleBtnRef} className="h-0 w-0 overflow-hidden" />
       <Button
         variant="outline"
-        className="w-full"
+        className={`w-full${buttonClassName ? ` ${buttonClassName}` : ""}`}
         onClick={handleGoogleClick}
         disabled={disabled || loading !== null || !mounted}
       >
@@ -155,7 +157,7 @@ export function SocialLoginButtons({
       </Button>
       <Button
         variant="outline"
-        className="w-full"
+        className={`w-full${buttonClassName ? ` ${buttonClassName}` : ""}`}
         onClick={handleAppleLogin}
         disabled={disabled || loading !== null || !mounted}
       >
