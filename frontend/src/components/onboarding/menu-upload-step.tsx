@@ -32,9 +32,9 @@ export function MenuUploadStep({ slug, onComplete, onSkip }: MenuUploadStepProps
         </p>
       </div>
 
-      <div className="flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted p-8">
+      <div className="glass-card rounded-2xl p-8 border-dashed border-2 border-border hover:border-primary/30 text-center transition-colors flex flex-col items-center gap-4">
         <Upload className="h-10 w-10 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground text-center">
+        <p className="text-muted-foreground text-sm text-center">
           Take photos of your paper menu or upload existing images.
           We support JPEG, PNG, and HEIC formats.
         </p>

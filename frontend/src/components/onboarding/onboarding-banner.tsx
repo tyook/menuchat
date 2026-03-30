@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useDismissOnboarding } from "@/hooks/use-onboarding";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export function OnboardingBanner() {
   const router = useRouter();
@@ -25,23 +24,21 @@ export function OnboardingBanner() {
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/50 to-green-900/50 border-b border-blue-800/50 px-4 py-3 flex items-center justify-between">
+    <div className="bg-card border border-border rounded-xl p-4 border-l-4 border-l-primary flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span className="text-blue-400 text-sm">✨</span>
-        <span className="text-sm text-gray-200">
+        <span className="text-foreground text-sm">
           Complete your profile for a personalized experience
         </span>
-        <Button
-          variant="default"
-          size="sm"
+        <button
           onClick={() => router.push("/account/onboarding")}
+          className="text-primary hover:underline text-sm font-medium"
         >
           Set up now
-        </Button>
+        </button>
       </div>
       <button
         onClick={handleDismiss}
-        className="text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Dismiss"
       >
         <X className="h-4 w-4" />
