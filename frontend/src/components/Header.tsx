@@ -38,12 +38,12 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto flex h-14 items-center px-4">
         {/* Logo */}
         <Link href="/" className="mr-6 flex items-center gap-2 font-bold">
-          <UtensilsCrossed className="h-5 w-5" />
-          <span>QR Order</span>
+          <UtensilsCrossed className="h-5 w-5 text-primary" />
+          <span className="gradient-text">QR Order</span>
         </Link>
 
         {/* Navigation */}
@@ -140,7 +140,7 @@ export function Header() {
           </DropdownMenu>
         ) : (
           <Link href="/account/login">
-            <Button size="sm">Log in</Button>
+            <Button size="sm" variant="gradient">Log in</Button>
           </Link>
         )}
       </div>
