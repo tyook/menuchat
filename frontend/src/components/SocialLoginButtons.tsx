@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 
 interface AppleAuthResponse {
