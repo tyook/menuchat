@@ -31,7 +31,7 @@ frontend/
 
 | Script | Command |
 |--------|---------|
-| `build:mobile` | `next build && npx cap sync` |
+| `build:mobile` | `BUILD_TARGET=mobile next build && npx cap sync` |
 | `open:android` | `npx cap open android` |
 | `open:ios` | `npx cap open ios` |
 | `deploy:mobile` | Builds, zips, and uploads bundle for live updates |
@@ -48,24 +48,86 @@ frontend/
 ```js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  ...(process.env.BUILD_TARGET === 'mobile' ? { output: 'export' } : {}),
 };
 export default nextConfig;
 ```
 
-Note: `output: 'export'` is only needed for mobile builds. The web deployment can continue using the default Next.js build. Consider using an environment variable to toggle this.
+`output: 'export'` is only active when `BUILD_TARGET=mobile` is set. The `build:mobile` script sets this automatically. Web deployments continue using the default Next.js build unchanged.
+
+### Static Export Compatibility
+
+All pages in this app are client components (`"use client"`) with client-side data fetching via React Query. There is no SSR, no middleware, no `getServerSideProps`, and no `next/image` usage. This means static export produces a single SPA-style shell — dynamic route segments (`[slug]`, `[tableId]`, `[orderId]`) are resolved client-side via `useParams()`, not at build time. No `generateStaticParams` is needed.
+
+If any page accidentally introduces a server-side feature in the future, the `next build` with `output: 'export'` will fail at build time with a clear error, preventing silent breakage.
+
+### Capacitor Configuration
+
+The `capacitor.config.ts` file:
+
+```ts
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.aiqrordering.app',
+  appName: 'AI QR Ordering',
+  webDir: 'out',
+  server: {
+    // For development only — remove for production builds
+    // url: 'http://192.168.x.x:3001',
+    // cleartext: true,
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+    CapawesomeLiveUpdate: {
+      enabled: true,
+      autoUpdate: true,
+      // Set to actual manifest URL when hosting is decided
+      // url: 'https://your-cdn.com/updates/manifest.json',
+    },
+  },
+};
+
+export default config;
+```
 
 ## Section 2: Native Plugin Integration
 
 ### Push Notifications (`@capacitor/push-notifications`)
 
 - On app launch, request notification permission and register with APNs (iOS) / FCM (Android)
-- Send the device token to Django backend via `POST /api/accounts/devices/`
+- Send the device token to Django backend via `POST /api/account/devices/`
 - Backend stores device tokens and sends notifications via Firebase Cloud Messaging (works for both platforms)
 - **Notification triggers:**
   - Customer: order status changes (confirmed, ready, etc.)
   - Kitchen/Owner: new incoming orders
 - Web users do not receive push notifications (can add web push later)
+
+**Backend: Device Token Endpoint**
+
+`POST /api/account/devices/` — registers a device for push notifications.
+
+Request body:
+```json
+{
+  "token": "fcm-device-token-string",
+  "platform": "ios" | "android"
+}
+```
+
+Backend creates/updates a `DeviceToken` model:
+```python
+class DeviceToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="devices")
+    token = models.TextField(unique=True)
+    platform = models.CharField(max_length=10)  # "ios" or "android"
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+```
+
+Backend sends notifications via `firebase-admin` SDK using stored device tokens when order status changes. The project already uses Celery for task scheduling — send push notifications as Celery tasks to avoid blocking the request/response cycle.
 
 ### QR Code Scanner (`@capawesome/capacitor-mlkit-barcode-scanning`)
 
@@ -98,11 +160,30 @@ Add Capacitor origins to the allowed origins list:
 
 These are required for both development and production — Capacitor always makes requests from these origins regardless of where the backend is hosted.
 
+Also add these origins to Django Channels' ASGI allowed origins for WebSocket connections (kitchen display real-time updates).
+
 ### Authentication
 
-- Current cookie-based JWT auth with CSRF tokens works in Capacitor's WebView
-- Keep this approach for now
-- If auth issues arise on specific devices/WebView versions, add `Authorization: Bearer` header fallback — the backend already issues JWT tokens, so this would be a minimal change (read from localStorage instead of cookies)
+Use `Authorization: Bearer` header-based auth for native platforms from the start, rather than relying on cookies.
+
+**Rationale:** Cookie-based auth with `credentials: "include"` and CSRF tokens is unreliable in Capacitor WebViews. Cross-origin cookie handling (`capacitor://localhost` → remote backend) varies by platform, OS version, and `SameSite`/`Secure` settings. Discovering this late in device testing would be costly.
+
+**Backend support:** The existing `CookieJWTAuthentication` class (`accounts/authentication.py`) already falls back to reading `Authorization: Bearer <token>` from the request header when no cookie is present. No backend auth class changes needed.
+
+**Backend change required:** Auth endpoints (`login`, `register`, `google`, `apple`, `refresh`) currently return tokens **only** as httpOnly cookies (not accessible to JavaScript). For native platforms, these endpoints must also return `access_token` and `refresh_token` in the JSON response body when a `X-Platform: mobile` header is present (or similar signal). This allows the frontend to store tokens in localStorage on native.
+
+**Frontend approach:**
+- On native: auth endpoints send `X-Platform: mobile` header; store returned `access_token` and `refresh_token` in localStorage
+- On native: `apiFetch()` sends `Authorization: Bearer <token>` header instead of `credentials: "include"`
+- On native: `tryRefresh()` sends `refresh_token` from localStorage in the request body (instead of relying on httpOnly cookie), and stores the new `access_token` from the response
+- On native: skip CSRF token handling (CSRF is a browser-specific concern)
+- On web: keep the existing cookie-based flow completely unchanged
+
+**Auth store changes:** Add `accessToken` and `refreshToken` fields to Zustand store, persisted to localStorage on native only. Note: localStorage in Capacitor WebViews is persistent across app restarts but cleared if user clears app data — this is standard behavior for auth tokens.
+
+**Logout on native:** `logout()` clears tokens from localStorage and calls `POST /api/auth/logout/`. Client-side token deletion is sufficient — tokens are short-lived JWTs (15-min access, 7-day refresh) and will expire naturally. No server-side token blacklisting needed.
+
+**WebSocket auth on native:** The `useWebSocket` hook currently relies on cookies for authentication. On native, the WebSocket connection URL must include the access token as a query parameter (e.g., `wss://backend/ws/orders/?token=<jwt>`). The Django Channels consumer needs to read the token from the query string as a fallback when no cookie is present.
 
 ### WebSocket URL
 
@@ -113,9 +194,32 @@ These are required for both development and production — Capacitor always make
 
 - All React components, hooks, stores, types — unchanged
 - Tailwind CSS / shadcn/ui styling — works as-is in Capacitor WebView
-- Google OAuth, Stripe — work in WebView (may need OAuth redirect URI config for Capacitor scheme)
 - Next.js routing — static export handles dynamic routes client-side
 - The web version continues to be deployed and used independently
+
+### Google OAuth in Native App
+
+Google blocks sign-in from embedded WebViews. Use `@capacitor/browser` plugin to open the system browser for the Google OAuth consent screen, then handle the redirect back to the app.
+
+**Current backend:** The Google OAuth endpoint (`POST /api/auth/google/`) accepts a Google **ID token** (not an authorization code) and verifies it via `google.oauth2.id_token.verify_oauth2_token()`.
+
+**Flow on native:**
+1. User taps "Sign in with Google"
+2. Open system browser via `@capacitor/browser` with Google OAuth URL (response_type=id_token, redirect_uri=`com.aiqrordering.app://oauth/callback`)
+3. Google redirects to `com.aiqrordering.app://oauth/callback#id_token=...`
+4. Capacitor catches the deep link, extracts the ID token from the URL fragment
+5. Send the ID token to `POST /api/auth/google/` (same endpoint as web)
+6. Backend verifies and returns user + tokens (via `X-Platform: mobile` header)
+
+**Flow on web:** Existing `@react-oauth/google` flow continues unchanged.
+
+**Google Cloud Console setup:** Add `com.aiqrordering.app://oauth/callback` as an authorized redirect URI for the OAuth client.
+
+### Stripe in Native App
+
+Stripe's `@stripe/react-stripe-js` works in Capacitor WebView. The one issue is redirect-based payment confirmation — `return_url` currently uses `window.location.href`, which resolves to `capacitor://localhost/...` on iOS. For payment confirmation redirects, use the app's deep link scheme (`com.aiqrordering.app://payment/confirm`) on native, and the current `window.location.href` on web.
+
+**Note:** `return_url` is set in two places: `src/lib/api.ts` and `src/app/order/[slug]/components/PaymentStep.tsx`. Both must be updated to use the platform-aware URL.
 
 ## Section 5: Live Updates (Capawesome)
 
@@ -128,15 +232,39 @@ These are required for both development and production — Capacitor always make
 ### Infrastructure
 
 - Host bundle zips on any static file server (S3, Cloudflare R2, or Django serving static files)
-- A simple manifest JSON file tracks the current version
 - No paid service needed
+
+**Manifest format** (URL determined when hosting is set up — configured in `capacitor.config.ts`):
+
+```json
+{
+  "version": "1.2.3",
+  "bundleUrl": "https://your-cdn.com/updates/1.2.3.zip"
+}
+```
+
+The app checks this manifest URL on launch. If `version` is newer than the installed version, it downloads the zip and applies it on next restart.
+
+### `deploy:mobile` Script
+
+```bash
+# 1. Build static export
+BUILD_TARGET=mobile next build
+# 2. Zip the output
+cd out && zip -r ../bundle.zip . && cd ..
+# 3. Upload to bundle server (example using AWS CLI)
+aws s3 cp bundle.zip s3://your-bucket/updates/$(node -p "require('./package.json').version").zip
+# 4. Update manifest
+echo "{\"version\":\"$(node -p "require('./package.json').version")\",\"bundleUrl\":\"https://your-cdn.com/updates/$(node -p "require('./package.json').version").zip\"}" | aws s3 cp - s3://your-bucket/updates/manifest.json
+```
+
+The exact upload target will depend on the chosen hosting provider. This is a placeholder — the actual `deploy:mobile` script should be implemented as a Node.js script for reliability (avoiding shell string concatenation issues).
 
 ### Update Flow
 
-1. Make code changes and run `next build`
-2. Zip the `out/` directory, upload to bundle server with a version ID
-3. Update the manifest to point at the new version
-4. Users' apps pick it up automatically on next launch
+1. Make code changes, bump version in `package.json`
+2. Run `npm run deploy:mobile` — builds, zips, uploads bundle and manifest
+3. Users' apps pick it up automatically on next launch
 
 ### What Still Requires a Store Submission
 
@@ -155,8 +283,11 @@ These are required for both development and production — Capacitor always make
 | `src/lib/platform.ts` | New utility — `isNative()`, platform detection |
 | `src/hooks/use-push-notifications.ts` | New hook — register + handle push notifications |
 | `src/hooks/use-qr-scanner.ts` | New hook — native barcode scanning |
-| Backend `settings.py` | Add Capacitor origins to CORS |
-| Backend `POST /api/accounts/devices/` | New endpoint — store device tokens |
+| Backend `settings.py` | Add Capacitor origins to CORS + Django Channels |
+| Backend auth endpoints | Return tokens in response body when `X-Platform: mobile` header present |
+| Backend `POST /api/account/devices/` | New endpoint + `DeviceToken` model — store FCM device tokens |
+| Backend notifications | `firebase-admin` + Celery tasks to send push via FCM |
+| Backend Django Channels consumer | Accept token from query string for native WebSocket auth |
 | UI | Add QR scan button (native only) |
 | Live updates | Capawesome plugin + bundle hosting |
 
@@ -171,6 +302,7 @@ These are required for both development and production — Capacitor always make
 
 # Plugins
 @capacitor/push-notifications
+@capacitor/browser
 @capawesome/capacitor-mlkit-barcode-scanning
 @capawesome/capacitor-live-update
 ```
