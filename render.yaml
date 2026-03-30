@@ -27,9 +27,15 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PRICE_STARTER_MONTHLY
         sync: false
@@ -45,11 +51,17 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: LLM_MODEL
-        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: APPLE_CLIENT_ID
+        sync: false
+      - key: POS_ENCRYPTION_KEY
+        sync: false
+      - key: POS_SQUARE_CLIENT_ID
+        sync: false
+      - key: POS_SQUARE_CLIENT_SECRET
+        sync: false
+      - key: POS_TOAST_CLIENT_ID
+        sync: false
+      - key: POS_TOAST_CLIENT_SECRET
         sync: false
