@@ -5,7 +5,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   usePOSConnect,
   usePOSConnection,
@@ -66,7 +65,7 @@ export default function POSIntegrationsPage() {
       )}
 
       {/* Connection Status */}
-      <Card className="p-6">
+      <Card className="bg-card border border-border rounded-2xl p-6">
         <h2 className="text-lg font-semibold">Connection Status</h2>
         <div className="mt-4 flex items-center gap-3">
           <span
@@ -79,12 +78,15 @@ export default function POSIntegrationsPage() {
               ? `Connected to ${connection?.pos_type}`
               : "No POS connected"}
           </span>
-          {isConnected && <Badge variant="outline">Active</Badge>}
+          {isConnected && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Active</span>
+          )}
         </div>
 
         {!isConnected && (
           <div className="mt-4 flex gap-3">
             <Button
+              variant="gradient"
               onClick={() => connect.mutate({ slug, posType: "square" })}
               disabled={connect.isPending}
             >
@@ -114,7 +116,7 @@ export default function POSIntegrationsPage() {
 
       {/* Location Selector */}
       {isConnected && (
-        <Card className="p-6">
+        <Card className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-lg font-semibold">POS Location</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Enter the location ID from your POS dashboard for the location that should receive QR orders.
@@ -128,6 +130,7 @@ export default function POSIntegrationsPage() {
               className="flex-1"
             />
             <Button
+              variant="gradient"
               onClick={() =>
                 updateConnection.mutate({ external_location_id: locationId })
               }
@@ -141,7 +144,7 @@ export default function POSIntegrationsPage() {
 
       {/* Payment Mode */}
       {isConnected && (
-        <Card className="p-6">
+        <Card className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-lg font-semibold">Payment Mode</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Choose how payments are collected for QR orders.

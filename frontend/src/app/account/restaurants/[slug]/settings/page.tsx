@@ -75,7 +75,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold mb-6">Settings & QR Codes</h1>
 
         {/* Tax Rate */}
-        <Card className="p-6 mb-6">
+        <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Tax Rate</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Set the sales tax percentage for this restaurant. This will be
@@ -83,7 +83,7 @@ export default function SettingsPage() {
           </p>
           <div className="flex items-end gap-2">
             <div className="w-40">
-              <Label htmlFor="tax-rate">Rate (%)</Label>
+              <Label className="text-muted-foreground text-sm" htmlFor="tax-rate">Rate (%)</Label>
               <Input
                 id="tax-rate"
                 type="number"
@@ -95,7 +95,7 @@ export default function SettingsPage() {
                 placeholder="0.000"
               />
             </div>
-            <Button onClick={handleSaveTax} disabled={updateTaxRate.isPending}>
+            <Button variant="gradient" onClick={handleSaveTax} disabled={updateTaxRate.isPending}>
               {updateTaxRate.isPending ? "Saving..." : "Save"}
             </Button>
             {taxMessage && (
@@ -107,7 +107,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Counter QR (no table) */}
-        <Card className="p-6 mb-6">
+        <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">
             Counter / Pickup QR Code
           </h2>
@@ -123,7 +123,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Table QR Generator */}
-        <Card className="p-6">
+        <Card className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-lg font-semibold mb-4">Table QR Codes</h2>
           <div className="flex gap-2 mb-4">
             <div className="flex-1">
@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 placeholder="1, 2, 3, 4, 5"
               />
             </div>
-            <Button className="mt-6" onClick={handleGenerate}>
+            <Button variant="gradient" className="mt-6" onClick={handleGenerate}>
               Generate
             </Button>
           </div>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
               {generatedTables.map((tableId) => (
                 <div
                   key={tableId}
-                  className="flex flex-col items-center p-4 border rounded-lg"
+                  className="flex flex-col items-center p-4 bg-card border border-border rounded-2xl"
                 >
                   <QRCodeSVG value={getOrderUrl(tableId)} size={120} />
                   <p className="font-semibold mt-2">Table {tableId}</p>

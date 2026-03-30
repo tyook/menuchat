@@ -3,17 +3,16 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useRequireRestaurantAccess } from "@/hooks/use-auth";
 import { useRestaurantOrders } from "@/hooks/use-restaurant-orders";
 
-const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  pending_payment: "destructive",
-  pending: "outline",
-  confirmed: "destructive",
-  preparing: "secondary",
-  ready: "default",
-  completed: "outline",
+const statusClass: Record<string, string> = {
+  pending_payment: "bg-destructive/10 text-destructive",
+  pending: "bg-primary/10 text-primary",
+  confirmed: "bg-primary/10 text-primary",
+  preparing: "bg-amber-100 text-amber-700",
+  ready: "bg-green-100 text-green-700",
+  completed: "bg-green-100 text-green-700",
 };
 
 export default function OrderHistoryPage() {
@@ -61,7 +60,7 @@ export default function OrderHistoryPage() {
         <div className="space-y-3">
           {orders && orders.length > 0 ? (
             orders.map((order) => (
-              <Card key={order.id} className="p-4">
+              <Card key={order.id} className="bg-card border border-border rounded-2xl p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="font-mono text-sm">
@@ -83,9 +82,9 @@ export default function OrderHistoryPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={statusVariant[order.status] || "outline"}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusClass[order.status] || "bg-muted text-muted-foreground"}`}>
                       {order.status}
-                    </Badge>
+                    </span>
                     <span className="font-semibold">${order.total_price}</span>
                   </div>
                 </div>
