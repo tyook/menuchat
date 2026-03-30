@@ -227,9 +227,17 @@ CORS_ALLOW_CREDENTIALS = True
 # Cookie Auth
 # ---------------------------------------------------------------------------
 AUTH_COOKIE_SECURE = not DEBUG
+# Cross-origin deployments (frontend/backend on different domains) require
+# SameSite=None so the browser accepts Set-Cookie from the API response.
+# Defaults to "Lax" in dev (same-origin), "None" in production (cross-origin).
+AUTH_COOKIE_SAMESITE = config(
+    "AUTH_COOKIE_SAMESITE", default="Lax" if DEBUG else "None"
+)
 CSRF_COOKIE_HTTPONLY = False  # Frontend reads csrftoken cookie
-CSRF_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = AUTH_COOKIE_SAMESITE
+CSRF_COOKIE_SECURE = AUTH_COOKIE_SECURE
+SESSION_COOKIE_SAMESITE = AUTH_COOKIE_SAMESITE
+SESSION_COOKIE_SECURE = AUTH_COOKIE_SECURE
 CSRF_TRUSTED_ORIGINS = [
     FRONTEND_URL,
     "http://localhost:3000",

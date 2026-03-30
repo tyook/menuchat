@@ -20,13 +20,14 @@ def set_auth_cookies(response: Response, user: User) -> Response:
     """Generate JWT tokens and set them as httpOnly cookies on the response."""
     refresh = RefreshToken.for_user(user)
     secure = getattr(settings, "AUTH_COOKIE_SECURE", not settings.DEBUG)
+    samesite = getattr(settings, "AUTH_COOKIE_SAMESITE", "Lax")
 
     response.set_cookie(
         key="access_token",
         value=str(refresh.access_token),
         httponly=True,
         secure=secure,
-        samesite="Lax",
+        samesite=samesite,
         path="/",
         max_age=int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()),
     )
@@ -35,7 +36,7 @@ def set_auth_cookies(response: Response, user: User) -> Response:
         value=str(refresh),
         httponly=True,
         secure=secure,
-        samesite="Lax",
+        samesite=samesite,
         path="/api/auth/refresh/",
         max_age=int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()),
     )
