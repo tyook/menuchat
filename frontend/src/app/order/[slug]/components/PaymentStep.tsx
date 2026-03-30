@@ -7,6 +7,7 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import type { Appearance } from "@stripe/stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
@@ -18,6 +19,26 @@ import type { SavedPaymentMethod, ConfirmOrderItem } from "@/types";
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
 );
+
+const stripeAppearance: Appearance = {
+  theme: "night",
+  variables: {
+    colorPrimary: "#7c3aed",
+    colorBackground: "#1e293b",
+    colorText: "#f1f5f9",
+    colorTextSecondary: "#94a3b8",
+    colorDanger: "#ef4444",
+    fontFamily: "var(--font-geist-sans)",
+    borderRadius: "12px",
+    spacingUnit: "4px",
+  },
+  rules: {
+    ".Input": {
+      backgroundColor: "#334155",
+      border: "1px solid rgba(255,255,255,0.06)",
+    },
+  },
+};
 
 function SavedCardOption({
   method,
@@ -116,7 +137,9 @@ function PaymentForm({
       )}
       <Button
         type="submit"
-        className="w-full mt-6"
+        variant="gradient"
+        size="lg"
+        className="w-full glow-primary mt-4"
         disabled={!stripe || isProcessing}
       >
         {isProcessing ? "Processing payment..." : "Pay Now"}
@@ -213,7 +236,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
 
   if (!clientSecret && !hasSavedCards) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-8 text-center">
+      <div className="max-w-lg mx-auto px-6 py-8 text-center">
         <p className="text-muted-foreground mb-4">
           Payment session expired. Please try again.
         </p>
@@ -223,40 +246,88 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
-      <h2 className="text-xl font-semibold mb-2">Payment</h2>
-      <p className="text-muted-foreground mb-6">Total: ${total.toFixed(2)}</p>
+    <div className="max-w-lg mx-auto px-6 py-8">
+      <div className="mb-6">
+        <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground mb-2">
+          Checkout
+        </p>
+        <h2 className="text-2xl font-semibold text-foreground">Payment</h2>
+      </div>
+
+      {/* Order summary card */}
+      <div className="glass-card rounded-2xl p-5 mb-6">
+        <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground mb-3">
+          Order Summary
+        </p>
+        <div className="space-y-2 mb-4">
+          {parsedItems.map((item, index) => (
+            <div key={index} className="flex justify-between items-start">
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="text-foreground text-sm font-medium">{item.name}</p>
+                {item.variant.label && (
+                  <p className="text-muted-foreground text-xs">{item.variant.label}</p>
+                )}
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-foreground text-sm">×{item.quantity}</p>
+                <p className="text-muted-foreground text-xs">${item.line_total}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-border/40 pt-3 space-y-1">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="text-foreground">${subtotal.toFixed(2)}</span>
+          </div>
+          {parseFloat(taxRate) > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Tax ({taxRate}%)</span>
+              <span className="text-muted-foreground">${tax.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center pt-1">
+            <span className="text-foreground font-semibold text-sm">Total</span>
+            <span className="gradient-text font-bold text-lg">${total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
 
       {hasSavedCards && !useNewCard ? (
         <div className="space-y-4">
-          <div className="space-y-2">
-            {savedMethods.map((method) => (
-              <SavedCardOption
-                key={method.id}
-                method={method}
-                selected={effectiveSelectedId === method.id}
-                onSelect={() => {
-                  setSelectedMethodId(method.id);
-                  setUseNewCard(false);
-                }}
-              />
-            ))}
-            <label
-              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                useNewCard
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50"
-              }`}
-            >
-              <input
-                type="radio"
-                name="payment-method"
-                checked={useNewCard}
-                onChange={() => setUseNewCard(true)}
-                className="accent-primary"
-              />
-              <span className="font-medium">Add new card</span>
-            </label>
+          <div className="glass-card rounded-2xl p-5">
+            <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground mb-3">
+              Saved Cards
+            </p>
+            <div className="space-y-2">
+              {savedMethods.map((method) => (
+                <SavedCardOption
+                  key={method.id}
+                  method={method}
+                  selected={effectiveSelectedId === method.id}
+                  onSelect={() => {
+                    setSelectedMethodId(method.id);
+                    setUseNewCard(false);
+                  }}
+                />
+              ))}
+              <label
+                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                  useNewCard
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payment-method"
+                  checked={useNewCard}
+                  onChange={() => setUseNewCard(true)}
+                  className="accent-primary"
+                />
+                <span className="font-medium">Add new card</span>
+              </label>
+            </div>
           </div>
 
           {paymentError && (
@@ -264,7 +335,9 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
           )}
 
           <Button
-            className="w-full"
+            variant="gradient"
+            size="lg"
+            className="w-full glow-primary mt-4"
             onClick={handleSavedCardPayment}
             disabled={isProcessing}
           >
@@ -284,15 +357,17 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
               <span className="text-sm">Save this card for future orders</span>
             </label>
           )}
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: { theme: "stripe" },
-            }}
-          >
-            <PaymentForm saveCard={saveCard} slug={slug} orderId={orderId} />
-          </Elements>
+          <div className="glass-card rounded-2xl p-6">
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret,
+                appearance: stripeAppearance,
+              }}
+            >
+              <PaymentForm saveCard={saveCard} slug={slug} orderId={orderId} />
+            </Elements>
+          </div>
           {hasSavedCards && (
             <Button
               variant="ghost"

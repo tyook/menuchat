@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +16,7 @@ interface SubmittedStepProps {
 }
 
 export function SubmittedStep({ slug }: SubmittedStepProps) {
-  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode } = useOrderStore();
+  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode, parsedItems } = useOrderStore();
   const { isAuthenticated, register } = useAuthStore();
 
   const [showRegister, setShowRegister] = useState(false);
@@ -47,34 +47,71 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
-      <div className="flex flex-col items-center justify-center text-center mb-8">
-        <div className="text-4xl mb-4">&#10003;</div>
-        <h2 className="text-2xl font-bold mb-2">Order Placed!</h2>
-        {orderId && (
-          <p className="text-muted-foreground mb-1">
-            Order #{orderId.slice(0, 8)}
-          </p>
-        )}
-        {tableIdentifier && (
-          <p className="text-muted-foreground">Table {tableIdentifier}</p>
-        )}
-        <p className="text-sm text-muted-foreground mt-4">
-          Your order has been sent to the kitchen.
-          {paymentMode === "pos_collected" && (
-            <span className="block mt-1 font-medium text-foreground">
-              Please pay at the counter.
-            </span>
-          )}
-        </p>
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-6 text-center">
+      {/* Ambient success glow */}
+      <div
+        aria-hidden
+        className="absolute w-[250px] h-[250px] bg-[radial-gradient(circle,rgba(34,197,94,0.12),transparent_70%)] rounded-full pointer-events-none"
+      />
+
+      {/* Success icon */}
+      <div className="w-20 h-20 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mb-6">
+        <CheckCircle className="text-green-400 w-10 h-10" />
       </div>
 
-      {orderId && <OrderTracker slug={slug} orderId={orderId} />}
+      <h2 className="text-2xl font-bold text-foreground mb-2">Order Submitted</h2>
+
+      {orderId && (
+        <p className="gradient-text text-lg font-semibold">
+          #{orderId.slice(0, 8)}
+        </p>
+      )}
+
+      {tableIdentifier && (
+        <p className="text-muted-foreground text-sm mt-1">Table {tableIdentifier}</p>
+      )}
+
+      <p className="text-muted-foreground text-sm mt-2 max-w-xs">
+        Your order has been sent to the kitchen.
+        {paymentMode === "pos_collected" && (
+          <span className="block mt-1 font-medium text-foreground">
+            Please pay at the counter.
+          </span>
+        )}
+      </p>
+
+      {/* Order details card */}
+      {parsedItems && parsedItems.length > 0 && (
+        <div className="glass-card rounded-2xl p-5 mt-8 w-full max-w-sm text-left">
+          <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground mb-3">
+            Your Items
+          </p>
+          <div className="space-y-2">
+            {parsedItems.map((item, index) => (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-foreground/80 text-sm">
+                  {item.quantity > 1 && (
+                    <span className="text-muted-foreground text-xs mr-1">×{item.quantity}</span>
+                  )}
+                  {item.name}
+                </span>
+                <span className="text-muted-foreground text-xs">${item.line_total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {orderId && (
+        <div className="w-full max-w-sm mt-6">
+          <OrderTracker slug={slug} orderId={orderId} />
+        </div>
+      )}
 
       {/* Account creation prompt */}
       {!isAuthenticated && !registerSuccess && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-2">Save your order to an account?</h3>
+        <div className="glass-card rounded-2xl p-6 mt-6 w-full max-w-sm text-left">
+          <h3 className="text-lg font-semibold text-foreground mb-2">Save your order to an account?</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Create an account to track this order and save your preferences for next time.
           </p>
@@ -144,19 +181,29 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
               </div>
             </form>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Success message after registration */}
       {registerSuccess && (
-        <Card className="p-6 text-center">
-          <div className="text-3xl mb-2">&#127881;</div>
-          <h3 className="text-lg font-semibold mb-1">Account created!</h3>
+        <div className="glass-card rounded-2xl p-6 mt-6 w-full max-w-sm text-center">
+          <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <CheckCircle className="text-green-400 w-6 h-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-1">Account created!</h3>
           <p className="text-sm text-muted-foreground">
             Your order has been linked to your new account. You can now track all your orders.
           </p>
-        </Card>
+        </div>
       )}
+
+      <Button
+        variant="gradient"
+        size="lg"
+        className="mt-6 w-full max-w-sm"
+      >
+        Done
+      </Button>
     </div>
   );
 }
