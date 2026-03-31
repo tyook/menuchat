@@ -170,7 +170,7 @@ export default function BillingPage() {
                     usagePercent >= 100
                       ? "bg-destructive"
                       : usagePercent >= 80
-                        ? "bg-yellow-500"
+                        ? "bg-warning"
                         : "bg-primary"
                   }`}
                   style={{ width: `${Math.min(usagePercent, 100)}%` }}

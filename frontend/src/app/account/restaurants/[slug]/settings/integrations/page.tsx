@@ -53,13 +53,13 @@ export default function POSIntegrationsPage() {
       <h1 className="text-2xl font-bold">POS Integration</h1>
 
       {justConnected && (
-        <div className="rounded-md bg-green-50 p-4 text-green-800">
+        <div className="rounded-md bg-success/10 p-4 text-success">
           Successfully connected to {justConnected}!
         </div>
       )}
 
       {oauthError && (
-        <div className="rounded-md bg-red-50 p-4 text-red-800">
+        <div className="rounded-md bg-destructive/10 p-4 text-destructive">
           Failed to connect. Please try again.
         </div>
       )}
@@ -70,7 +70,7 @@ export default function POSIntegrationsPage() {
         <div className="mt-4 flex items-center gap-3">
           <span
             className={`h-3 w-3 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-gray-300"
+              isConnected ? "bg-success" : "bg-muted-foreground/30"
             }`}
           />
           <span>
@@ -79,7 +79,7 @@ export default function POSIntegrationsPage() {
               : "No POS connected"}
           </span>
           {isConnected && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Active</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Active</span>
           )}
         </div>
 

@@ -13,6 +13,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTheme } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import {
 export function Header() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -37,29 +39,19 @@ export function Header() {
     router.push("/");
   };
 
+  const isAdmin = theme === "admin";
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
+    <header className={`sticky top-0 z-50 w-full border-b ${isAdmin ? "border-border bg-card shadow-sm" : "border-border bg-background/80 backdrop-blur-xl"}`}>
       <div className="container mx-auto flex h-14 items-center px-4">
         {/* Logo */}
         <Link href="/" className="mr-6 flex items-center gap-2 font-bold">
           <UtensilsCrossed className="h-5 w-5 text-primary" />
-          <span className="gradient-text">QR Order</span>
+          <span className={isAdmin ? "text-foreground" : "gradient-text"}>MenuChat</span>
         </Link>
 
         {/* Navigation */}
         <nav className="flex items-center gap-1 text-sm">
-          <Link href="/account/orders">
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <ShoppingBag className="h-4 w-4" />
-              Orders
-            </Button>
-          </Link>
-          <Link href="/account/profile">
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <UserIcon className="h-4 w-4" />
-              Profile
-            </Button>
-          </Link>
           {mounted && user?.is_restaurant_owner && (
             <Link href="/account/restaurants">
               <Button variant="ghost" size="sm" className="gap-1.5">
@@ -68,6 +60,18 @@ export function Header() {
               </Button>
             </Link>
           )}
+          <Link href="/account/profile">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <UserIcon className="h-4 w-4" />
+              Profile
+            </Button>
+          </Link>
+          <Link href="/account/orders">
+            <Button variant="ghost" size="sm" className="gap-1.5">
+              <ShoppingBag className="h-4 w-4" />
+              Orders
+            </Button>
+          </Link>
         </nav>
 
         {/* Spacer */}

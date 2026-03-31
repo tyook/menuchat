@@ -10,9 +10,9 @@ const statusClass: Record<string, string> = {
   pending_payment: "bg-destructive/10 text-destructive",
   pending: "bg-primary/10 text-primary",
   confirmed: "bg-primary/10 text-primary",
-  preparing: "bg-amber-100 text-amber-700",
-  ready: "bg-green-100 text-green-700",
-  completed: "bg-green-100 text-green-700",
+  preparing: "bg-warning/10 text-warning",
+  ready: "bg-success/10 text-success",
+  completed: "bg-success/10 text-success",
 };
 
 export default function OrderHistoryPage() {

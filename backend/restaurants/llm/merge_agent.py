@@ -75,4 +75,9 @@ class MenuMergeAgent(BaseAgent):
         agent = instance._build_agent(pages=pages)
 
         result = agent.run(instance.prompt(pages=pages))
+        if not isinstance(result.content, ParsedMenu):
+            raise ValueError(
+                f"MenuMergeAgent expected ParsedMenu but got {type(result.content).__name__}: "
+                f"{str(result.content)[:200]}"
+            )
         return result.content

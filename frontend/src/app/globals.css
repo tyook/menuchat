@@ -171,6 +171,17 @@
   border-radius: var(--radius);
 }
 
+[data-theme="admin"] .glass-card {
+  background: hsl(var(--card));
+}
+
+[data-theme="admin"] .gradient-text {
+  background: linear-gradient(135deg, var(--primary-from), var(--primary-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .glow-primary {
   box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
 }
@@ -226,14 +237,19 @@
     --primary-to: #6366f1;
     --accent-from: #f0abfc;
     --accent-to: #818cf8;
-    --success: #22c55e;
+
+    /* Semantic status colors (HSL values for use with hsl()) */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
   }
 
   /* ══════════════════════════════════════════════
      ADMIN THEME — Clean & Airy
      ══════════════════════════════════════════════ */
   [data-theme="admin"] {
-    --background: 210 40% 98%;
+    --background: 210 40% 96%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -241,16 +257,16 @@
     --popover-foreground: 222 47% 11%;
     --primary: 263 70% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
+    --secondary: 210 30% 93%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 214 100% 97%;
+    --muted: 210 30% 93%;
+    --muted-foreground: 215 16% 43%;
+    --accent: 214 60% 95%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 20% 84%;
+    --input: 214 20% 84%;
     --ring: 263 70% 50%;
     --chart-1: 263 70% 55%;
     --chart-2: 173 58% 39%;
@@ -260,9 +276,13 @@
 
     --primary-from: #7c3aed;
     --primary-to: #6366f1;
-    --accent-from: #f0abfc;
-    --accent-to: #818cf8;
-    --success: #22c55e;
+    --accent-from: #7c3aed;
+    --accent-to: #6366f1;
+
+    --success: 142 71% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
   }
 
   /* ══════════════════════════════════════════════
@@ -298,7 +318,11 @@
     --primary-to: #6366f1;
     --accent-from: #f0abfc;
     --accent-to: #818cf8;
-    --success: #22c55e;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
   }
 }
 

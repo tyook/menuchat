@@ -195,7 +195,7 @@ export default function RestaurantsDashboard() {
                         {r.subscription.plan_name}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        r.subscription.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        r.subscription.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                       }`}>
                         {r.subscription.status.replace("_", " ")}
                       </span>

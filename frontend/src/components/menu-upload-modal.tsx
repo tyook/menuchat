@@ -240,7 +240,7 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
 
         {step === "success" && (
           <div className="py-12 text-center">
-            <Check className="h-8 w-8 mx-auto mb-3 text-green-600" />
+            <Check className="h-8 w-8 mx-auto mb-3 text-success" />
             <p className="font-medium">Menu saved successfully!</p>
           </div>
         )}

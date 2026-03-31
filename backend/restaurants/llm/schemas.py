@@ -1,16 +1,15 @@
-from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
 class ParsedMenuVariant(BaseModel):
     label: str
-    price: Decimal = Field(max_digits=8, decimal_places=2)
+    price: float
 
 
 class ParsedMenuItem(BaseModel):
     name: str
     description: str | None = None
-    variants: list[ParsedMenuVariant] = Field(min_length=1)
+    variants: list[ParsedMenuVariant]
 
 
 class ParsedMenuCategory(BaseModel):

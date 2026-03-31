@@ -29,7 +29,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <div data-theme={theme} className="contents">
+      <div data-theme={theme} className="contents bg-background text-foreground">
         {children}
       </div>
     </ThemeContext.Provider>

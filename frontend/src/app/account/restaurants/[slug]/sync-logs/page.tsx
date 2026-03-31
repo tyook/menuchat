@@ -14,7 +14,7 @@ import {
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "text-muted-foreground",
-  success: "text-green-600",
+  success: "text-success",
   failed: "text-destructive",
   retrying: "text-muted-foreground",
   manually_resolved: "text-muted-foreground",

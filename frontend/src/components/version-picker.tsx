@@ -106,7 +106,7 @@ export function VersionPicker({ slug }: VersionPickerProps) {
                     onSelect={(e) => e.preventDefault()}
                   >
                     <div className="flex items-center gap-2">
-                      {v.is_active && <Check className="h-3 w-3 text-green-600" />}
+                      {v.is_active && <Check className="h-3 w-3 text-success" />}
                       <div>
                         <p className="text-sm font-medium">{v.name}</p>
                         <p className="text-xs text-muted-foreground">

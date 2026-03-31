@@ -66,4 +66,9 @@ class MenuParsingAgent(BaseAgent):
             "Extract all menu categories, items, and prices from this image.",
             images=[image],
         )
+        if not isinstance(result.content, ParsedMenuPage):
+            raise ValueError(
+                f"MenuParsingAgent expected ParsedMenuPage but got {type(result.content).__name__}: "
+                f"{str(result.content)[:200]}"
+            )
         return result.content

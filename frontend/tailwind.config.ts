@@ -53,7 +53,14 @@ const config: Config = {
   			violet: {
   				glow: 'rgba(124, 58, 237, 0.2)',
   			},
-  			success: 'var(--success)',
+  			success: {
+				DEFAULT: 'hsl(var(--success))',
+				foreground: 'hsl(var(--success-foreground))',
+			},
+			warning: {
+				DEFAULT: 'hsl(var(--warning))',
+				foreground: 'hsl(var(--warning-foreground))',
+			},
   		},
   		borderRadius: {
   			xl: 'calc(var(--radius) + 8px)',

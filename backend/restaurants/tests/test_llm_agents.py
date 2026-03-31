@@ -26,13 +26,13 @@ from restaurants.llm.schemas import (
 
 class TestParsedMenuVariant:
     def test_valid_creation(self):
-        variant = ParsedMenuVariant(label="Regular", price=Decimal("9.50"))
+        variant = ParsedMenuVariant(label="Regular", price=9.50)
         assert variant.label == "Regular"
-        assert variant.price == Decimal("9.50")
+        assert variant.price == 9.50
 
     def test_price_from_string(self):
         variant = ParsedMenuVariant(label="Large", price="12.00")
-        assert variant.price == Decimal("12.00")
+        assert variant.price == 12.00
 
     def test_missing_label_raises(self):
         with pytest.raises(ValidationError):
@@ -61,9 +61,9 @@ class TestParsedMenuItem:
         item = ParsedMenuItem(name="Fries", variants=[self._variant()])
         assert item.description is None
 
-    def test_empty_variants_raises(self):
-        with pytest.raises(ValidationError):
-            ParsedMenuItem(name="Salad", variants=[])
+    def test_empty_variants_allowed(self):
+        item = ParsedMenuItem(name="Salad", variants=[])
+        assert item.variants == []
 
     def test_missing_variants_raises(self):
         with pytest.raises(ValidationError):
