@@ -46,6 +46,7 @@ export function useCreateRestaurant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-restaurants"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 }
