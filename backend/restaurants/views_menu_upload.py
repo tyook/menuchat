@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -14,6 +16,8 @@ from restaurants.services.menu_upload_service import MenuUploadService
 from restaurants.services.menu_version_service import MenuVersionService
 from restaurants.views import RestaurantMixin
 
+logger = logging.getLogger(__name__)
+
 
 class MenuUploadParseView(RestaurantMixin, APIView):
     def post(self, request, slug):
@@ -24,7 +28,17 @@ class MenuUploadParseView(RestaurantMixin, APIView):
         image_files = serializer.validated_data["images"]
         image_data = [f.read() for f in image_files]
 
-        parsed_menu = MenuUploadService.parse_images(image_data)
+        try:
+            parsed_menu = MenuUploadService.parse_images(image_data)
+        except Exception:
+            logger.exception("Menu parse failed for restaurant %s", slug)
+            return Response(
+                {
+                    "code": "menu_parse_failed",
+                    "detail": "Failed to parse menu images. Please try again or use different images.",
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
         return Response(parsed_menu.model_dump(mode="json"))
 
 
@@ -38,12 +52,22 @@ class MenuUploadSaveView(RestaurantMixin, APIView):
         parsed_menu = ParsedMenu(**data["menu"])
         version_name = data.get("version_name") or None
 
-        new_version = MenuUploadService.save_menu(
-            restaurant=restaurant,
-            parsed_menu=parsed_menu,
-            mode=data["mode"],
-            version_name=version_name,
-        )
+        try:
+            new_version = MenuUploadService.save_menu(
+                restaurant=restaurant,
+                parsed_menu=parsed_menu,
+                mode=data["mode"],
+                version_name=version_name,
+            )
+        except Exception:
+            logger.exception("Menu save failed for restaurant %s", slug)
+            return Response(
+                {
+                    "code": "menu_save_failed",
+                    "detail": "Failed to save the parsed menu. Please try again.",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(
             MenuVersionSerializer(new_version).data,
             status=status.HTTP_201_CREATED,
