@@ -11,7 +11,19 @@ import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useToast } from "@/hooks/use-toast";
 import { SPEECH_LANGUAGES } from "@/lib/constants";
-import { X } from "lucide-react";
+import { Store, X } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const PREDEFINED_DIETARY_PREFERENCES = [
   "Vegetarian",
@@ -153,6 +165,71 @@ export default function CustomerProfilePage() {
       <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
 
       <div className="space-y-6">
+        {/* Restaurant Owner CTA */}
+        {profile && !profile.owns_restaurant && (
+          <Card className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-300">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500 text-white flex items-center justify-center">
+                <Store className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold">Own a restaurant?</h2>
+                <p className="text-xs text-muted-foreground">
+                  Register your restaurant and start accepting QR orders
+                </p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    Get Started
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Register Your Restaurant</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div>
+                        <p className="mb-4">Here&apos;s what you&apos;ll set up:</p>
+                        <div className="space-y-3 mb-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-semibold">
+                              1
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">Restaurant details</p>
+                              <p className="text-xs text-muted-foreground">Name, address, contact info</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-semibold">
+                              2
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                Menu upload <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">Upload a photo or PDF of your menu</p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          You can edit everything later from your dashboard.
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Link href="/account/register-restaurant">Continue</Link>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </Card>
+        )}
+
         {/* Basic Information */}
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
