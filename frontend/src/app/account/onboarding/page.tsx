@@ -9,9 +9,10 @@ import { PreferencesStep } from "@/components/onboarding/preferences-step";
 import { OwnerQuestionStep } from "@/components/onboarding/owner-question-step";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
 import { MenuUploadStep } from "@/components/onboarding/menu-upload-step";
+import { POSVendorStep } from "@/components/onboarding/pos-vendor-step";
 import { cn } from "@/lib/utils";
 
-type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload";
+type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload" | "pos-vendor";
 
 export default function OnboardingPage() {
   const isAuthenticated = useRequireAuth();
@@ -23,11 +24,12 @@ export default function OnboardingPage() {
 
   if (!isAuthenticated || !user) return null;
 
-  const totalSteps = step === "restaurant-details" || step === "menu-upload" ? 4 : 2;
+  const totalSteps = step === "restaurant-details" || step === "menu-upload" || step === "pos-vendor" ? 5 : 2;
   const currentStep =
     step === "preferences" ? 1 :
     step === "owner-question" ? 2 :
-    step === "restaurant-details" ? 3 : 4;
+    step === "restaurant-details" ? 3 :
+    step === "menu-upload" ? 4 : 5;
 
   const handleComplete = () => {
     completeMutation.mutate(undefined, {
@@ -103,7 +105,10 @@ export default function OnboardingPage() {
             />
           )}
           {step === "menu-upload" && restaurantSlug && (
-            <MenuUploadStep slug={restaurantSlug} onComplete={handleComplete} onSkip={handleComplete} />
+            <MenuUploadStep slug={restaurantSlug} onComplete={() => setStep("pos-vendor")} onSkip={() => setStep("pos-vendor")} />
+          )}
+          {step === "pos-vendor" && restaurantSlug && (
+            <POSVendorStep slug={restaurantSlug} onComplete={handleComplete} onSkip={handleComplete} />
           )}
         </div>
       </div>
