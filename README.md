@@ -75,6 +75,33 @@ AI-powered QR code ordering system for restaurants. Customers scan, speak or typ
       STRIPE_WEBHOOK_SECRET=whsec_...
       ```
 
+## Database Reset
+
+To wipe the database and re-run all migrations from scratch:
+
+```bash
+cd backend
+python manage.py reset_db
+```
+
+You will be prompted to confirm. To skip the prompt (useful in CI or scripts):
+
+```bash
+python manage.py reset_db --no-input
+```
+
+To delete all data but keep the schema (faster, skips re-running migrations):
+
+```bash
+python manage.py reset_db --flush-only
+```
+
+| Flag | Effect |
+|------|--------|
+| *(none)* | Drop all tables, re-run migrations (full reset) |
+| `--flush-only` | Delete all rows but keep tables and schema |
+| `--no-input` | Skip the "are you sure?" confirmation prompt |
+
 ## Running
 
 Start the backend (port 5005):
