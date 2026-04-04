@@ -95,6 +95,7 @@ import type {
   POSSyncLog,
   MenuVersion,
   ParsedMenu,
+  CartUpsellResponse,
 } from "@/types";
 
 // ── Auth ──
@@ -277,6 +278,17 @@ export async function saveCardConsent(
   });
 }
 
+// ── Upsell ──
+export async function fetchCartUpsell(
+  slug: string,
+  items: { menu_item_id: number; variant_id: number; quantity: number }[]
+): Promise<CartUpsellResponse> {
+  return apiFetch<CartUpsellResponse>(`/api/order/${slug}/cart-upsell/`, {
+    method: "POST",
+    body: JSON.stringify({ items }),
+  });
+}
+
 // ── Queue ──
 export interface QueueInfo {
   busyness: "green" | "yellow" | "red";
@@ -380,6 +392,16 @@ export async function updatePOSConnection(
   return apiFetch<POSConnectionResponse>(
     `/api/restaurants/${slug}/pos/connection/`,
     { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
+export async function selectPOSVendor(
+  slug: string,
+  posType: string
+): Promise<POSConnectionResponse> {
+  return apiFetch<POSConnectionResponse>(
+    `/api/restaurants/${slug}/pos/select-vendor/`,
+    { method: "POST", body: JSON.stringify({ pos_type: posType }) }
   );
 }
 
