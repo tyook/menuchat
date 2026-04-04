@@ -6,9 +6,10 @@ import { useRequireAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
 import { MenuUploadStep } from "@/components/onboarding/menu-upload-step";
+import { POSVendorStep } from "@/components/onboarding/pos-vendor-step";
 import { cn } from "@/lib/utils";
 
-type Step = "details" | "menu";
+type Step = "details" | "menu" | "pos-vendor";
 
 export default function RegisterRestaurantPage() {
   const isAuthenticated = useRequireAuth();
@@ -33,8 +34,8 @@ export default function RegisterRestaurantPage() {
     return null;
   }
 
-  const totalSteps = 2;
-  const currentStep = step === "details" ? 1 : 2;
+  const totalSteps = 3;
+  const currentStep = step === "details" ? 1 : step === "menu" ? 2 : 3;
 
   const handleComplete = () => {
     router.push("/account/restaurants");
@@ -94,6 +95,13 @@ export default function RegisterRestaurantPage() {
           )}
           {step === "menu" && restaurantSlug && (
             <MenuUploadStep
+              slug={restaurantSlug}
+              onComplete={() => setStep("pos-vendor")}
+              onSkip={() => setStep("pos-vendor")}
+            />
+          )}
+          {step === "pos-vendor" && restaurantSlug && (
+            <POSVendorStep
               slug={restaurantSlug}
               onComplete={handleComplete}
               onSkip={handleComplete}
