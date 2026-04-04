@@ -223,3 +223,19 @@ export interface ParsedMenuCategory {
 export interface ParsedMenu {
   categories: ParsedMenuCategory[];
 }
+
+// Upsell types
+export interface UpsellSuggestion {
+  menu_item_id: number;
+  name: string;
+  description: string;
+  image_url: string;
+  price: string | null;
+  variant_id: number | null;
+  variant_label: string | null;
+  reason: string;
+}
+
+export interface CartUpsellResponse {
+  suggestions: UpsellSuggestion[];
+}

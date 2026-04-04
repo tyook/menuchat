@@ -256,6 +256,40 @@ class StripeConnectWebhookView(APIView):
         return Response(result)
 
 
+class UpsellSuggestionsView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug, order_id):
+        try:
+            order = Order.objects.get(id=order_id, restaurant__slug=slug)
+        except Order.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        suggestions = OrderService.get_upsell_suggestions(order)
+        return Response({"suggestions": suggestions})
+
+
+class CartUpsellView(APIView):
+    """POST /api/order/<slug>/cart-upsell/ — AI upsell suggestions for cart items (pre-order)."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug):
+        restaurant = OrderService.get_restaurant_by_slug(slug)
+
+        cart_items = request.data.get("items", [])
+        if not cart_items:
+            return Response({"suggestions": []})
+
+        suggestions = OrderService.get_cart_upsell_suggestions(
+            restaurant, cart_items
+        )
+        return Response({"suggestions": suggestions})
+
+
 class QueueInfoView(APIView):
     """GET /api/order/<slug>/queue-info/ — restaurant busyness (public)."""
 
@@ -285,7 +319,9 @@ class OrderQueueView(APIView):
             raise NotFound("Order not found")
 
         data = QueueService.get_order_queue_info(order)
-        return Response(data)
+        response = Response(data)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 class KitchenOrderUpdateView(APIView):

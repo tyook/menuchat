@@ -82,8 +82,15 @@ class QueueService:
     @staticmethod
     def get_order_queue_info(order: Order) -> dict:
         """Get queue info for SubmittedStep (post-order)."""
+        active_count = Order.objects.filter(
+            restaurant=order.restaurant,
+            status__in=ACTIVE_STATUSES,
+        ).count()
+
         if order.status in (Order.Status.READY, Order.Status.COMPLETED):
             return {
+                "position": 0,
+                "total": active_count,
                 "queue_position": 0,
                 "estimated_wait_minutes": 0,
                 "status": order.status,
@@ -94,6 +101,8 @@ class QueueService:
         estimated_wait = QueueService.get_estimated_wait(order.restaurant, position)
 
         return {
+            "position": position,
+            "total": active_count,
             "queue_position": position,
             "estimated_wait_minutes": estimated_wait,
             "status": order.status,

@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppleAuthInit } from "@/components/AppleAuthInit";
 import { OnboardingBanner } from "@/components/onboarding/onboarding-banner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -51,10 +52,12 @@ export default function RootLayout({
         />
         <QueryProvider>
           <ThemeProvider>
-            <OnboardingBanner />
-            <ConditionalHeader />
-            <AppleAuthInit />
-            {children}
+            <TooltipProvider>
+              <OnboardingBanner />
+              <ConditionalHeader />
+              <AppleAuthInit />
+              {children}
+            </TooltipProvider>
           </ThemeProvider>
         </QueryProvider>
       </body>

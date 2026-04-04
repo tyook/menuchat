@@ -22,6 +22,7 @@ interface OrderState {
   setStep: (step: OrderStep) => void;
   setRawInput: (input: string) => void;
   setParsedResult: (items: ParsedOrderItem[], allergies: string[], total: string, lang: string) => void;
+  addItem: (item: ParsedOrderItem) => void;
   removeItem: (index: number) => void;
   updateItemQuantity: (index: number, quantity: number) => void;
   setOrderId: (id: string) => void;
@@ -57,6 +58,14 @@ export const useOrderStore = create<OrderState>((set) => ({
   setRawInput: (rawInput) => set({ rawInput }),
   setParsedResult: (parsedItems, parsedAllergies, totalPrice, language) =>
     set({ parsedItems, parsedAllergies, totalPrice, language }),
+  addItem: (item) =>
+    set((state) => {
+      const newItems = [...state.parsedItems, item];
+      const newTotal = newItems
+        .reduce((sum, i) => sum + parseFloat(i.line_total), 0)
+        .toFixed(2);
+      return { parsedItems: newItems, totalPrice: newTotal };
+    }),
   removeItem: (index) =>
     set((state) => {
       const newItems = state.parsedItems.filter((_, i) => i !== index);

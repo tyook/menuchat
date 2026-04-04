@@ -19,6 +19,7 @@ interface MenuItemFull {
   name: string;
   description: string;
   is_active: boolean;
+  is_upsellable: boolean;
   sort_order: number;
   variants: Variant[];
   modifiers: Modifier[];
@@ -77,6 +78,42 @@ export function useAddMenuItem(slug: string) {
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-menu", slug] });
+    },
+  });
+}
+
+export function useToggleUpsellable(slug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ itemId, is_upsellable }: { itemId: number; is_upsellable: boolean }) =>
+      apiFetch(`/api/restaurants/${slug}/items/${itemId}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_upsellable }),
+      }),
+    onMutate: async ({ itemId, is_upsellable }) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-menu", slug] });
+      const previous = queryClient.getQueryData<AdminMenu>(["admin-menu", slug]);
+      if (previous) {
+        queryClient.setQueryData<AdminMenu>(["admin-menu", slug], {
+          ...previous,
+          categories: previous.categories.map((cat) => ({
+            ...cat,
+            items: cat.items.map((item) =>
+              item.id === itemId ? { ...item, is_upsellable } : item
+            ),
+          })),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["admin-menu", slug], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-menu", slug] });
     },
   });

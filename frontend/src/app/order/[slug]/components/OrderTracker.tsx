@@ -86,10 +86,19 @@ export function OrderTracker({ slug, orderId }: OrderTrackerProps) {
         <div className="glass-card rounded-xl p-5 text-center mb-4">
           <div className="text-lg font-bold text-foreground">Order complete. Thank you!</div>
         </div>
-      ) : queuePosition !== null ? (
+      ) : queuePosition === 0 || status === "preparing" ? (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 text-center mb-4">
+          <div className="text-lg font-bold text-amber-400">Your order is being prepared!</div>
+        </div>
+      ) : queuePosition !== null && queuePosition > 0 ? (
         <div className="glass-card rounded-xl p-5 text-center mb-4">
           <div className="text-3xl font-extrabold text-foreground">#{queuePosition}</div>
-          <div className="text-sm text-muted-foreground mb-3">in line</div>
+          <div className="text-sm text-muted-foreground mb-1">in line</div>
+          <div className="text-sm font-medium text-foreground/70 mb-3">
+            {queuePosition === 1
+              ? "You\u2019re next!"
+              : `${queuePosition - 1} ${queuePosition - 1 === 1 ? "order" : "orders"} ahead of you`}
+          </div>
           {estimatedWait !== null && (
             <>
               <div className="w-12 h-px bg-border mx-auto mb-3" />

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from orders.views import (
+    CartUpsellView,
     ConfirmOrderView,
     ConfirmPaymentView,
     CreatePaymentView,
@@ -13,6 +14,7 @@ from orders.views import (
     SaveCardConsentView,
     StripeConnectWebhookView,
     StripeWebhookView,
+    UpsellSuggestionsView,
 )
 
 urlpatterns = [
@@ -36,6 +38,12 @@ urlpatterns = [
         KitchenOrderUpdateView.as_view(),
         name="kitchen-order-update",
     ),
+    path(
+        "order/<slug:slug>/upsell-suggestions/<uuid:order_id>/",
+        UpsellSuggestionsView.as_view(),
+        name="upsell-suggestions",
+    ),
+    path("order/<slug:slug>/cart-upsell/", CartUpsellView.as_view(), name="cart-upsell"),
     path("order/<slug:slug>/queue-info/", QueueInfoView.as_view(), name="queue-info"),
     path("order/<slug:slug>/queue/<uuid:order_id>/", OrderQueueView.as_view(), name="order-queue"),
     path("webhooks/stripe/", StripeWebhookView.as_view(), name="stripe-webhook"),

@@ -12,6 +12,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useCreatePayment } from "@/hooks/use-create-payment";
 import { BusynessBanner } from "./BusynessBanner";
 import { useConfirmOrder } from "@/hooks/use-confirm-order";
+import { UpsellSuggestions } from "./UpsellSuggestions";
 import type { ConfirmOrderItem } from "@/types";
 
 interface ConfirmationStepProps {
@@ -185,6 +186,8 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
           </p>
         </div>
       )}
+
+      <UpsellSuggestions slug={slug} />
 
       <Separator className="my-4" />
 

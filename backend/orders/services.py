@@ -807,3 +807,100 @@ class OrderService:
             return Restaurant.objects.get(slug=slug)
         except Restaurant.DoesNotExist:
             raise NotFound("Restaurant not found.")
+
+    @staticmethod
+    def get_upsell_suggestions(order: Order) -> list[dict]:
+        """Return 1-2 AI-driven upsell suggestions for an order."""
+        restaurant = order.restaurant
+
+        # Build cart summary from order items
+        cart_lines = []
+        cart_item_ids = set()
+        for oi in order.items.select_related("menu_item", "variant").all():
+            cart_lines.append(
+                f"- {oi.quantity}x {oi.menu_item.name} ({oi.variant.label})"
+            )
+            cart_item_ids.add(oi.menu_item.id)
+
+        return OrderService._run_upsell(restaurant, cart_lines, cart_item_ids)
+
+    @staticmethod
+    def get_cart_upsell_suggestions(
+        restaurant: Restaurant, cart_items: list[dict]
+    ) -> list[dict]:
+        """Return 1-2 AI-driven upsell suggestions for cart items (pre-order).
+
+        cart_items: list of dicts with menu_item_id, variant_id, quantity.
+        """
+        cart_lines = []
+        cart_item_ids = set()
+        for ci in cart_items:
+            try:
+                item = MenuItem.objects.get(
+                    id=ci["menu_item_id"],
+                    category__version__restaurant=restaurant,
+                    is_active=True,
+                )
+                variant = MenuItemVariant.objects.get(
+                    id=ci["variant_id"], menu_item=item
+                )
+            except (MenuItem.DoesNotExist, MenuItemVariant.DoesNotExist):
+                continue
+            cart_lines.append(
+                f"- {ci['quantity']}x {item.name} ({variant.label})"
+            )
+            cart_item_ids.add(item.id)
+
+        return OrderService._run_upsell(restaurant, cart_lines, cart_item_ids)
+
+    @staticmethod
+    def _run_upsell(
+        restaurant: Restaurant,
+        cart_lines: list[str],
+        cart_item_ids: set[int],
+    ) -> list[dict]:
+        """Shared upsell logic: call the LLM agent and enrich results."""
+        from orders.llm.upsell_agent import UpsellRecommendationAgent
+
+        if not cart_lines:
+            return []
+
+        menu_context = build_menu_context(restaurant)
+        cart_summary = "\n".join(cart_lines)
+
+        result = UpsellRecommendationAgent.run(
+            cart_summary=cart_summary,
+            menu_context=menu_context,
+        )
+
+        suggestions = []
+        for s in result.suggestions:
+            if s.menu_item_id in cart_item_ids:
+                continue
+            try:
+                item = MenuItem.objects.prefetch_related("variants").get(
+                    id=s.menu_item_id,
+                    category__version__restaurant=restaurant,
+                    is_active=True,
+                )
+            except MenuItem.DoesNotExist:
+                continue
+            default_variant = item.variants.filter(is_default=True).first()
+            if not default_variant:
+                default_variant = item.variants.first()
+            suggestions.append(
+                {
+                    "menu_item_id": item.id,
+                    "name": item.name,
+                    "description": item.description,
+                    "image_url": item.image_url,
+                    "price": str(default_variant.price) if default_variant else None,
+                    "variant_id": default_variant.id if default_variant else None,
+                    "variant_label": default_variant.label if default_variant else None,
+                    "reason": s.reason,
+                }
+            )
+            if len(suggestions) >= 2:
+                break
+
+        return suggestions

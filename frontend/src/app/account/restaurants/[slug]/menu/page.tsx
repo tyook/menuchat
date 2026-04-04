@@ -15,7 +15,14 @@ import {
   useAddCategory,
   useAddMenuItem,
   useDeactivateMenuItem,
+  useToggleUpsellable,
 } from "@/hooks/use-admin-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MenuUploadModal } from "@/components/menu-upload-modal";
 import { VersionPicker } from "@/components/version-picker";
 
@@ -36,6 +43,7 @@ export default function MenuManagementPage() {
   const addCategory = useAddCategory(params.slug);
   const addMenuItem = useAddMenuItem(params.slug);
   const deactivateMenuItem = useDeactivateMenuItem(params.slug);
+  const toggleUpsellable = useToggleUpsellable(params.slug);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,15 +185,44 @@ export default function MenuManagementPage() {
                         </div>
                       )}
                     </div>
-                    {item.is_active && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeactivateItem(item.id)}
-                      >
-                        Remove
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {item.is_active && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox
+                                id={`upsell-${item.id}`}
+                                checked={item.is_upsellable}
+                                onCheckedChange={(checked) =>
+                                  toggleUpsellable.mutate({
+                                    itemId: item.id,
+                                    is_upsellable: checked === true,
+                                  })
+                                }
+                              />
+                              <Label
+                                htmlFor={`upsell-${item.id}`}
+                                className="text-xs text-muted-foreground cursor-pointer"
+                              >
+                                Upsellable
+                              </Label>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Checked items may be suggested to customers as add-ons before they submit their order.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {item.is_active && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeactivateItem(item.id)}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
               ))}

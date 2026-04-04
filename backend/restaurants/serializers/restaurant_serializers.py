@@ -136,6 +136,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             "description",
             "image_url",
             "is_active",
+            "is_upsellable",
             "sort_order",
             "variants",
             "modifiers",

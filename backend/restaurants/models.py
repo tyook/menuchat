@@ -146,6 +146,7 @@ class MenuItem(models.Model):
     description = models.TextField(blank=True, default="")
     image_url = models.URLField(blank=True, default="")
     is_active = models.BooleanField(default=True)
+    is_upsellable = models.BooleanField(default=False)
     sort_order = models.IntegerField(default=0)
 
     class Meta:

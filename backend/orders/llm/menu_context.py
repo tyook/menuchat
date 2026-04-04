@@ -23,7 +23,8 @@ def build_menu_context(restaurant: Restaurant) -> str:
         active_items = category.items.filter(is_active=True).order_by("sort_order")
 
         for item in active_items:
-            lines.append(f"  - {item.name} (item_id: {item.id})")
+            upsell_marker = " [UPSELLABLE]" if item.is_upsellable else ""
+            lines.append(f"  - {item.name} (item_id: {item.id}){upsell_marker}")
             if item.description:
                 lines.append(f"    Description: {item.description}")
 

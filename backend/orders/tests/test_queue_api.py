@@ -59,9 +59,12 @@ class TestOrderQueueView:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["queue_position"] == 2
+        assert response.data["position"] == 2
+        assert response.data["total"] == 2
         assert response.data["status"] == "confirmed"
         assert "estimated_wait_minutes" in response.data
         assert "busyness" in response.data
+        assert response["Cache-Control"] == "no-store"
 
     def test_404_for_unknown_order(self, api_client):
         RestaurantFactory(slug="order-queue-404")
