@@ -6,6 +6,7 @@ from integrations.views import (
     POSConnectInitiateView,
     POSSyncLogDetailView,
     POSSyncLogListView,
+    POSVendorSelectView,
     RetryAllSyncView,
     RetryOrderSyncView,
     SquareOAuthCallbackView,
@@ -16,6 +17,11 @@ urlpatterns = [
         "restaurants/<slug:slug>/pos/connection/",
         POSConnectionDetailView.as_view(),
         name="pos-connection-detail",
+    ),
+    path(
+        "restaurants/<slug:slug>/pos/select-vendor/",
+        POSVendorSelectView.as_view(),
+        name="pos-vendor-select",
     ),
     path(
         "restaurants/<slug:slug>/pos/connect/",

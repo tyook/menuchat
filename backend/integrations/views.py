@@ -55,6 +55,29 @@ class POSConnectionDetailView(RestaurantPOSMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+ENABLED_POS_VENDORS = {"square", "none"}
+
+
+class POSVendorSelectView(RestaurantPOSMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, slug):
+        restaurant = self.get_restaurant(slug)
+        pos_type = request.data.get("pos_type")
+
+        if pos_type not in ENABLED_POS_VENDORS:
+            return Response(
+                {"error": f"Unsupported POS type: {pos_type}. Allowed: {', '.join(sorted(ENABLED_POS_VENDORS))}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        connection, _ = POSConnection.objects.update_or_create(
+            restaurant=restaurant,
+            defaults={"pos_type": pos_type, "is_active": False},
+        )
+        return Response(POSConnectionSerializer(connection).data)
+
+
 class POSSyncLogListView(RestaurantPOSMixin, APIView):
     permission_classes = [IsAuthenticated]
 
