@@ -11,6 +11,8 @@ import {
   usePOSConnectionUpdate,
   usePOSDisconnect,
 } from "@/hooks/use-pos-connection";
+import { usePOSVendorSelect } from "@/hooks/use-pos-vendor-select";
+import { POSVendorSelector } from "@/components/pos-vendor-selector";
 
 export default function POSIntegrationsPage() {
   const params = useParams<{ slug: string }>();
@@ -21,9 +23,11 @@ export default function POSIntegrationsPage() {
   const connect = usePOSConnect();
   const disconnect = usePOSDisconnect(slug);
   const updateConnection = usePOSConnectionUpdate(slug);
+  const vendorSelect = usePOSVendorSelect(slug);
 
-  // Local state for location ID input (avoid PATCH on every keystroke)
   const [locationId, setLocationId] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
+  const [isChanging, setIsChanging] = useState(false);
 
   useEffect(() => {
     if (connection?.external_location_id != null) {
@@ -47,6 +51,9 @@ export default function POSIntegrationsPage() {
   }
 
   const isConnected = connection?.is_connected ?? false;
+  const posType = connection?.pos_type ?? "none";
+  const isVendorSelected = posType !== "none" && !isConnected;
+  const showSelector = (!isVendorSelected && !isConnected) || isChanging;
 
   return (
     <div className="space-y-6 p-6">
@@ -64,41 +71,82 @@ export default function POSIntegrationsPage() {
         </div>
       )}
 
-      {/* Connection Status */}
-      <Card className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="text-lg font-semibold">Connection Status</h2>
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className={`h-3 w-3 rounded-full ${
-              isConnected ? "bg-success" : "bg-muted-foreground/30"
-            }`}
-          />
-          <span>
-            {isConnected
-              ? `Connected to ${connection?.pos_type}`
-              : "No POS connected"}
-          </span>
-          {isConnected && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Active</span>
-          )}
-        </div>
-
-        {!isConnected && (
+      {/* Vendor Selection */}
+      {showSelector && (
+        <Card className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-lg font-semibold">Select Your POS</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose your point-of-sale system to sync orders automatically.
+          </p>
+          <div className="mt-4">
+            <POSVendorSelector
+              selected={selectedVendor}
+              onSelect={setSelectedVendor}
+            />
+          </div>
           <div className="mt-4 flex gap-3">
             <Button
               variant="gradient"
-              onClick={() => connect.mutate({ slug, posType: "square" })}
+              onClick={() => {
+                if (!selectedVendor) return;
+                vendorSelect.mutate(selectedVendor, {
+                  onSuccess: () => setIsChanging(false),
+                });
+              }}
+              disabled={!selectedVendor || vendorSelect.isPending}
+            >
+              {vendorSelect.isPending ? "Saving..." : "Save"}
+            </Button>
+            {isChanging && (
+              <Button variant="ghost" onClick={() => setIsChanging(false)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Vendor Selected, Not Connected */}
+      {isVendorSelected && !isChanging && (
+        <Card className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-lg font-semibold">Connection Status</h2>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-amber-400" />
+            <span className="capitalize">{posType}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-600 font-medium">
+              Not Connected
+            </span>
+          </div>
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="gradient"
+              onClick={() => connect.mutate({ slug, posType })}
               disabled={connect.isPending}
             >
-              {connect.isPending ? "Connecting..." : "Connect Square"}
+              {connect.isPending ? "Connecting..." : `Connect ${posType.charAt(0).toUpperCase() + posType.slice(1)}`}
             </Button>
-            <Button variant="outline" disabled title="Coming soon">
-              Connect Toast (Coming Soon)
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedVendor(posType);
+                setIsChanging(true);
+              }}
+            >
+              Change
             </Button>
           </div>
-        )}
+        </Card>
+      )}
 
-        {isConnected && (
+      {/* Connected */}
+      {isConnected && (
+        <Card className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-lg font-semibold">Connection Status</h2>
+          <div className="mt-4 flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-success" />
+            <span>Connected to {posType}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">Active</span>
+          </div>
           <Button
             variant="outline"
             className="mt-4 border-destructive text-destructive hover:bg-destructive/10"
@@ -111,8 +159,8 @@ export default function POSIntegrationsPage() {
           >
             Disconnect
           </Button>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* Location Selector */}
       {isConnected && (
