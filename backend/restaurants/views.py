@@ -1,4 +1,6 @@
+from django.conf import settings
 from rest_framework import generics, status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -296,6 +298,44 @@ class ConnectDashboardView(RestaurantMixin, APIView):
     def post(self, request, slug):
         restaurant = self.get_restaurant()
         result = ConnectService.create_dashboard_link(restaurant)
+        return Response(result)
+
+
+class OnboardingConnectInitiateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, slug):
+        try:
+            restaurant = Restaurant.objects.get(slug=slug, owner=request.user)
+        except Restaurant.DoesNotExist:
+            raise NotFound("Restaurant not found.")
+
+        return_url = request.data.get("return_url", "")
+        refresh_url = request.data.get("refresh_url", "")
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+        if not return_url.startswith(frontend_url) or not refresh_url.startswith(frontend_url):
+            return Response(
+                {"error": "Invalid return URL"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        result = ConnectService.create_onboarding_link(
+            restaurant, return_url=return_url, refresh_url=refresh_url
+        )
+        return Response(result)
+
+
+class OnboardingConnectStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, slug):
+        try:
+            restaurant = Restaurant.objects.get(slug=slug, owner=request.user)
+        except Restaurant.DoesNotExist:
+            raise NotFound("Restaurant not found.")
+
+        result = ConnectService.get_connect_status(restaurant)
         return Response(result)
 
 

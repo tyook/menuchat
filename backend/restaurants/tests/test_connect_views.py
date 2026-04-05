@@ -99,3 +99,111 @@ class TestConnectServiceCustomURLs:
         call_kwargs = mock_link.call_args[1]
         assert "/dashboard/" in call_kwargs["return_url"]
         assert "/dashboard/" in call_kwargs["refresh_url"]
+
+
+@pytest.mark.django_db
+class TestOnboardingConnectInitiateView:
+    @patch("restaurants.services.connect_service.stripe.Account.create")
+    @patch("restaurants.services.connect_service.stripe.AccountLink.create")
+    def test_initiate_with_valid_urls(self, mock_link, mock_create, api_client, restaurant):
+        mock_create.return_value = MagicMock(id="acct_test123")
+        mock_link.return_value = MagicMock(url="https://connect.stripe.com/setup/abc")
+
+        response = api_client.post(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-initiate/",
+            {
+                "return_url": "http://localhost:3000/account/onboarding?stripe_return=true",
+                "refresh_url": "http://localhost:3000/account/onboarding?stripe_refresh=true",
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        assert "url" in response.data
+
+    def test_initiate_rejects_invalid_return_url(self, api_client, restaurant):
+        response = api_client.post(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-initiate/",
+            {
+                "return_url": "https://evil.com/steal",
+                "refresh_url": "http://localhost:3000/account/onboarding?stripe_refresh=true",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_initiate_rejects_invalid_refresh_url(self, api_client, restaurant):
+        response = api_client.post(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-initiate/",
+            {
+                "return_url": "http://localhost:3000/account/onboarding?stripe_return=true",
+                "refresh_url": "https://evil.com/steal",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_initiate_unauthenticated(self, restaurant):
+        client = APIClient()
+        response = client.post(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-initiate/",
+            {
+                "return_url": "http://localhost:3000/account/onboarding?stripe_return=true",
+                "refresh_url": "http://localhost:3000/account/onboarding?stripe_refresh=true",
+            },
+            format="json",
+        )
+        assert response.status_code == 401
+
+    def test_initiate_wrong_owner(self, restaurant):
+        other_user = User.objects.create_user(email="other@test.com", password="testpass123")
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+        response = client.post(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-initiate/",
+            {
+                "return_url": "http://localhost:3000/account/onboarding?stripe_return=true",
+                "refresh_url": "http://localhost:3000/account/onboarding?stripe_refresh=true",
+            },
+            format="json",
+        )
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestOnboardingConnectStatusView:
+    def test_status_no_account(self, api_client, restaurant):
+        response = api_client.get(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-status/"
+        )
+        assert response.status_code == 200
+        assert response.data["has_account"] is False
+        assert response.data["onboarding_complete"] is False
+
+    def test_status_with_complete_account(self, api_client, restaurant):
+        ConnectedAccount.objects.create(
+            restaurant=restaurant,
+            stripe_account_id="acct_test123",
+            onboarding_complete=True,
+            payouts_enabled=True,
+        )
+        response = api_client.get(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-status/"
+        )
+        assert response.status_code == 200
+        assert response.data["onboarding_complete"] is True
+
+    def test_status_unauthenticated(self, restaurant):
+        client = APIClient()
+        response = client.get(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-status/"
+        )
+        assert response.status_code == 401
+
+    def test_status_wrong_owner(self, restaurant):
+        other_user = User.objects.create_user(email="other@test.com", password="testpass123")
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+        response = client.get(
+            f"/api/restaurants/{restaurant.slug}/connect/onboarding-status/"
+        )
+        assert response.status_code == 404

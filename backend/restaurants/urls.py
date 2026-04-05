@@ -12,6 +12,8 @@ from restaurants.views import (
     ConnectDashboardView,
     ConnectOnboardView,
     ConnectStatusView,
+    OnboardingConnectInitiateView,
+    OnboardingConnectStatusView,
     CreateBillingPortalView,
     CreateCheckoutSessionView,
     CreateRestaurantView,
@@ -146,5 +148,15 @@ urlpatterns = [
         "restaurants/<slug:slug>/connect/dashboard/",
         ConnectDashboardView.as_view(),
         name="connect-dashboard",
+    ),
+    path(
+        "restaurants/<slug:slug>/connect/onboarding-initiate/",
+        OnboardingConnectInitiateView.as_view(),
+        name="connect-onboarding-initiate",
+    ),
+    path(
+        "restaurants/<slug:slug>/connect/onboarding-status/",
+        OnboardingConnectStatusView.as_view(),
+        name="connect-onboarding-status",
     ),
 ]
