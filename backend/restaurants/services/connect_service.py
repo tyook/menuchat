@@ -9,7 +9,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class ConnectService:
     @staticmethod
-    def create_onboarding_link(restaurant):
+    def create_onboarding_link(restaurant, return_url=None, refresh_url=None):
         try:
             account = restaurant.connected_account
         except ConnectedAccount.DoesNotExist:
@@ -22,10 +22,15 @@ class ConnectService:
                 stripe_account_id=stripe_account.id,
             )
 
+        if return_url is None:
+            return_url = f"{settings.FRONTEND_URL}/dashboard/{restaurant.slug}/connect/complete"
+        if refresh_url is None:
+            refresh_url = f"{settings.FRONTEND_URL}/dashboard/{restaurant.slug}/connect/refresh"
+
         account_link = stripe.AccountLink.create(
             account=account.stripe_account_id,
-            refresh_url=f"{settings.FRONTEND_URL}/dashboard/{restaurant.slug}/connect/refresh",
-            return_url=f"{settings.FRONTEND_URL}/dashboard/{restaurant.slug}/connect/complete",
+            refresh_url=refresh_url,
+            return_url=return_url,
             type="account_onboarding",
         )
         return {"url": account_link.url}

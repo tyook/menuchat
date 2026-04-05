@@ -65,3 +65,37 @@ class TestConnectDashboardView:
         response = api_client.post(f"/api/restaurants/{restaurant.slug}/connect/dashboard/")
         assert response.status_code == 200
         assert "url" in response.data
+
+
+@pytest.mark.django_db
+class TestConnectServiceCustomURLs:
+    @patch("restaurants.services.connect_service.stripe.Account.create")
+    @patch("restaurants.services.connect_service.stripe.AccountLink.create")
+    def test_custom_return_url_passed_to_stripe(self, mock_link, mock_create, restaurant):
+        mock_create.return_value = MagicMock(id="acct_test123")
+        mock_link.return_value = MagicMock(url="https://connect.stripe.com/setup/abc")
+
+        from restaurants.services.connect_service import ConnectService
+        result = ConnectService.create_onboarding_link(
+            restaurant,
+            return_url="http://localhost:3000/account/onboarding?stripe_return=true",
+            refresh_url="http://localhost:3000/account/onboarding?stripe_refresh=true",
+        )
+
+        assert result["url"] == "https://connect.stripe.com/setup/abc"
+        call_kwargs = mock_link.call_args[1]
+        assert "stripe_return=true" in call_kwargs["return_url"]
+        assert "stripe_refresh=true" in call_kwargs["refresh_url"]
+
+    @patch("restaurants.services.connect_service.stripe.Account.create")
+    @patch("restaurants.services.connect_service.stripe.AccountLink.create")
+    def test_default_urls_when_none_provided(self, mock_link, mock_create, restaurant):
+        mock_create.return_value = MagicMock(id="acct_test123")
+        mock_link.return_value = MagicMock(url="https://connect.stripe.com/setup/abc")
+
+        from restaurants.services.connect_service import ConnectService
+        ConnectService.create_onboarding_link(restaurant)
+
+        call_kwargs = mock_link.call_args[1]
+        assert "/dashboard/" in call_kwargs["return_url"]
+        assert "/dashboard/" in call_kwargs["refresh_url"]
