@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCompleteOnboarding } from "@/hooks/use-onboarding";
@@ -10,9 +11,10 @@ import { OwnerQuestionStep } from "@/components/onboarding/owner-question-step";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
 import { MenuUploadStep } from "@/components/onboarding/menu-upload-step";
 import { POSVendorStep } from "@/components/onboarding/pos-vendor-step";
+import { PaymentSetupStep } from "@/components/onboarding/payment-setup-step";
 import { cn } from "@/lib/utils";
 
-type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload" | "pos-vendor";
+type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload" | "payment-setup" | "pos-vendor";
 
 export default function OnboardingPage() {
   const isAuthenticated = useRequireAuth();
@@ -21,15 +23,47 @@ export default function OnboardingPage() {
   const completeMutation = useCompleteOnboarding();
   const [step, setStep] = useState<Step>("preferences");
   const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [stripeReturnError, setStripeReturnError] = useState(false);
+
+  useEffect(() => {
+    const isStripeReturn = searchParams.get("stripe_return") === "true" || searchParams.get("stripe_refresh") === "true";
+    if (isStripeReturn && !restaurantSlug) {
+      const savedSlug = sessionStorage.getItem("onboarding_restaurant_slug");
+      if (savedSlug) {
+        setRestaurantSlug(savedSlug);
+        setStep("payment-setup");
+      } else {
+        setStripeReturnError(true);
+      }
+    }
+  }, [searchParams]);
 
   if (!isAuthenticated || !user) return null;
 
-  const totalSteps = step === "restaurant-details" || step === "menu-upload" || step === "pos-vendor" ? 5 : 2;
+  if (stripeReturnError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold">Unable to Restore Session</h1>
+          <p className="text-muted-foreground">
+            Unable to restore your session. Please return to your profile and continue setup.
+          </p>
+          <a href="/account/profile" className="text-primary underline">
+            Go to Profile
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const totalSteps = step === "restaurant-details" || step === "menu-upload" || step === "payment-setup" || step === "pos-vendor" ? 6 : 2;
   const currentStep =
     step === "preferences" ? 1 :
     step === "owner-question" ? 2 :
     step === "restaurant-details" ? 3 :
-    step === "menu-upload" ? 4 : 5;
+    step === "menu-upload" ? 4 :
+    step === "payment-setup" ? 5 : 6;
 
   const handleComplete = () => {
     completeMutation.mutate(undefined, {
@@ -105,7 +139,10 @@ export default function OnboardingPage() {
             />
           )}
           {step === "menu-upload" && restaurantSlug && (
-            <MenuUploadStep slug={restaurantSlug} onComplete={() => setStep("pos-vendor")} onSkip={() => setStep("pos-vendor")} />
+            <MenuUploadStep slug={restaurantSlug} onComplete={() => setStep("payment-setup")} onSkip={() => setStep("payment-setup")} />
+          )}
+          {step === "payment-setup" && restaurantSlug && (
+            <PaymentSetupStep slug={restaurantSlug} onComplete={() => setStep("pos-vendor")} />
           )}
           {step === "pos-vendor" && restaurantSlug && (
             <POSVendorStep slug={restaurantSlug} onComplete={handleComplete} onSkip={handleComplete} />
