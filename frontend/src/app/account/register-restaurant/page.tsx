@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
 import { MenuUploadStep } from "@/components/onboarding/menu-upload-step";
+import { PaymentSetupStep } from "@/components/onboarding/payment-setup-step";
 import { POSVendorStep } from "@/components/onboarding/pos-vendor-step";
 import { cn } from "@/lib/utils";
 
-type Step = "details" | "menu" | "pos-vendor";
+type Step = "details" | "menu" | "payment-setup" | "pos-vendor";
 
 export default function RegisterRestaurantPage() {
   const isAuthenticated = useRequireAuth();
@@ -17,6 +19,21 @@ export default function RegisterRestaurantPage() {
   const { data: profile, isLoading } = useProfile();
   const [step, setStep] = useState<Step>("details");
   const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [stripeReturnError, setStripeReturnError] = useState(false);
+
+  useEffect(() => {
+    const isStripeReturn = searchParams.get("stripe_return") === "true" || searchParams.get("stripe_refresh") === "true";
+    if (isStripeReturn && !restaurantSlug) {
+      const savedSlug = sessionStorage.getItem("onboarding_restaurant_slug");
+      if (savedSlug) {
+        setRestaurantSlug(savedSlug);
+        setStep("payment-setup");
+      } else {
+        setStripeReturnError(true);
+      }
+    }
+  }, [searchParams]);
 
   if (isAuthenticated === null || isLoading) {
     return (
@@ -28,14 +45,30 @@ export default function RegisterRestaurantPage() {
 
   if (isAuthenticated === false) return null;
 
+  if (stripeReturnError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold">Unable to Restore Session</h1>
+          <p className="text-muted-foreground">
+            Unable to restore your session. Please return to your profile and continue setup.
+          </p>
+          <a href="/account/profile" className="text-primary underline">
+            Go to Profile
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   // Redirect owners to their restaurants list
   if (profile?.owns_restaurant) {
     router.replace("/account/restaurants");
     return null;
   }
 
-  const totalSteps = 3;
-  const currentStep = step === "details" ? 1 : step === "menu" ? 2 : 3;
+  const totalSteps = 4;
+  const currentStep = step === "details" ? 1 : step === "menu" ? 2 : step === "payment-setup" ? 3 : 4;
 
   const handleComplete = () => {
     router.push("/account/restaurants");
@@ -96,8 +129,14 @@ export default function RegisterRestaurantPage() {
           {step === "menu" && restaurantSlug && (
             <MenuUploadStep
               slug={restaurantSlug}
+              onComplete={() => setStep("payment-setup")}
+              onSkip={() => setStep("payment-setup")}
+            />
+          )}
+          {step === "payment-setup" && restaurantSlug && (
+            <PaymentSetupStep
+              slug={restaurantSlug}
               onComplete={() => setStep("pos-vendor")}
-              onSkip={() => setStep("pos-vendor")}
             />
           )}
           {step === "pos-vendor" && restaurantSlug && (
