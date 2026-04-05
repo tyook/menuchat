@@ -463,6 +463,34 @@ export async function markSyncResolved(
   );
 }
 
+// ── Connect Onboarding ──
+export async function createOnboardingConnectLink(
+  slug: string,
+  returnUrl: string,
+  refreshUrl: string
+): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>(
+    `/api/restaurants/${slug}/connect/onboarding-initiate/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ return_url: returnUrl, refresh_url: refreshUrl }),
+    }
+  );
+}
+
+export async function fetchOnboardingConnectStatus(
+  slug: string
+): Promise<{
+  has_account: boolean;
+  onboarding_complete: boolean;
+  payouts_enabled: boolean;
+  charges_enabled: boolean;
+}> {
+  return apiFetch(
+    `/api/restaurants/${slug}/connect/onboarding-status/`
+  );
+}
+
 // ── Menu Upload & Versions ──
 export async function parseMenuImages(slug: string, images: File[]): Promise<ParsedMenu> {
   const formData = new FormData();
