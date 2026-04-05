@@ -1,8 +1,10 @@
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from restaurants.models import MenuCategory, MenuItem, MenuVersion, Restaurant, RestaurantStaff, Subscription
+from restaurants.permissions import HasActiveSubscription
 from restaurants.serializers import (
     MenuCategorySerializer,
     MenuItemSerializer,
@@ -39,6 +41,9 @@ class RestaurantDetailView(generics.RetrieveUpdateAPIView):
 
 class RestaurantMixin:
     """Mixin to resolve restaurant from URL slug and check access."""
+
+    def get_permissions(self):
+        return [IsAuthenticated(), HasActiveSubscription()]
 
     def get_restaurant(self):
         slug = self.kwargs["slug"]
@@ -172,6 +177,9 @@ class RestaurantOrderListView(RestaurantMixin, APIView):
 class SubscriptionDetailView(RestaurantMixin, APIView):
     """GET /api/restaurants/:slug/subscription/ - View subscription details."""
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
     def get(self, request, slug):
         restaurant = self.get_restaurant()
         try:
@@ -187,6 +195,9 @@ class SubscriptionDetailView(RestaurantMixin, APIView):
 class CreateCheckoutSessionView(RestaurantMixin, APIView):
     """POST /api/restaurants/:slug/subscription/checkout/ - Create Stripe Checkout session."""
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
     def post(self, request, slug):
         restaurant = self.get_restaurant()
         plan = request.data.get("plan", "starter")
@@ -200,6 +211,9 @@ class CreateCheckoutSessionView(RestaurantMixin, APIView):
 class CreateBillingPortalView(RestaurantMixin, APIView):
     """POST /api/restaurants/:slug/subscription/portal/ - Open Stripe Billing Portal."""
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
     def post(self, request, slug):
         restaurant = self.get_restaurant()
         portal_url = RestaurantService.create_billing_portal(restaurant)
@@ -209,6 +223,9 @@ class CreateBillingPortalView(RestaurantMixin, APIView):
 class CancelSubscriptionView(RestaurantMixin, APIView):
     """POST /api/restaurants/:slug/subscription/cancel/ - Cancel subscription at period end."""
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
     def post(self, request, slug):
         restaurant = self.get_restaurant()
         subscription = RestaurantService.cancel_subscription(restaurant)
@@ -217,6 +234,9 @@ class CancelSubscriptionView(RestaurantMixin, APIView):
 
 class ReactivateSubscriptionView(RestaurantMixin, APIView):
     """POST /api/restaurants/:slug/subscription/reactivate/ - Undo pending cancellation."""
+
+    def get_permissions(self):
+        return [IsAuthenticated()]
 
     def post(self, request, slug):
         restaurant = self.get_restaurant()
@@ -277,3 +297,140 @@ class ConnectDashboardView(RestaurantMixin, APIView):
         restaurant = self.get_restaurant()
         result = ConnectService.create_dashboard_link(restaurant)
         return Response(result)
+
+
+from restaurants.models import Table
+from restaurants.serializers import TableSerializer
+
+
+class TableListCreateView(RestaurantMixin, generics.ListCreateAPIView):
+    """GET/POST /api/restaurants/:slug/tables/"""
+
+    serializer_class = TableSerializer
+
+    def get_queryset(self):
+        restaurant = self.get_restaurant()
+        return Table.objects.filter(restaurant=restaurant)
+
+    def perform_create(self, serializer):
+        restaurant = self.get_restaurant()
+        serializer.save(restaurant=restaurant)
+
+
+class TableDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView):
+    """GET/PATCH/DELETE /api/restaurants/:slug/tables/:id/"""
+
+    serializer_class = TableSerializer
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        restaurant = self.get_restaurant()
+        return Table.objects.filter(restaurant=restaurant)
+
+
+class RestaurantAnalyticsView(RestaurantMixin, APIView):
+    """GET /api/restaurants/:slug/analytics/?period=7d|30d|90d"""
+
+    def get(self, request, slug):
+        from datetime import timedelta
+
+        from django.db.models import Avg, Count, Sum
+        from django.db.models.functions import ExtractHour, TruncDate
+        from django.utils import timezone
+
+        from orders.models import Order, OrderItem
+
+        restaurant = self.get_restaurant()
+
+        period_str = request.query_params.get("period", "30d")
+        days_map = {"7d": 7, "30d": 30, "90d": 90}
+        days = days_map.get(period_str, 30)
+
+        now = timezone.now()
+        start_date = now - timedelta(days=days)
+        prev_start = start_date - timedelta(days=days)
+
+        completed_statuses = [Order.Status.COMPLETED, Order.Status.CONFIRMED]
+        base_qs = Order.objects.filter(
+            restaurant=restaurant,
+            status__in=completed_statuses,
+        )
+
+        current_qs = base_qs.filter(created_at__gte=start_date)
+        prev_qs = base_qs.filter(created_at__gte=prev_start, created_at__lt=start_date)
+
+        # Summary metrics
+        current_agg = current_qs.aggregate(
+            order_count=Count("id"),
+            total_revenue=Sum("total_price"),
+            total_tax=Sum("tax_amount"),
+            avg_order_value=Avg("total_price"),
+        )
+        prev_agg = prev_qs.aggregate(
+            order_count=Count("id"),
+            total_revenue=Sum("total_price"),
+        )
+
+        # Daily order volume
+        daily_orders = list(
+            current_qs.annotate(date=TruncDate("created_at"))
+            .values("date")
+            .annotate(count=Count("id"), revenue=Sum("total_price"))
+            .order_by("date")
+        )
+        for entry in daily_orders:
+            entry["date"] = entry["date"].isoformat()
+            entry["revenue"] = float(entry["revenue"] or 0)
+
+        # Top 5 items
+        top_items = list(
+            OrderItem.objects.filter(order__in=current_qs)
+            .values("menu_item__name")
+            .annotate(total_quantity=Sum("quantity"))
+            .order_by("-total_quantity")[:5]
+        )
+
+        # Peak hours
+        hourly = list(
+            current_qs.annotate(hour=ExtractHour("created_at"))
+            .values("hour")
+            .annotate(count=Count("id"))
+            .order_by("hour")
+        )
+        peak_hours = {entry["hour"]: entry["count"] for entry in hourly}
+        peak_hours_full = [{"hour": h, "orders": peak_hours.get(h, 0)} for h in range(24)]
+
+        # Orders by payment type
+        payment_breakdown = list(
+            current_qs.values("payment_status")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        return Response(
+            {
+                "period": period_str,
+                "summary": {
+                    "order_count": current_agg["order_count"],
+                    "total_revenue": float(current_agg["total_revenue"] or 0),
+                    "total_tax": float(current_agg["total_tax"] or 0),
+                    "net_revenue": float(
+                        (current_agg["total_revenue"] or 0)
+                        - (current_agg["total_tax"] or 0)
+                    ),
+                    "avg_order_value": float(current_agg["avg_order_value"] or 0),
+                    "prev_order_count": prev_agg["order_count"],
+                    "prev_total_revenue": float(prev_agg["total_revenue"] or 0),
+                },
+                "daily_orders": daily_orders,
+                "top_items": [
+                    {"name": item["menu_item__name"], "quantity": item["total_quantity"]}
+                    for item in top_items
+                ],
+                "peak_hours": peak_hours_full,
+                "payment_breakdown": [
+                    {"type": entry["payment_status"], "count": entry["count"]}
+                    for entry in payment_breakdown
+                ],
+            }
+        )

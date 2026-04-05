@@ -17,8 +17,8 @@ class Restaurant(models.Model):
     zip_code = models.CharField(max_length=20, blank=True, default="")
     country = models.CharField(max_length=100, blank=True, default="US")
     google_place_id = models.CharField(max_length=255, blank=True, default="")
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     homepage = models.URLField(blank=True, default="")
     logo_url = models.URLField(blank=True, default="")
     tax_rate = models.DecimalField(
@@ -173,6 +173,22 @@ class MenuItemModifier(models.Model):
 
     def __str__(self):
         return f"{self.menu_item.name} + {self.name} (${self.price_adjustment})"
+
+
+class Table(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name="tables")
+    name = models.CharField(max_length=50, help_text="Display name, e.g. 'Patio 3'")
+    number = models.CharField(max_length=20, help_text="Short identifier used in QR URL, e.g. 'A1'")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("restaurant", "number")
+        ordering = ["number"]
+
+    def __str__(self):
+        return f"{self.restaurant.name} - Table {self.number}"
 
 
 class ConnectedAccount(models.Model):

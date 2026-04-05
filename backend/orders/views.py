@@ -72,6 +72,7 @@ class ConfirmOrderView(APIView):
             language=data.get("language", "en"),
             table_identifier=data.get("table_identifier"),
             customer_name=data.get("customer_name", ""),
+            customer_email=data.get("customer_email", ""),
             customer_phone=data.get("customer_phone", ""),
         )
 
@@ -130,6 +131,7 @@ class CreatePaymentView(APIView):
             language=data.get("language", "en"),
             table_identifier=data.get("table_identifier"),
             customer_name=data.get("customer_name", ""),
+            customer_email=data.get("customer_email", ""),
             customer_phone=data.get("customer_phone", ""),
             customer_allergies=customer_allergies,
         )

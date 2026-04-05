@@ -26,6 +26,7 @@ class Order(models.Model):
         related_name="orders",
     )
     customer_name = models.CharField(max_length=255, blank=True, default="")
+    customer_email = models.EmailField(blank=True, default="")
     customer_phone = models.CharField(max_length=20, blank=True, default="")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     raw_input = models.TextField()

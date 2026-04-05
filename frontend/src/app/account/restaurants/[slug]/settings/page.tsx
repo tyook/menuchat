@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
+import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,19 +12,23 @@ import { Label } from "@/components/ui/label";
 import { useRequireRestaurantAccess } from "@/hooks/use-auth";
 import { useRestaurant } from "@/hooks/use-restaurant";
 import { useUpdateTaxRate } from "@/hooks/use-update-tax-rate";
+import { useTables, useCreateTable, useDeleteTable } from "@/hooks/use-tables";
+import type { Table } from "@/types";
 
 export default function SettingsPage() {
   const params = useParams<{ slug: string }>();
   const isAuthenticated = useRequireRestaurantAccess();
-  const [tableIds, setTableIds] = useState("");
-  const [generatedTables, setGeneratedTables] = useState<string[]>([]);
   const [taxRate, setTaxRate] = useState<string | null>(null);
   const [taxMessage, setTaxMessage] = useState("");
+  const [newTableName, setNewTableName] = useState("");
+  const [newTableNumber, setNewTableNumber] = useState("");
 
   const { data: restaurant } = useRestaurant(params.slug);
   const updateTaxRate = useUpdateTaxRate(params.slug);
+  const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useTables(params.slug);
+  const createTable = useCreateTable(params.slug);
+  const deleteTable = useDeleteTable(params.slug);
 
-  // Initialize local tax rate from fetched data
   const displayTaxRate = taxRate ?? restaurant?.tax_rate ?? "";
 
   const handleSaveTax = () => {
@@ -36,19 +41,33 @@ export default function SettingsPage() {
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  const handleGenerate = () => {
-    const ids = tableIds
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean);
-    setGeneratedTables(ids);
-  };
-
-  const getOrderUrl = (tableId?: string) => {
-    if (tableId) {
-      return `${baseUrl}/order/${params.slug}/${tableId}`;
+  const getOrderUrl = (tableNumber?: string) => {
+    if (tableNumber) {
+      return `${baseUrl}/order/${params.slug}/${tableNumber}`;
     }
     return `${baseUrl}/order/${params.slug}`;
+  };
+
+  const handleAddTable = () => {
+    const name = newTableName.trim();
+    const number = newTableNumber.trim();
+    if (!name || !number) return;
+    createTable.mutate(
+      { name, number },
+      {
+        onSuccess: () => {
+          setNewTableName("");
+          setNewTableNumber("");
+        },
+      }
+    );
+  };
+
+  const handleDeleteTable = (table: Table) => {
+    if (!window.confirm(`Delete table "${table.name}" (#${table.number})? Existing QR codes for this table will stop working.`)) {
+      return;
+    }
+    deleteTable.mutate(table.id);
   };
 
   if (isAuthenticated === null) {
@@ -62,6 +81,8 @@ export default function SettingsPage() {
   if (isAuthenticated === false) {
     return null;
   }
+
+  const activeTables = tables.filter((t: Table) => t.is_active);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -122,38 +143,90 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* Table QR Generator */}
+        {/* Table Management */}
         <Card className="bg-card border border-border rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Table QR Codes</h2>
-          <div className="flex gap-2 mb-4">
+          <h2 className="text-lg font-semibold mb-4">Table Management</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Add tables and generate per-table QR codes for dine-in ordering.
+          </p>
+
+          {/* Add new table */}
+          <div className="flex gap-2 mb-6">
             <div className="flex-1">
-              <Label>Table IDs (comma-separated)</Label>
+              <Label>Table Name</Label>
               <Input
-                value={tableIds}
-                onChange={(e) => setTableIds(e.target.value)}
-                placeholder="1, 2, 3, 4, 5"
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                placeholder="e.g. Patio 3"
               />
             </div>
-            <Button variant="gradient" className="mt-6" onClick={handleGenerate}>
-              Generate
+            <div className="w-32">
+              <Label>Number</Label>
+              <Input
+                value={newTableNumber}
+                onChange={(e) => setNewTableNumber(e.target.value)}
+                placeholder="e.g. A1"
+              />
+            </div>
+            <Button
+              variant="gradient"
+              className="mt-6"
+              onClick={handleAddTable}
+              disabled={createTable.isPending || !newTableName.trim() || !newTableNumber.trim()}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {createTable.isPending ? "Adding..." : "Add"}
             </Button>
           </div>
 
-          {generatedTables.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-6">
-              {generatedTables.map((tableId) => (
+          {createTable.isError && (
+            <p className="text-sm text-destructive mb-4">
+              {createTable.error?.message || "Failed to add table. The number may already exist."}
+            </p>
+          )}
+
+          {/* Table list with QR codes */}
+          {tablesLoading && (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          )}
+
+          {tablesError && (
+            <p className="text-sm text-destructive text-center py-4">
+              Failed to load tables.
+            </p>
+          )}
+
+          {!tablesLoading && !tablesError && activeTables.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {activeTables.map((table: Table) => (
                 <div
-                  key={tableId}
-                  className="flex flex-col items-center p-4 bg-card border border-border rounded-2xl"
+                  key={table.id}
+                  className="flex flex-col items-center p-4 bg-card border border-border rounded-2xl relative group"
                 >
-                  <QRCodeSVG value={getOrderUrl(tableId)} size={120} />
-                  <p className="font-semibold mt-2">Table {tableId}</p>
-                  <p className="text-xs text-muted-foreground break-all text-center">
-                    {getOrderUrl(tableId)}
+                  <button
+                    onClick={() => handleDeleteTable(table)}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    title="Delete table"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <QRCodeSVG value={getOrderUrl(table.number)} size={120} />
+                  <p className="font-semibold mt-2">{table.name}</p>
+                  <p className="text-xs text-muted-foreground">#{table.number}</p>
+                  <p className="text-xs text-muted-foreground break-all text-center mt-1">
+                    {getOrderUrl(table.number)}
                   </p>
                 </div>
               ))}
             </div>
+          )}
+
+          {!tablesLoading && !tablesError && activeTables.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No tables yet. Add your first table above.
+            </p>
           )}
         </Card>
       </div>

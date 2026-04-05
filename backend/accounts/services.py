@@ -93,7 +93,10 @@ def authenticate_google(token: str) -> User:
         },
     )
 
-    if not created and user.auth_provider == "email":
+    if created:
+        from accounts.tasks import send_welcome_email_task
+        send_welcome_email_task.delay(str(user.id))
+    elif user.auth_provider == "email":
         user.auth_provider = "google"
         user.auth_provider_id = google_user["sub"]
         user.save(update_fields=["auth_provider", "auth_provider_id"])
@@ -125,7 +128,10 @@ def authenticate_apple(token: str, name: str = "") -> User:
         },
     )
 
-    if not created and user.auth_provider == "email":
+    if created:
+        from accounts.tasks import send_welcome_email_task
+        send_welcome_email_task.delay(str(user.id))
+    elif user.auth_provider == "email":
         user.auth_provider = "apple"
         user.auth_provider_id = apple_user["sub"]
         user.save(update_fields=["auth_provider", "auth_provider_id"])

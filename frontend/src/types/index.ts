@@ -224,6 +224,56 @@ export interface ParsedMenu {
   categories: ParsedMenuCategory[];
 }
 
+// Table types
+export interface Table {
+  id: string;
+  name: string;
+  number: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Analytics types
+export interface AnalyticsSummary {
+  order_count: number;
+  total_revenue: number;
+  total_tax: number;
+  net_revenue: number;
+  avg_order_value: number;
+  prev_order_count: number;
+  prev_total_revenue: number;
+}
+
+export interface DailyOrder {
+  date: string;
+  count: number;
+  revenue: number;
+}
+
+export interface TopItem {
+  name: string;
+  quantity: number;
+}
+
+export interface PeakHour {
+  hour: number;
+  orders: number;
+}
+
+export interface PaymentBreakdown {
+  type: string;
+  count: number;
+}
+
+export interface AnalyticsResponse {
+  period: string;
+  summary: AnalyticsSummary;
+  daily_orders: DailyOrder[];
+  top_items: TopItem[];
+  peak_hours: PeakHour[];
+  payment_breakdown: PaymentBreakdown[];
+}
+
 // Upsell types
 export interface UpsellSuggestion {
   menu_item_id: number;

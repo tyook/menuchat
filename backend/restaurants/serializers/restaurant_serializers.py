@@ -8,6 +8,7 @@ from restaurants.models import (
     Restaurant,
     RestaurantStaff,
     Subscription,
+    Table,
 )
 
 
@@ -72,6 +73,8 @@ class RestaurantSerializer(serializers.ModelSerializer):
             current_period_end=trial_end,
             order_count=0,
         )
+        from restaurants.tasks import send_merchant_welcome_email_task
+        send_merchant_welcome_email_task.delay(str(restaurant.id))
         return restaurant
 
 
@@ -199,3 +202,19 @@ class PublicMenuCategorySerializer(serializers.ModelSerializer):
 class PublicMenuSerializer(serializers.Serializer):
     restaurant_name = serializers.CharField()
     categories = PublicMenuCategorySerializer(many=True)
+
+
+class TableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Table
+        fields = ["id", "name", "number", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate_number(self, value):
+        import re
+
+        if not re.match(r"^[A-Za-z0-9_-]+$", value):
+            raise serializers.ValidationError(
+                "Table number must contain only letters, numbers, hyphens, or underscores."
+            )
+        return value

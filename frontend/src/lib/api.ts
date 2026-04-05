@@ -65,6 +65,25 @@ export async function apiFetch<T>(
     throw new Error("Session expired. Please log in again.");
   }
 
+  if (response.status === 403) {
+    const error = await response.json().catch(() => ({}));
+    if (
+      error.code === "permission_denied" &&
+      typeof error.detail === "string" &&
+      error.detail.toLowerCase().includes("subscription")
+    ) {
+      if (typeof window !== "undefined") {
+        const slugMatch = path.match(/\/api\/restaurants\/([^/]+)\//);
+        const slug = slugMatch?.[1];
+        if (slug) {
+          window.location.href = `/account/restaurants/${slug}/billing`;
+          return new Promise<T>(() => {}); // never resolves; page is navigating
+        }
+      }
+    }
+    throw new Error(error.detail || `API error: 403`);
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(
@@ -487,6 +506,55 @@ export async function deleteMenuVersion(slug: string, versionId: number): Promis
   return apiFetch<void>(`/api/restaurants/${slug}/menu/versions/${versionId}/`, {
     method: "DELETE",
   });
+}
+
+// ── Tables ──
+import type { Table } from "@/types";
+
+export async function fetchTables(slug: string): Promise<Table[]> {
+  return apiFetch<Table[]>(`/api/restaurants/${slug}/tables/`);
+}
+
+export async function createTable(
+  slug: string,
+  data: { name: string; number: string }
+): Promise<Table> {
+  return apiFetch<Table>(`/api/restaurants/${slug}/tables/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTable(
+  slug: string,
+  tableId: string,
+  data: Partial<{ name: string; number: string; is_active: boolean }>
+): Promise<Table> {
+  return apiFetch<Table>(`/api/restaurants/${slug}/tables/${tableId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTable(
+  slug: string,
+  tableId: string
+): Promise<void> {
+  return apiFetch<void>(`/api/restaurants/${slug}/tables/${tableId}/`, {
+    method: "DELETE",
+  });
+}
+
+// ── Analytics ──
+import type { AnalyticsResponse } from "@/types";
+
+export async function fetchAnalytics(
+  slug: string,
+  period: string = "30d"
+): Promise<AnalyticsResponse> {
+  return apiFetch<AnalyticsResponse>(
+    `/api/restaurants/${slug}/analytics/?period=${period}`
+  );
 }
 
 // ── Onboarding ──

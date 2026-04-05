@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to MenuChat</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:100%;">
+
+<!-- Header -->
+<tr><td style="background-color:#18181b;padding:24px 32px;">
+  <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Welcome to MenuChat</h1>
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;color:#18181b;font-size:16px;">Hi {{ user_name|default:"there" }},</p>
+  <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.6;">
+    Thanks for signing up! You can now order from your favorite restaurants using AI-powered natural language ordering.
+  </p>
+
+  <div style="padding:20px;background-color:#fafafa;border-radius:8px;margin-bottom:24px;">
+    <h2 style="margin:0 0 12px;color:#18181b;font-size:15px;font-weight:600;">What you can do:</h2>
+    <table role="presentation" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:4px 0;color:#52525b;font-size:14px;">&#x2022; Scan a QR code at any MenuChat restaurant</td></tr>
+    <tr><td style="padding:4px 0;color:#52525b;font-size:14px;">&#x2022; Order in your own language &mdash; our AI understands you</td></tr>
+    <tr><td style="padding:4px 0;color:#52525b;font-size:14px;">&#x2022; Track your orders in real time</td></tr>
+    <tr><td style="padding:4px 0;color:#52525b;font-size:14px;">&#x2022; Save your preferences and dietary info</td></tr>
+    </table>
+  </div>
+
+  {% if is_restaurant_owner %}
+  <p style="margin:0 0 24px;color:#52525b;font-size:14px;line-height:1.6;">
+    Want to add your restaurant? Head to your
+    <a href="{{ frontend_url }}/account/restaurants" style="color:#18181b;font-weight:500;text-decoration:underline;">dashboard</a>
+    to get started with a free trial.
+  </p>
+  {% endif %}
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="padding:16px 32px;background-color:#fafafa;border-top:1px solid #e4e4e7;">
+  <p style="margin:0;color:#a1a1aa;font-size:12px;text-align:center;">
+    MenuChat &mdash; AI-powered ordering
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -241,6 +241,7 @@ class OrderService:
         language: str = "en",
         table_identifier: str | None = None,
         customer_name: str = "",
+        customer_email: str = "",
         customer_phone: str = "",
         customer_allergies: list | None = None,
     ) -> Order:
@@ -250,6 +251,7 @@ class OrderService:
             table_identifier=table_identifier or None,
             user=user,
             customer_name=customer_name,
+            customer_email=customer_email,
             customer_phone=customer_phone,
             status=order_status,
             payment_status=payment_status,
@@ -275,8 +277,16 @@ class OrderService:
 
         if order_status == "confirmed":
             OrderService.set_status_timestamp(order, "confirmed")
+            OrderService._send_confirmation_emails(order)
 
         return order
+
+    @staticmethod
+    def _send_confirmation_emails(order: Order) -> None:
+        """Dispatch async email tasks for a newly confirmed order."""
+        from orders.tasks import send_new_order_alert_email, send_order_confirmation_email
+        send_order_confirmation_email.delay(str(order.id))
+        send_new_order_alert_email.delay(str(order.id))
 
     # ── Subscription Check ─────────────────────────────────────────
 
@@ -447,6 +457,7 @@ class OrderService:
                 broadcast_queue_updates.apply_async(
                     args=[str(order.restaurant_id), str(order.id)],
                 )
+                OrderService._send_confirmation_emails(order)
         elif intent.status in ("requires_payment_method", "canceled"):
             Order.objects.filter(
                 id=order.id, payment_status="pending"
@@ -547,6 +558,7 @@ class OrderService:
             broadcast_queue_updates.apply_async(
                 args=[str(order.restaurant_id), str(order.id)],
             )
+            OrderService._send_confirmation_emails(order)
             from integrations.tasks import dispatch_order_to_pos
             dispatch_order_to_pos.delay(str(order.id))
 
@@ -587,6 +599,8 @@ class OrderService:
                     "order_count",
                 ]
             )
+            from restaurants.tasks import send_subscription_activated_email_task
+            send_subscription_activated_email_task.delay(restaurant_id, plan)
         except Subscription.DoesNotExist:
             pass
 

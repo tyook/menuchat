@@ -209,6 +209,9 @@ export default function RestaurantsDashboard() {
                   <Link href={`/account/restaurants/${r.slug}/orders`}>
                     <Button variant="outline" size="sm">Orders</Button>
                   </Link>
+                  <Link href={`/account/restaurants/${r.slug}/analytics`}>
+                    <Button variant="outline" size="sm">Analytics</Button>
+                  </Link>
                   <Link href={`/account/restaurants/${r.slug}/billing`}>
                     <Button variant="outline" size="sm">Billing</Button>
                   </Link>

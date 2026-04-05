@@ -60,21 +60,20 @@ export default function Home() {
             <UtensilsCrossed className="h-7 w-7 text-primary" />
           </div>
           <span className="text-2xl font-bold tracking-tight text-foreground">
-            QR Order
+            MenuChat
           </span>
         </div>
 
         {/* headline */}
         <h1 className="animate-fade-in-up-delay-1 max-w-2xl text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.15]">
-          The smarter way to{" "}
-          <br className="hidden sm:block" />
+          The smarter way to <br className="hidden sm:block" />
           <span className="gradient-text">dine & order</span>
         </h1>
 
         {/* subtitle */}
         <p className="animate-fade-in-up-delay-2 mt-6 text-muted-foreground max-w-md mx-auto text-lg leading-relaxed">
-          AI-powered ordering that speaks every language. Scan a QR code and
-          let your voice do the rest.
+          AI-powered ordering that speaks every language. Scan a QR code and let
+          your voice do the rest.
         </p>
 
         {/* CTA buttons */}
@@ -120,8 +119,8 @@ export default function Home() {
                 Scan QR Code
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Point your phone at the QR code at your table or counter to
-                open the menu instantly.
+                Point your phone at the QR code at your table or counter to open
+                the menu instantly.
               </p>
             </div>
 
@@ -144,8 +143,8 @@ export default function Home() {
                 Talk to AI
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Speak or type your order in any language. Our AI understands
-                you perfectly.
+                Speak or type your order in any language. Our AI understands you
+                perfectly.
               </p>
             </div>
 
@@ -209,8 +208,8 @@ export default function Home() {
                 Real-Time Kitchen Display
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Orders appear instantly on your kitchen screen. No more
-                lost tickets or miscommunication.
+                Orders appear instantly on your kitchen screen. No more lost
+                tickets or miscommunication.
               </p>
             </div>
 
@@ -223,8 +222,8 @@ export default function Home() {
                 Analytics &amp; Insights
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                See your best-selling items, peak hours, and revenue trends at
-                a glance. Data-driven decisions made easy.
+                See your best-selling items, peak hours, and revenue trends at a
+                glance. Data-driven decisions made easy.
               </p>
             </div>
           </div>
@@ -275,7 +274,7 @@ export default function Home() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
               <UtensilsCrossed className="h-4 w-4 text-primary" />
             </div>
-            <span className="font-semibold gradient-text">QR Order</span>
+            <span className="font-semibold gradient-text">MenuChat</span>
           </div>
           <p className="text-sm text-muted-foreground">
             AI-powered ordering for modern restaurants

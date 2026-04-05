@@ -35,6 +35,8 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        from accounts.tasks import send_welcome_email_task
+        send_welcome_email_task.delay(str(user.id))
         response = Response(
             {"user": services.user_to_dict(user)},
             status=status.HTTP_201_CREATED,

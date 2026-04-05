@@ -22,6 +22,7 @@ class ConfirmOrderSerializer(serializers.Serializer):
     table_identifier = serializers.CharField(required=False, default="", allow_blank=True)
     language = serializers.CharField(required=False, default="en")
     customer_name = serializers.CharField(max_length=255, required=False, default="")
+    customer_email = serializers.EmailField(required=False, default="", allow_blank=True)
     customer_phone = serializers.CharField(max_length=20, required=False, default="", allow_blank=True)
     payment_method_id = serializers.CharField(required=False, default="", allow_blank=True)
     save_card = serializers.BooleanField(required=False, default=False)
@@ -56,6 +57,7 @@ class OrderResponseSerializer(serializers.ModelSerializer):
             "status",
             "table_identifier",
             "customer_name",
+            "customer_email",
             "customer_phone",
             "subtotal",
             "tax_rate",

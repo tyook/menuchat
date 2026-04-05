@@ -18,6 +18,32 @@ BROADCAST_DEDUP_TTL = 2  # seconds
 
 
 @shared_task
+def send_order_confirmation_email(order_id: str):
+    """Send order confirmation email to the customer (async)."""
+    try:
+        order = Order.objects.select_related("restaurant__owner", "user").get(id=order_id)
+    except Order.DoesNotExist:
+        logger.warning("send_order_confirmation_email: order %s not found", order_id)
+        return
+
+    from orders.notifications import send_order_confirmation_email as _send
+    _send(order)
+
+
+@shared_task
+def send_new_order_alert_email(order_id: str):
+    """Send new order alert email to the restaurant owner (async)."""
+    try:
+        order = Order.objects.select_related("restaurant__owner", "user").get(id=order_id)
+    except Order.DoesNotExist:
+        logger.warning("send_new_order_alert_email: order %s not found", order_id)
+        return
+
+    from orders.notifications import send_new_order_alert_email as _send
+    _send(order)
+
+
+@shared_task
 def update_queue_stats():
     """Refresh cached queue statistics for all restaurants with recent activity."""
     cutoff = timezone.now() - timedelta(days=HISTORICAL_WINDOW_DAYS)

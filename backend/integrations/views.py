@@ -13,9 +13,12 @@ from integrations.serializers import (
 from integrations.tasks import dispatch_order_to_pos
 from orders.models import Order
 from restaurants.models import Restaurant
+from restaurants.permissions import HasActiveSubscription
 
 
 class RestaurantPOSMixin:
+    permission_classes = [IsAuthenticated, HasActiveSubscription]
+
     def get_restaurant(self, slug):
         try:
             return Restaurant.objects.get(slug=slug, owner=self.request.user)
@@ -24,8 +27,6 @@ class RestaurantPOSMixin:
 
 
 class POSConnectionDetailView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def get(self, request, slug):
         restaurant = self.get_restaurant(slug)
         try:
@@ -59,8 +60,6 @@ ENABLED_POS_VENDORS = {"square", "none"}
 
 
 class POSVendorSelectView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, slug):
         restaurant = self.get_restaurant(slug)
         pos_type = request.data.get("pos_type")
@@ -79,8 +78,6 @@ class POSVendorSelectView(RestaurantPOSMixin, APIView):
 
 
 class POSSyncLogListView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def get(self, request, slug):
         restaurant = self.get_restaurant(slug)
         logs = POSSyncLog.objects.filter(
@@ -95,8 +92,6 @@ class POSSyncLogListView(RestaurantPOSMixin, APIView):
 
 
 class RetryOrderSyncView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, slug, order_id):
         restaurant = self.get_restaurant(slug)
         try:
@@ -110,8 +105,6 @@ class RetryOrderSyncView(RestaurantPOSMixin, APIView):
 
 
 class RetryAllSyncView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, slug):
         restaurant = self.get_restaurant(slug)
         failed_orders = Order.objects.filter(
@@ -126,8 +119,6 @@ class RetryAllSyncView(RestaurantPOSMixin, APIView):
 
 
 class POSSyncLogDetailView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def patch(self, request, slug, log_id):
         restaurant = self.get_restaurant(slug)
         try:
@@ -180,8 +171,6 @@ def _verify_oauth_state(state: str) -> tuple[str, str]:
 
 
 class POSConnectInitiateView(RestaurantPOSMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, slug):
         restaurant = self.get_restaurant(slug)
         pos_type = request.data.get("pos_type")

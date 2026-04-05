@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:100%;">
+
+<!-- Header -->
+<tr><td style="background-color:#18181b;padding:24px 32px;">
+  <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Order Confirmed</h1>
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 8px;color:#52525b;font-size:14px;">Hi {{ customer_name|default:"there" }},</p>
+  <p style="margin:0 0 24px;color:#18181b;font-size:16px;">Your order at <strong>{{ restaurant_name }}</strong> has been confirmed.</p>
+
+  {% if table_identifier %}
+  <p style="margin:0 0 24px;color:#52525b;font-size:14px;">Table: <strong>{{ table_identifier }}</strong></p>
+  {% endif %}
+
+  <!-- Items -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e4e4e7;margin-bottom:16px;">
+  {% for item in items %}
+  <tr>
+    <td style="padding:12px 0;border-bottom:1px solid #f4f4f5;color:#18181b;font-size:14px;">
+      {{ item.quantity }}x {{ item.name }} ({{ item.variant_label }})
+      {% if item.special_requests %}<br><span style="color:#71717a;font-size:12px;">Note: {{ item.special_requests }}</span>{% endif %}
+    </td>
+    <td style="padding:12px 0;border-bottom:1px solid #f4f4f5;color:#18181b;font-size:14px;text-align:right;">
+      ${{ item.line_total }}
+    </td>
+  </tr>
+  {% endfor %}
+  </table>
+
+  <!-- Totals -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="padding:4px 0;color:#71717a;font-size:14px;">Subtotal</td>
+    <td style="padding:4px 0;color:#18181b;font-size:14px;text-align:right;">${{ subtotal }}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;color:#71717a;font-size:14px;">Tax</td>
+    <td style="padding:4px 0;color:#18181b;font-size:14px;text-align:right;">${{ tax_amount }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0 0;color:#18181b;font-size:16px;font-weight:600;border-top:1px solid #e4e4e7;">Total</td>
+    <td style="padding:8px 0 0;color:#18181b;font-size:16px;font-weight:600;text-align:right;border-top:1px solid #e4e4e7;">${{ total_price }}</td>
+  </tr>
+  </table>
+
+  {% if estimated_wait %}
+  <p style="margin:24px 0 0;padding:16px;background-color:#fafafa;border-radius:6px;color:#18181b;font-size:14px;text-align:center;">
+    Estimated wait: <strong>~{{ estimated_wait }} minutes</strong>
+  </p>
+  {% endif %}
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="padding:16px 32px;background-color:#fafafa;border-top:1px solid #e4e4e7;">
+  <p style="margin:0;color:#a1a1aa;font-size:12px;text-align:center;">
+    {{ restaurant_name }} &mdash; Powered by MenuChat
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

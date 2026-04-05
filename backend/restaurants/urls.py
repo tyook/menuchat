@@ -24,9 +24,12 @@ from restaurants.views import (
     PayoutDetailView,
     PayoutListView,
     ReactivateSubscriptionView,
+    RestaurantAnalyticsView,
     RestaurantDetailView,
     RestaurantOrderListView,
     SubscriptionDetailView,
+    TableDetailView,
+    TableListCreateView,
 )
 
 urlpatterns = [
@@ -111,6 +114,23 @@ urlpatterns = [
     path("restaurants/<slug:slug>/menu/versions/", MenuVersionListView.as_view(), name="menu-versions"),
     path("restaurants/<slug:slug>/menu/versions/<int:pk>/", MenuVersionDetailView.as_view(), name="menu-version-detail"),
     path("restaurants/<slug:slug>/menu/versions/<int:pk>/activate/", MenuVersionActivateView.as_view(), name="menu-version-activate"),
+    # Tables
+    path(
+        "restaurants/<slug:slug>/tables/",
+        TableListCreateView.as_view(),
+        name="table-list-create",
+    ),
+    path(
+        "restaurants/<slug:slug>/tables/<uuid:pk>/",
+        TableDetailView.as_view(),
+        name="table-detail",
+    ),
+    # Analytics
+    path(
+        "restaurants/<slug:slug>/analytics/",
+        RestaurantAnalyticsView.as_view(),
+        name="restaurant-analytics",
+    ),
     # Connect (payout onboarding)
     path(
         "restaurants/<slug:slug>/connect/onboard/",
