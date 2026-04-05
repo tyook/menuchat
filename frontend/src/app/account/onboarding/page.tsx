@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCompleteOnboarding } from "@/hooks/use-onboarding";
@@ -17,6 +16,14 @@ import { cn } from "@/lib/utils";
 type Step = "preferences" | "owner-question" | "restaurant-details" | "menu-upload" | "payment-setup" | "pos-vendor";
 
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingPageContent />
+    </Suspense>
+  );
+}
+
+function OnboardingPageContent() {
   const isAuthenticated = useRequireAuth();
   const router = useRouter();
   const { user } = useAuthStore();

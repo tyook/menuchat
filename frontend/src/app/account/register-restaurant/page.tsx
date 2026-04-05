@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { RestaurantDetailsStep } from "@/components/onboarding/restaurant-details-step";
@@ -14,6 +13,14 @@ import { cn } from "@/lib/utils";
 type Step = "details" | "menu" | "payment-setup" | "pos-vendor";
 
 export default function RegisterRestaurantPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterRestaurantPageContent />
+    </Suspense>
+  );
+}
+
+function RegisterRestaurantPageContent() {
   const isAuthenticated = useRequireAuth();
   const router = useRouter();
   const { data: profile, isLoading } = useProfile();
