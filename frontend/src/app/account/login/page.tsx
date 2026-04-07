@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/auth-store";
 export default function CustomerLoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const getUser = () => useAuthStore.getState().user;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +25,8 @@ export default function CustomerLoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push("/account/orders");
+      const user = getUser();
+      router.push(user?.onboarding_completed ? "/account/orders" : "/account/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -76,7 +78,10 @@ export default function CustomerLoginPage() {
         </div>
 
         <SocialLoginButtons
-          onSuccess={() => router.push("/account/orders")}
+          onSuccess={() => {
+            const user = getUser();
+            router.push(user?.onboarding_completed ? "/account/orders" : "/account/onboarding");
+          }}
           onError={(err) => setError(err)}
           buttonClassName="bg-card border border-border rounded-xl hover:bg-card/80"
         />

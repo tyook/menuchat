@@ -159,7 +159,7 @@ export function InputStep({ slug }: InputStepProps) {
       )}
 
       {/* Text input fallback */}
-      <div className="w-full animate-fade-in-up-delay-2">
+      {!isListening && <div className="w-full animate-fade-in-up-delay-2">
         <div className="glass-card rounded-xl p-1 flex items-end gap-2">
           <Textarea
             value={currentInput}
@@ -178,7 +178,7 @@ export function InputStep({ slug }: InputStepProps) {
             <Send size={18} />
           </button>
         </div>
-      </div>
+      </div>}
 
       {useOrderStore.getState().error && (
         <p className="text-destructive text-sm">

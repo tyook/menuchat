@@ -199,6 +199,18 @@ CELERY_BEAT_SCHEDULE = {
         "task": "orders.tasks.update_queue_stats",
         "schedule": 300.0,  # Every 5 minutes
     },
+    "check-toast-health": {
+        "task": "integrations.monitoring.check_toast_health",
+        "schedule": 300.0,  # Every 5 minutes
+    },
+    "sync-all-toast-menus": {
+        "task": "integrations.tasks.sync_all_toast_menus",
+        "schedule": 3600.0,  # Every hour
+    },
+    "poll-toast-order-statuses": {
+        "task": "integrations.tasks.poll_all_toast_order_statuses",
+        "schedule": 120.0,  # Every 2 minutes
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -209,6 +221,11 @@ POS_SQUARE_CLIENT_ID = config("POS_SQUARE_CLIENT_ID", default="")
 POS_SQUARE_CLIENT_SECRET = config("POS_SQUARE_CLIENT_SECRET", default="")
 POS_TOAST_CLIENT_ID = config("POS_TOAST_CLIENT_ID", default="")
 POS_TOAST_CLIENT_SECRET = config("POS_TOAST_CLIENT_SECRET", default="")
+POS_TOAST_API_BASE_URL = config(
+    "POS_TOAST_API_BASE_URL", default="https://ws-sandbox-api.eng.toasttab.com"
+)
+POS_TOAST_RESTAURANT_GUID = config("POS_TOAST_RESTAURANT_GUID", default="")
+TOAST_POS_ENABLED = config("TOAST_POS_ENABLED", default=False, cast=bool)
 POS_DISPATCH_MAX_RETRIES = 5
 POS_DISPATCH_RETRY_DELAYS = [30, 120, 600, 1800]  # seconds: 30s, 2m, 10m, 30m
 
@@ -293,3 +310,38 @@ LLM_MODEL = config("LLM_MODEL", default="")
 # ---------------------------------------------------------------------------
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 APPLE_CLIENT_ID = config("APPLE_CLIENT_ID", default="")  # e.g. "com.yourapp.service"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "config.logging_formatter.JSONFormatter",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "integrations.adapters.toast": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "integrations.monitoring": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

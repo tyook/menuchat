@@ -10,6 +10,7 @@ from integrations.views import (
     RetryAllSyncView,
     RetryOrderSyncView,
     SquareOAuthCallbackView,
+    ToastMenuSyncView,
 )
 
 urlpatterns = [
@@ -47,6 +48,11 @@ urlpatterns = [
         "restaurants/<slug:slug>/pos/sync-logs/<uuid:log_id>/",
         POSSyncLogDetailView.as_view(),
         name="pos-sync-log-detail",
+    ),
+    path(
+        "restaurants/<slug:slug>/pos/toast/sync-menu/",
+        ToastMenuSyncView.as_view(),
+        name="toast-menu-sync",
     ),
     path(
         "integrations/oauth/square/callback/",

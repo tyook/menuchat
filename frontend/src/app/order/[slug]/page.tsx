@@ -23,13 +23,14 @@ export default function OrderPage() {
   const step = useOrderStore((s) => s.step);
   const reset = useOrderStore((s) => s.reset);
   const { data: menu, isLoading, error } = useMenu(slug);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    checkAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
     reset();

@@ -126,6 +126,8 @@ stripe listen --forward-to localhost:5005/api/order/webhook/stripe/
 | Backend  | http://localhost:5005   |
 | Frontend | http://localhost:3001   |
 
+Run BE server locally
+./manage.py runserver 5005
 ## Mobile App (Capacitor)
 
 The frontend is wrapped with [Capacitor](https://capacitorjs.com/) to produce native Android and iOS apps from the same codebase. Native features include push notifications, QR code scanning, and over-the-air live updates.

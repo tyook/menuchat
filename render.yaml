@@ -67,3 +67,7 @@ services:
         sync: false
       - key: POS_TOAST_CLIENT_SECRET
         sync: false
+      - key: POS_TOAST_RESTAURANT_GUID
+        sync: false
+      - key: TOAST_POS_ENABLED
+        value: "False"

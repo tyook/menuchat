@@ -108,6 +108,7 @@ class MenuVersion(models.Model):
     class Source(models.TextChoices):
         MANUAL = "manual", "Manual"
         AI_UPLOAD = "ai_upload", "AI Upload"
+        TOAST_SYNC = "toast_sync", "Toast Sync"
 
     restaurant = models.ForeignKey(
         Restaurant, on_delete=models.CASCADE, related_name="menu_versions"

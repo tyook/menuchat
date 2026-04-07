@@ -39,12 +39,6 @@ class ConnectService:
     def get_connect_status(restaurant):
         try:
             account = restaurant.connected_account
-            return {
-                "has_account": True,
-                "onboarding_complete": account.onboarding_complete,
-                "payouts_enabled": account.payouts_enabled,
-                "charges_enabled": account.charges_enabled,
-            }
         except ConnectedAccount.DoesNotExist:
             return {
                 "has_account": False,
@@ -52,6 +46,24 @@ class ConnectService:
                 "payouts_enabled": False,
                 "charges_enabled": False,
             }
+
+        # Sync latest status from Stripe
+        stripe_account = stripe.Account.retrieve(account.stripe_account_id)
+        details_submitted = stripe_account.get("details_submitted", False)
+        payouts_enabled = stripe_account.get("payouts_enabled", False)
+        charges_enabled = stripe_account.get("charges_enabled", False)
+
+        account.onboarding_complete = details_submitted
+        account.payouts_enabled = payouts_enabled
+        account.charges_enabled = charges_enabled
+        account.save(update_fields=["onboarding_complete", "payouts_enabled", "charges_enabled", "updated_at"])
+
+        return {
+            "has_account": True,
+            "onboarding_complete": details_submitted,
+            "payouts_enabled": payouts_enabled,
+            "charges_enabled": charges_enabled,
+        }
 
     @staticmethod
     def create_dashboard_link(restaurant):

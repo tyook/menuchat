@@ -1,3 +1,4 @@
+from django.conf import settings as django_settings
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
@@ -56,7 +57,11 @@ class POSConnectionDetailView(RestaurantPOSMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-ENABLED_POS_VENDORS = {"square", "none"}
+def _get_enabled_pos_vendors() -> set[str]:
+    vendors = {"square", "none"}
+    if getattr(django_settings, "TOAST_POS_ENABLED", False):
+        vendors.add("toast")
+    return vendors
 
 
 class POSVendorSelectView(RestaurantPOSMixin, APIView):
@@ -64,9 +69,10 @@ class POSVendorSelectView(RestaurantPOSMixin, APIView):
         restaurant = self.get_restaurant(slug)
         pos_type = request.data.get("pos_type")
 
-        if pos_type not in ENABLED_POS_VENDORS:
+        enabled = _get_enabled_pos_vendors()
+        if pos_type not in enabled:
             return Response(
-                {"error": f"Unsupported POS type: {pos_type}. Allowed: {', '.join(sorted(ENABLED_POS_VENDORS))}"},
+                {"error": f"Unsupported POS type: {pos_type}. Allowed: {', '.join(sorted(enabled))}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -137,7 +143,24 @@ class POSSyncLogDetailView(RestaurantPOSMixin, APIView):
         return Response(POSSyncLogSerializer(log).data)
 
 
-from django.conf import settings as django_settings
+class ToastMenuSyncView(RestaurantPOSMixin, APIView):
+    """POST: trigger a Toast menu sync for the restaurant."""
+
+    def post(self, request, slug):
+        restaurant = self.get_restaurant(slug)
+
+        if not getattr(django_settings, "TOAST_POS_ENABLED", False):
+            return Response(
+                {"error": "Toast POS integration is disabled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from integrations.tasks import sync_toast_menu
+
+        sync_toast_menu.delay(str(restaurant.id))
+        return Response({"status": "sync_queued"})
+
+
 from django.http import HttpResponseRedirect
 from django.utils.dateparse import parse_datetime
 from square import Square as SquareClient

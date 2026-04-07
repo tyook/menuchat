@@ -28,7 +28,7 @@ export default function CustomerRegisterPage() {
     setLoading(true);
     try {
       await register(form);
-      router.push("/account/orders");
+      router.push("/account/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -99,7 +99,7 @@ export default function CustomerRegisterPage() {
         </div>
 
         <SocialLoginButtons
-          onSuccess={() => router.push("/account/orders")}
+          onSuccess={() => router.push("/account/onboarding")}
           onError={(err) => setError(err)}
           buttonClassName="bg-card border border-border rounded-xl hover:bg-card/80"
         />

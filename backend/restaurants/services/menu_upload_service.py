@@ -123,4 +123,9 @@ class MenuUploadService:
                         is_default=False,
                     )
 
+        # Auto-activate if no active version exists (e.g. first upload during onboarding)
+        if not restaurant.menu_versions.filter(is_active=True).exists():
+            new_version.is_active = True
+            new_version.save(update_fields=["is_active", "updated_at"])
+
         return new_version

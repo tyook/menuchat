@@ -347,6 +347,7 @@ class TableListCreateView(RestaurantMixin, generics.ListCreateAPIView):
     """GET/POST /api/restaurants/:slug/tables/"""
 
     serializer_class = TableSerializer
+    pagination_class = None
 
     def get_queryset(self):
         restaurant = self.get_restaurant()
