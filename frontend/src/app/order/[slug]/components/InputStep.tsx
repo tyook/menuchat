@@ -30,7 +30,6 @@ export function InputStep({ slug }: InputStepProps) {
     if (!text) return;
 
     setRawInput(text);
-    setStep("loading");
 
     parseOrderMutation.mutate(text);
   };

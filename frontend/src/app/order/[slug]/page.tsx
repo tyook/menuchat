@@ -10,12 +10,10 @@ import { useMenu } from "@/hooks/use-menu";
 import { Button } from "@/components/ui/button";
 import { PreferencesDialog } from "@/components/PreferencesDialog";
 import { WelcomeStep } from "./components/WelcomeStep";
-import { InputStep } from "./components/InputStep";
-import { LoadingStep } from "./components/LoadingStep";
+import { OrderingStep } from "./components/OrderingStep";
 import { ConfirmationStep } from "./components/ConfirmationStep";
 import { PaymentStep } from "./components/PaymentStep";
 import { SubmittedStep } from "./components/SubmittedStep";
-import { MenuModal } from "./components/MenuModal";
 
 export default function OrderPage() {
   const params = useParams<{ slug: string }>();
@@ -72,11 +70,9 @@ export default function OrderPage() {
         >
           <Settings className="h-5 w-5" />
         </Button>
-        <MenuModal categories={menu.categories} />
       </div>
       {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} />}
-      {step === "input" && <InputStep slug={slug} />}
-      {step === "loading" && <LoadingStep />}
+      {step === "ordering" && <OrderingStep slug={slug} categories={menu.categories} />}
       {step === "cart" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
       {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
       {step === "submitted" && <SubmittedStep slug={slug} />}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ParsedOrderItem, MenuItem, MenuItemVariant, MenuItemModifier } from "@/types";
 
-type OrderStep = "welcome" | "ordering" | "input" | "loading" | "cart" | "payment" | "submitted";
+type OrderStep = "welcome" | "ordering" | "cart" | "payment" | "submitted";
 
 interface OrderState {
   step: OrderStep;
