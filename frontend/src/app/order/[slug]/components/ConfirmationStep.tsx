@@ -110,7 +110,7 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
         <p className="text-muted-foreground mb-4">
           We couldn&apos;t match anything from the menu. Try again?
         </p>
-        <Button onClick={() => setStep("input")}>Try Again</Button>
+        <Button onClick={() => setStep("input")}>Go Back</Button>
       </div>
     );
   }

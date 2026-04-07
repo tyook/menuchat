@@ -11,7 +11,7 @@ export function useParseOrder(slug: string) {
     mutationFn: (rawInput: string) => parseOrder(slug, rawInput),
     onSuccess: (result) => {
       setParsedResult(result.items, result.allergies ?? [], result.total_price, result.language);
-      setStep("confirmation");
+      setStep("cart");
     },
     onError: (err) => {
       setError(err instanceof Error ? err.message : "Failed to parse order");

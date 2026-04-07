@@ -149,6 +149,20 @@ class LogoutView(APIView):
         return services.clear_auth_cookies(response)
 
 
+class WsTokenView(APIView):
+    """Return the current access token so the frontend can pass it to WebSocket."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        token = request.COOKIES.get("access_token", "")
+        if not token:
+            return Response(
+                {"detail": "No access token cookie."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        return Response({"token": token})
+
+
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 

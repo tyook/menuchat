@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, ShoppingCart } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
@@ -14,9 +14,9 @@ interface InputStepProps {
 }
 
 export function InputStep({ slug }: InputStepProps) {
-  const { setStep, setRawInput, rawInput } = useOrderStore();
+  const { setStep, setRawInput, rawInput, parsedItems } = useOrderStore();
   const { preferredLanguage } = usePreferencesStore();
-  const [input, setInput] = useState(rawInput);
+  const [input, setInput] = useState(parsedItems.length > 0 ? "" : rawInput);
   const [speechLang, setSpeechLang] = useState(preferredLanguage);
   const { isListening, transcript, startListening, stopListening, isSupported } =
     useSpeechRecognition({ lang: speechLang || undefined });
@@ -184,6 +184,17 @@ export function InputStep({ slug }: InputStepProps) {
         <p className="text-destructive text-sm">
           {useOrderStore.getState().error}
         </p>
+      )}
+
+      {/* Cart button when items exist */}
+      {parsedItems.length > 0 && (
+        <button
+          onClick={() => setStep("cart")}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full gradient-primary glow-primary px-5 py-3 text-primary-foreground font-semibold shadow-lg hover:scale-105 active:scale-95 transition-transform"
+        >
+          <ShoppingCart size={18} />
+          <span>Cart ({parsedItems.length})</span>
+        </button>
       )}
     </div>
   );

@@ -77,7 +77,7 @@ export default function OrderPage() {
       {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} />}
       {step === "input" && <InputStep slug={slug} />}
       {step === "loading" && <LoadingStep />}
-      {step === "confirmation" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
+      {step === "cart" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
       {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
       {step === "submitted" && <SubmittedStep slug={slug} />}
 

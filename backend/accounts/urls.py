@@ -14,6 +14,7 @@ from accounts.views import (
     PaymentMethodsView,
     RefreshView,
     RegisterView,
+    WsTokenView,
 )
 
 urlpatterns = [
@@ -26,6 +27,7 @@ urlpatterns = [
     path("auth/refresh/", RefreshView.as_view(), name="token-refresh"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/me/", MeView.as_view(), name="me"),
+    path("auth/ws-token/", WsTokenView.as_view(), name="ws-token"),
     # Account
     path("account/orders/", OrderHistoryView.as_view(), name="account-orders"),
     path("account/orders/<uuid:order_id>/", OrderDetailView.as_view(), name="account-order-detail"),

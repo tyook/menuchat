@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ParsedOrderItem } from "@/types";
 
-type OrderStep = "welcome" | "input" | "loading" | "confirmation" | "payment" | "submitted";
+type OrderStep = "welcome" | "input" | "loading" | "cart" | "payment" | "submitted";
 
 interface OrderState {
   step: OrderStep;
@@ -56,8 +56,15 @@ export const useOrderStore = create<OrderState>((set) => ({
 
   setStep: (step) => set({ step }),
   setRawInput: (rawInput) => set({ rawInput }),
-  setParsedResult: (parsedItems, parsedAllergies, totalPrice, language) =>
-    set({ parsedItems, parsedAllergies, totalPrice, language }),
+  setParsedResult: (newItems, newAllergies, _totalPrice, language) =>
+    set((state) => {
+      const combined = [...state.parsedItems, ...newItems];
+      const total = combined
+        .reduce((sum, i) => sum + parseFloat(i.line_total), 0)
+        .toFixed(2);
+      const allergies = Array.from(new Set([...state.parsedAllergies, ...newAllergies]));
+      return { parsedItems: combined, parsedAllergies: allergies, totalPrice: total, language };
+    }),
   addItem: (item) =>
     set((state) => {
       const newItems = [...state.parsedItems, item];

@@ -240,7 +240,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
         <p className="text-muted-foreground mb-4">
           Payment session expired. Please try again.
         </p>
-        <Button onClick={() => setStep("confirmation")}>Go Back</Button>
+        <Button onClick={() => setStep("cart")}>Go Back</Button>
       </div>
     );
   }
@@ -383,7 +383,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
       <Button
         variant="ghost"
         className="w-full mt-4"
-        onClick={() => setStep("confirmation")}
+        onClick={() => setStep("cart")}
       >
         Back to order
       </Button>

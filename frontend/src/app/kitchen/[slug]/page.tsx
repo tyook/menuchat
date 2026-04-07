@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useKitchenStore } from "@/stores/kitchen-store";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { useWsToken } from "@/hooks/use-ws-token";
 import { useAuthStore } from "@/stores/auth-store";
 import { useMyRestaurants } from "@/hooks/use-my-restaurants";
 import { useAdvanceOrder } from "@/hooks/use-advance-order";
@@ -73,13 +74,12 @@ export default function KitchenPage() {
     [addOrUpdateOrder]
   );
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const { data: wsToken } = useWsToken(authorized);
 
   const { isConnected } = useWebSocket({
-    url: `${WS_URL}/ws/kitchen/${slug}/?token=${token ?? ""}`,
+    url: `${WS_URL}/ws/kitchen/${slug}/?token=${wsToken ?? ""}`,
     onMessage: handleMessage,
-    enabled: authorized,
+    enabled: authorized && !!wsToken,
   });
 
   const handleAdvance = (orderId: string) => {

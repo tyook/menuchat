@@ -16,7 +16,7 @@ interface SubmittedStepProps {
 }
 
 export function SubmittedStep({ slug }: SubmittedStepProps) {
-  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode, parsedItems } = useOrderStore();
+  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode, parsedItems, reset } = useOrderStore();
   const { isAuthenticated, register } = useAuthStore();
 
   const [showRegister, setShowRegister] = useState(false);
@@ -201,6 +201,7 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
         variant="gradient"
         size="lg"
         className="mt-6 w-full max-w-sm"
+        onClick={reset}
       >
         Done
       </Button>
