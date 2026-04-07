@@ -37,7 +37,7 @@ export function WelcomeStep({ restaurantName }: WelcomeStepProps) {
           variant="gradient"
           size="lg"
           className="w-full max-w-sm glow-primary-lg"
-          onClick={() => setStep("input")}
+          onClick={() => setStep("ordering")}
         >
           Start Ordering
         </Button>

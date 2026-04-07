@@ -110,7 +110,7 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
         <p className="text-muted-foreground mb-4">
           We couldn&apos;t match anything from the menu. Try again?
         </p>
-        <Button onClick={() => setStep("input")}>Go Back</Button>
+        <Button onClick={() => setStep("ordering")}>Go Back</Button>
       </div>
     );
   }
@@ -235,7 +235,7 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setStep("input")}>
+        <Button variant="outline" onClick={() => setStep("ordering")}>
           Add More
         </Button>
         <Button
