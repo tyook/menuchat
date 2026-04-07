@@ -52,7 +52,7 @@ The existing `ConfirmOrderView` and `CreatePaymentView` already accept structure
 Layout (top to bottom within the ordering step):
 
 1. **Tab bar** — "Menu" | "Voice/Chat" toggle, below restaurant name
-2. **Category pills** — Sticky horizontal scroll bar with snap scrolling. Highlights active category based on scroll position via `IntersectionObserver`. Tapping scrolls to section.
+2. **Category pills** — Sticky horizontal scroll bar with snap scrolling. Highlights active category based on scroll position via `IntersectionObserver`. Tapping scrolls to section. Note: programmatic scroll (from pill tap) must suppress the `IntersectionObserver` callback via a ref flag to prevent pill highlight flickering during scroll animation.
 3. **Menu items list** — Scrollable area taking remaining viewport height. Grouped by category with section headers.
 4. **Cart bottom bar** — Fixed to bottom. Shows item count, total price, "Review Order" button. Always visible, greyed out when empty.
 
@@ -77,7 +77,7 @@ Layout (top to bottom within the ordering step):
 - Uses existing `useMenu(slug)` hook to fetch menu data
 - On "Add to Cart": creates a `ParsedOrderItem` and calls `addItemFromMenu()` on `useOrderStore`
 - No backend call needed — item data comes directly from the menu response
-- Price calculated client-side from variant + modifiers (validated server-side on confirm)
+- Price formula: `line_total = (variant.price + sum(selected_modifier.price_adjustment)) * quantity` — validated server-side on confirm
 
 ### VoiceChatTab
 
@@ -85,10 +85,10 @@ Refactored from existing `InputStep` to work as a tab:
 
 - Same mic orb, textarea fallback, `useParseOrder` hook
 - When LLM returns parsed items, they get added to `useOrderStore` via `addItem()`
-- Instead of auto-transitioning to `ConfirmationStep`, items appear in the shared cart bottom bar
+- The store's `setParsedResult` already merges new items with existing ones (additive behavior). The key change is: **do not transition to cart step after parsing**. The `useParseOrder` hook's `onSuccess` currently calls `setStep("cart")` — this must be modified to stay on the `ordering` step and show inline confirmation instead.
 - Shows brief inline confirmation: "Added 2x Margherita, 1x Carbonara" with checkmarks
 - Input clears, ready for another voice/text entry
-- Voice ordering becomes **additive** — each submission adds to cart rather than replacing it
+- Loading state during LLM parsing shown as an **inline spinner/animation within the VoiceChatTab** (replaces the standalone `LoadingStep` component which is no longer needed)
 
 ## Store Changes
 
@@ -96,11 +96,9 @@ Refactored from existing `InputStep` to work as a tab:
 
 1. **`addItemFromMenu(item, variant, modifiers, quantity)`** — New action that creates a `ParsedOrderItem` from menu data directly (no LLM). Maps `MenuItem` + `MenuItemVariant` + `MenuItemModifier[]` into the same shape that `parseOrder` returns.
 
-2. **`activeTab: 'menu' | 'voice'`** — Tracks which tab is active, persists across renders.
+2. **Step enum change** — New `'ordering'` value replaces the `'input'` → `'loading'` transition. Flow: `welcome → ordering → cart → payment → submitted`.
 
-3. **`expandedItemId: string | null`** — Tracks which menu item is expanded for inline variant/modifier selection.
-
-4. **Step enum change** — New `'ordering'` value replaces the `'input'` → `'loading'` transition. Flow: `welcome → ordering → cart → payment → submitted`.
+**UI state (`activeTab`, `expandedItemId`) stays in local `useState`** within `OrderingStep`, not in the Zustand store. These are UI-only concerns and tab content is preserved in DOM (not unmounted), so local state is sufficient.
 
 ## Mobile-First Layout Strategy
 
@@ -146,7 +144,17 @@ Refactored from existing `InputStep` to work as a tab:
 - `frontend/src/app/order/[slug]/components/OrderingStep.tsx`
 
 ### Modified Files
-- `frontend/src/stores/order-store.ts` — new actions, step enum, tab state
-- `frontend/src/app/order/[slug]/page.tsx` — render `OrderingStep` for the `ordering` step
+- `frontend/src/stores/order-store.ts` — new `addItemFromMenu` action, add `'ordering'` to step enum
+- `frontend/src/hooks/use-parse-order.ts` — remove `setStep("cart")` from `onSuccess`, stay on `ordering` step
+- `frontend/src/app/order/[slug]/page.tsx` — render `OrderingStep` for the `ordering` step, remove `MenuModal` (now redundant)
 - `frontend/src/app/order/[slug]/components/WelcomeStep.tsx` — transition to `ordering` instead of `input`
-- `frontend/src/types/index.ts` — if any type additions needed for store changes
+
+### Deprecated Files
+- `frontend/src/app/order/[slug]/components/InputStep.tsx` — replaced by `VoiceChatTab`
+- `frontend/src/app/order/[slug]/components/LoadingStep.tsx` — loading state now inline within `VoiceChatTab`
+- `frontend/src/app/order/[slug]/components/MenuModal.tsx` — replaced by `MenuBrowseTab`
+
+### Cart Bottom Bar Behavior
+- Always visible at the bottom of the ordering step
+- When cart is empty: shows "Review Order" button in disabled/muted state (non-interactive), displays "$0.00"
+- When cart has items: shows item count, total price, and enabled "Review Order" button
