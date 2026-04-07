@@ -357,3 +357,12 @@
     opacity: 1;
   }
 }
+
+/* Hide scrollbar for category bar horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
