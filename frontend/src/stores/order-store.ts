@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import type { ParsedOrderItem } from "@/types";
+import type { ParsedOrderItem, MenuItem, MenuItemVariant, MenuItemModifier } from "@/types";
 
-type OrderStep = "welcome" | "input" | "loading" | "cart" | "payment" | "submitted";
+type OrderStep = "welcome" | "ordering" | "input" | "loading" | "cart" | "payment" | "submitted";
 
 interface OrderState {
   step: OrderStep;
@@ -23,6 +23,12 @@ interface OrderState {
   setRawInput: (input: string) => void;
   setParsedResult: (items: ParsedOrderItem[], allergies: string[], total: string, lang: string) => void;
   addItem: (item: ParsedOrderItem) => void;
+  addItemFromMenu: (
+    item: MenuItem,
+    variant: MenuItemVariant,
+    modifiers: MenuItemModifier[],
+    quantity: number,
+  ) => void;
   removeItem: (index: number) => void;
   updateItemQuantity: (index: number, quantity: number) => void;
   setOrderId: (id: string) => void;
@@ -68,6 +74,28 @@ export const useOrderStore = create<OrderState>((set) => ({
   addItem: (item) =>
     set((state) => {
       const newItems = [...state.parsedItems, item];
+      const newTotal = newItems
+        .reduce((sum, i) => sum + parseFloat(i.line_total), 0)
+        .toFixed(2);
+      return { parsedItems: newItems, totalPrice: newTotal };
+    }),
+  addItemFromMenu: (menuItem, variant, modifiers, quantity) =>
+    set((state) => {
+      const lineTotal = (
+        (parseFloat(variant.price) +
+          modifiers.reduce((sum, m) => sum + parseFloat(m.price_adjustment), 0)) *
+        quantity
+      ).toFixed(2);
+      const newItem: ParsedOrderItem = {
+        menu_item_id: menuItem.id,
+        name: menuItem.name,
+        variant: { id: variant.id, label: variant.label, price: variant.price },
+        quantity,
+        modifiers,
+        special_requests: "",
+        line_total: lineTotal,
+      };
+      const newItems = [...state.parsedItems, newItem];
       const newTotal = newItems
         .reduce((sum, i) => sum + parseFloat(i.line_total), 0)
         .toFixed(2);
