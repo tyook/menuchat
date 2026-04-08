@@ -13,13 +13,6 @@ interface RestaurantDetailsStepProps {
   onBack: () => void;
 }
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 interface AddressFields {
   street_address: string;
   city: string;
@@ -36,26 +29,19 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
   const { toast } = useToast();
 
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState<AddressFields | null>(null);
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-    setSlug(slugify(value));
-  };
 
   const handleAddressSelect = useCallback((addr: AddressFields) => {
     setAddress(addr);
   }, []);
 
   const handleSubmit = () => {
-    if (!name.trim() || !slug.trim()) return;
+    if (!name.trim()) return;
 
     createRestaurant.mutate(
       {
         name: name.trim(),
-        slug: slug.trim(),
         phone: phone || undefined,
         street_address: address?.street_address || undefined,
         city: address?.city || undefined,
@@ -96,22 +82,9 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
           <Input
             id="restaurant-name"
             value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Joe's Diner"
           />
-        </div>
-
-        <div>
-          <Label htmlFor="restaurant-slug" className="text-foreground text-sm font-medium">URL Slug</Label>
-          <Input
-            id="restaurant-slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="joes-diner"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Your menu will be available at /r/{slug || "your-slug"}
-          </p>
         </div>
 
         <div>
@@ -145,7 +118,7 @@ export function RestaurantDetailsStep({ onCreated, onBack }: RestaurantDetailsSt
         <Button
           onClick={handleSubmit}
           className="flex-1"
-          disabled={!name.trim() || !slug.trim() || createRestaurant.isPending}
+          disabled={!name.trim() || createRestaurant.isPending}
         >
           {createRestaurant.isPending ? "Creating..." : "Create Restaurant"}
         </Button>

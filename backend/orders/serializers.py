@@ -18,7 +18,7 @@ class ConfirmOrderItemSerializer(serializers.Serializer):
 
 class ConfirmOrderSerializer(serializers.Serializer):
     items = ConfirmOrderItemSerializer(many=True)
-    raw_input = serializers.CharField()
+    raw_input = serializers.CharField(allow_blank=True, default="")
     table_identifier = serializers.CharField(required=False, default="", allow_blank=True)
     language = serializers.CharField(required=False, default="en")
     customer_name = serializers.CharField(max_length=255, required=False, default="")

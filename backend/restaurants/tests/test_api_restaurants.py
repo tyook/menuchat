@@ -11,23 +11,35 @@ class TestCreateRestaurant:
         api_client.force_authenticate(user=user)
         response = api_client.post(
             "/api/restaurants/",
-            {"name": "My Pizza Place", "slug": "my-pizza-place"},
+            {"name": "My Pizza Place"},
             format="json",
         )
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["name"] == "My Pizza Place"
         assert response.data["slug"] == "my-pizza-place"
 
-    def test_create_restaurant_rejects_duplicate_slug(self, api_client):
-        RestaurantFactory(slug="taken")
+    def test_create_restaurant_auto_increments_duplicate_slug(self, api_client):
+        RestaurantFactory(slug="taken", name="Taken")
         user = UserFactory()
         api_client.force_authenticate(user=user)
         response = api_client.post(
             "/api/restaurants/",
-            {"name": "Another", "slug": "taken"},
+            {"name": "Taken"},
             format="json",
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["slug"] == "taken-2"
+
+    def test_create_restaurant_ignores_slug_in_payload(self, api_client):
+        user = UserFactory()
+        api_client.force_authenticate(user=user)
+        response = api_client.post(
+            "/api/restaurants/",
+            {"name": "My Place", "slug": "custom-slug"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["slug"] == "my-place"
 
 
 @pytest.mark.django_db
@@ -45,9 +57,9 @@ class TestMyRestaurants:
 
 @pytest.mark.django_db
 class TestUpdateRestaurant:
-    def test_owner_can_update_name(self, api_client):
+    def test_owner_can_update_name_and_slug_follows(self, api_client):
         user = UserFactory()
-        restaurant = RestaurantFactory(owner=user)
+        restaurant = RestaurantFactory(owner=user, name="Old Name", slug="old-name")
         api_client.force_authenticate(user=user)
         response = api_client.patch(
             f"/api/restaurants/{restaurant.slug}/",
@@ -56,6 +68,7 @@ class TestUpdateRestaurant:
         )
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "New Name"
+        assert response.data["slug"] == "new-name"
 
 
 @pytest.mark.django_db

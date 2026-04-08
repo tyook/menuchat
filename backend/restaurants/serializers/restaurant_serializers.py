@@ -36,7 +36,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
             "created_at",
             "subscription",
         ]
-        read_only_fields = ["id", "created_at", "subscription"]
+        read_only_fields = ["id", "slug", "created_at", "subscription"]
 
     def get_subscription(self, obj):
         try:
@@ -46,6 +46,25 @@ class RestaurantSerializer(serializers.ModelSerializer):
         # Import here to avoid circular — SubscriptionSerializer is defined below
         return SubscriptionSerializer(sub).data
 
+    @staticmethod
+    def _generate_unique_slug(name, exclude_pk=None):
+        from django.db import IntegrityError
+        from django.utils.text import slugify
+
+        base_slug = slugify(name)
+        if not base_slug:
+            base_slug = "restaurant"
+        slug = base_slug
+        suffix = 2
+        while True:
+            qs = Restaurant.objects.filter(slug=slug)
+            if exclude_pk:
+                qs = qs.exclude(pk=exclude_pk)
+            if not qs.exists():
+                return slug
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+
     def create(self, validated_data):
         from datetime import timedelta
 
@@ -53,6 +72,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
         from django.utils import timezone
 
         validated_data["owner"] = self.context["request"].user
+        validated_data["slug"] = self._generate_unique_slug(validated_data["name"])
         restaurant = Restaurant.objects.create(**validated_data)
         # Auto-create owner staff record
         RestaurantStaff.objects.create(
@@ -76,6 +96,13 @@ class RestaurantSerializer(serializers.ModelSerializer):
         from restaurants.tasks import send_merchant_welcome_email_task
         send_merchant_welcome_email_task.delay(str(restaurant.id))
         return restaurant
+
+    def update(self, instance, validated_data):
+        if "name" in validated_data and validated_data["name"] != instance.name:
+            validated_data["slug"] = self._generate_unique_slug(
+                validated_data["name"], exclude_pk=instance.pk
+            )
+        return super().update(instance, validated_data)
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

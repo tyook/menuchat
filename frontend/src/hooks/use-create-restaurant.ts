@@ -4,7 +4,6 @@ import type { Restaurant } from "@/types";
 
 interface CreateRestaurantParams {
   name: string;
-  slug: string;
   phone?: string;
   street_address?: string;
   city?: string;
@@ -25,7 +24,6 @@ export function useCreateRestaurant() {
     mutationFn: (params: CreateRestaurantParams) => {
       const body: Record<string, string | number | null> = {
         name: params.name,
-        slug: params.slug,
       };
       if (params.phone) body.phone = params.phone;
       if (params.street_address) body.street_address = params.street_address;
