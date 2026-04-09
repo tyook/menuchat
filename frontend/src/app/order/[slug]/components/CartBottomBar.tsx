@@ -8,6 +8,7 @@ export function CartBottomBar() {
   const parsedItems = useOrderStore((s) => s.parsedItems);
   const totalPrice = useOrderStore((s) => s.totalPrice);
   const setStep = useOrderStore((s) => s.setStep);
+  const paymentModel = useOrderStore((s) => s.paymentModel);
 
   const itemCount = parsedItems.reduce((sum, item) => sum + item.quantity, 0);
   const hasItems = itemCount > 0;
@@ -37,7 +38,7 @@ export function CartBottomBar() {
             disabled={!hasItems}
             onClick={() => setStep("cart")}
           >
-            Review Order
+            {paymentModel === "tab" ? "Place Order" : "Review Order"}
           </Button>
         </div>
       </div>
