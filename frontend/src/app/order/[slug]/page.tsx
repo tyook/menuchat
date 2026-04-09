@@ -14,12 +14,15 @@ import { OrderingStep } from "./components/OrderingStep";
 import { ConfirmationStep } from "./components/ConfirmationStep";
 import { PaymentStep } from "./components/PaymentStep";
 import { SubmittedStep } from "./components/SubmittedStep";
+import TabReviewStep from "./components/TabReviewStep";
+import TabStatusBar from "./components/TabStatusBar";
 
 export default function OrderPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const step = useOrderStore((s) => s.step);
   const reset = useOrderStore((s) => s.reset);
+  const setPaymentModel = useOrderStore((s) => s.setPaymentModel);
   const { data: menu, isLoading, error } = useMenu(slug);
   const { isAuthenticated, checkAuth } = useAuthStore();
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -33,6 +36,12 @@ export default function OrderPage() {
   useEffect(() => {
     reset();
   }, [reset]);
+
+  useEffect(() => {
+    if (menu?.payment_model) {
+      setPaymentModel(menu.payment_model);
+    }
+  }, [menu, setPaymentModel]);
 
   if (isLoading) {
     return (
@@ -71,11 +80,13 @@ export default function OrderPage() {
           <Settings className="h-5 w-5" />
         </Button>
       </div>
+      <TabStatusBar />
       {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} slug={slug} />}
       {step === "ordering" && <OrderingStep slug={slug} categories={menu.categories} />}
       {step === "cart" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
       {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
       {step === "submitted" && <SubmittedStep slug={slug} />}
+      {step === "tab_review" && <TabReviewStep slug={slug} />}
 
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
     </main>
