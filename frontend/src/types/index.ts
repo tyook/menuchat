@@ -30,6 +30,7 @@ export interface Restaurant {
   homepage: string;
   logo_url: string;
   tax_rate: string;
+  payment_model: "upfront" | "tab";
   created_at: string;
   subscription?: Subscription;
 }

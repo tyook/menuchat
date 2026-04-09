@@ -33,6 +33,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
             "homepage",
             "logo_url",
             "tax_rate",
+            "payment_model",
             "created_at",
             "subscription",
         ]

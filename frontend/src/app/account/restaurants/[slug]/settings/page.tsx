@@ -13,6 +13,7 @@ import { useRequireRestaurantAccess } from "@/hooks/use-auth";
 import { useRestaurant } from "@/hooks/use-restaurant";
 import { useUpdateTaxRate } from "@/hooks/use-update-tax-rate";
 import { useTables, useCreateTable, useDeleteTable } from "@/hooks/use-tables";
+import { apiFetch } from "@/lib/api";
 import type { Table } from "@/types";
 
 export default function SettingsPage() {
@@ -20,6 +21,8 @@ export default function SettingsPage() {
   const isAuthenticated = useRequireRestaurantAccess();
   const [taxRate, setTaxRate] = useState<string | null>(null);
   const [taxMessage, setTaxMessage] = useState("");
+  const [paymentModel, setPaymentModel] = useState<string | null>(null);
+  const [pmMessage, setPmMessage] = useState("");
   const [newTableName, setNewTableName] = useState("");
   const [newTableNumber, setNewTableNumber] = useState("");
 
@@ -30,6 +33,20 @@ export default function SettingsPage() {
   const deleteTable = useDeleteTable(params.slug);
 
   const displayTaxRate = taxRate ?? restaurant?.tax_rate ?? "";
+  const displayPaymentModel = paymentModel ?? restaurant?.payment_model ?? "upfront";
+
+  const handleSavePaymentModel = async () => {
+    setPmMessage("");
+    try {
+      await apiFetch(`/api/restaurants/${params.slug}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ payment_model: displayPaymentModel }),
+      });
+      setPmMessage("Saved");
+    } catch {
+      setPmMessage("Failed to save");
+    }
+  };
 
   const handleSaveTax = () => {
     setTaxMessage("");
@@ -122,6 +139,35 @@ export default function SettingsPage() {
             {taxMessage && (
               <span className="text-sm text-muted-foreground ml-2">
                 {taxMessage}
+              </span>
+            )}
+          </div>
+        </Card>
+
+        {/* Payment Model */}
+        <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Payment Model</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose when customers pay for their orders.
+          </p>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label className="text-muted-foreground text-sm">Model</Label>
+              <select
+                value={displayPaymentModel}
+                onChange={(e) => setPaymentModel(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="upfront">Pay Upfront (pay before order goes to kitchen)</option>
+                <option value="tab">Open Tab (order first, pay later)</option>
+              </select>
+            </div>
+            <Button variant="gradient" onClick={handleSavePaymentModel}>
+              Save
+            </Button>
+            {pmMessage && (
+              <span className="text-sm text-muted-foreground ml-2">
+                {pmMessage}
               </span>
             )}
           </div>
