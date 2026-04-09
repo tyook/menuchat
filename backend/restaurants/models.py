@@ -28,6 +28,11 @@ class Restaurant(models.Model):
         help_text="Tax rate as a percentage (e.g. 8.875 for 8.875%)",
     )
     estimated_minutes_per_order = models.PositiveIntegerField(default=10)
+    payment_model = models.CharField(
+        max_length=20,
+        choices=[("upfront", "Pay Upfront"), ("tab", "Open Tab")],
+        default="upfront",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
