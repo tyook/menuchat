@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import type { ParsedOrderItem, MenuItem, MenuItemVariant, MenuItemModifier } from "@/types";
+import type { ParsedOrderItem, MenuItem, MenuItemVariant, MenuItemModifier, TabOrder, TabResponse } from "@/types";
 
-type OrderStep = "welcome" | "ordering" | "cart" | "payment" | "submitted";
+type OrderStep = "welcome" | "ordering" | "cart" | "payment" | "submitted" | "tab_review";
 
 interface OrderState {
   step: OrderStep;
@@ -17,6 +17,13 @@ interface OrderState {
   error: string | null;
   clientSecret: string | null;
   paymentMode: "stripe" | "pos_collected";
+  paymentModel: "upfront" | "tab";
+  tabId: string | null;
+  tabOrders: TabOrder[];
+  tabTotal: string;
+  tabAmountPaid: string;
+  tabAmountRemaining: string;
+  tabPaymentId: string | null;
 
   // Actions
   setStep: (step: OrderStep) => void;
@@ -38,6 +45,10 @@ interface OrderState {
   setError: (error: string | null) => void;
   setClientSecret: (secret: string | null) => void;
   setPaymentMode: (mode: "stripe" | "pos_collected") => void;
+  setPaymentModel: (model: "upfront" | "tab") => void;
+  setTabId: (id: string | null) => void;
+  setTabData: (tab: TabResponse) => void;
+  setTabPaymentId: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -55,6 +66,13 @@ const initialState = {
   error: null,
   clientSecret: null,
   paymentMode: "stripe" as "stripe" | "pos_collected",
+  paymentModel: "upfront" as "upfront" | "tab",
+  tabId: null as string | null,
+  tabOrders: [] as TabOrder[],
+  tabTotal: "0.00",
+  tabAmountPaid: "0.00",
+  tabAmountRemaining: "0.00",
+  tabPaymentId: null as string | null,
 };
 
 export const useOrderStore = create<OrderState>((set) => ({
@@ -129,5 +147,15 @@ export const useOrderStore = create<OrderState>((set) => ({
   setError: (error) => set({ error }),
   setClientSecret: (clientSecret) => set({ clientSecret }),
   setPaymentMode: (paymentMode) => set({ paymentMode }),
+  setPaymentModel: (paymentModel) => set({ paymentModel }),
+  setTabId: (tabId) => set({ tabId }),
+  setTabData: (tab) => set({
+    tabId: tab.id,
+    tabOrders: tab.orders,
+    tabTotal: tab.total,
+    tabAmountPaid: tab.amount_paid,
+    tabAmountRemaining: tab.amount_remaining,
+  }),
+  setTabPaymentId: (tabPaymentId) => set({ tabPaymentId }),
   reset: () => set(initialState),
 }));
