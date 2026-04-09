@@ -63,6 +63,32 @@ class Tab(models.Model):
         return self.total - self.amount_paid
 
 
+class TabPayment(models.Model):
+    class Type(models.TextChoices):
+        FULL = "full", "Full"
+        SPLIT_EVEN = "split_even", "Split Even"
+        PAY_BY_ITEM = "pay_by_item", "Pay By Item"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tab = models.ForeignKey(Tab, on_delete=models.CASCADE, related_name="payments")
+    type = models.CharField(max_length=20, choices=Type.choices)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("paid", "Paid"), ("failed", "Failed")],
+        default="pending",
+    )
+    items = models.ManyToManyField("OrderItem", blank=True, related_name="tab_payments")
+    split_count = models.PositiveIntegerField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"TabPayment {self.type} ${self.amount} ({self.payment_status})"
+
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING_PAYMENT = "pending_payment", "Pending Payment"

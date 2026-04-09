@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 import pytest
 from django.db import IntegrityError
 from django.utils import timezone
-from orders.models import Order, Tab
-from orders.tests.factories import OrderFactory, TabFactory
+from orders.models import Order, Tab, TabPayment
+from orders.tests.factories import OrderFactory, TabFactory, TabPaymentFactory
 from restaurants.tests.factories import RestaurantFactory
 
 
@@ -66,3 +68,32 @@ class TestOrderTabRelation:
         assert tab.subtotal == 30
         assert tab.tax_amount == 3
         assert tab.total == 33
+
+
+@pytest.mark.django_db
+class TestTabPaymentModel:
+    def test_create_full_payment(self):
+        tab = TabFactory()
+        OrderFactory(restaurant=tab.restaurant, tab=tab, subtotal=20, tax_amount=2, total_price=22)
+        payment = TabPayment.objects.create(tab=tab, type="full", amount=Decimal("22.00"), tax_amount=Decimal("2.00"))
+        assert payment.payment_status == "pending"
+        assert payment.paid_at is None
+
+    def test_create_split_even_payment(self):
+        tab = TabFactory()
+        payment = TabPayment.objects.create(tab=tab, type="split_even", amount=Decimal("11.00"), tax_amount=Decimal("1.00"), split_count=2)
+        assert payment.type == "split_even"
+        assert payment.split_count == 2
+
+    def test_tab_amount_paid_tracks_payments(self):
+        tab = TabFactory()
+        OrderFactory(restaurant=tab.restaurant, tab=tab, subtotal=40, tax_amount=4, total_price=44)
+        TabPayment.objects.create(tab=tab, type="split_even", amount=Decimal("22.00"), tax_amount=Decimal("2.00"), payment_status="paid")
+        assert tab.amount_paid == Decimal("22.00")
+        assert tab.amount_remaining == Decimal("22.00")
+
+    def test_tab_fully_paid(self):
+        tab = TabFactory()
+        OrderFactory(restaurant=tab.restaurant, tab=tab, subtotal=20, tax_amount=2, total_price=22)
+        TabPayment.objects.create(tab=tab, type="full", amount=Decimal("22.00"), tax_amount=Decimal("2.00"), payment_status="paid")
+        assert tab.amount_remaining == 0
