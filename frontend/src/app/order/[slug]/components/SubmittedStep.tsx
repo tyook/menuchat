@@ -16,7 +16,7 @@ interface SubmittedStepProps {
 }
 
 export function SubmittedStep({ slug }: SubmittedStepProps) {
-  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode, parsedItems, reset } = useOrderStore();
+  const { orderId, tableIdentifier, customerName, customerPhone, paymentMode, parsedItems, reset, paymentModel, setStep } = useOrderStore();
   const { isAuthenticated, register } = useAuthStore();
 
   const [showRegister, setShowRegister] = useState(false);
@@ -194,6 +194,27 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
           <p className="text-sm text-muted-foreground">
             Your order has been linked to your new account. You can now track all your orders.
           </p>
+        </div>
+      )}
+
+      {paymentModel === "tab" && (
+        <div className="flex flex-col gap-3 mt-6 w-full max-w-sm">
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => setStep("ordering")}
+          >
+            Order More
+          </Button>
+          <Button
+            variant="gradient"
+            size="lg"
+            className="w-full"
+            onClick={() => setStep("tab_review")}
+          >
+            View Tab &amp; Pay
+          </Button>
         </div>
       )}
 
