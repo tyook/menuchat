@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from orders.consumers import CustomerOrderConsumer, KitchenConsumer
+from orders.consumers import CustomerOrderConsumer, KitchenConsumer, TabConsumer
 
 websocket_urlpatterns = [
     re_path(r"ws/kitchen/(?P<slug>[\w-]+)/$", KitchenConsumer.as_asgi()),
@@ -8,4 +8,5 @@ websocket_urlpatterns = [
         r"ws/order/(?P<slug>[\w-]+)/(?P<order_id>[0-9a-f-]+)/$",
         CustomerOrderConsumer.as_asgi(),
     ),
+    re_path(r"ws/tab/(?P<tab_id>[0-9a-f-]+)/$", TabConsumer.as_asgi()),
 ]

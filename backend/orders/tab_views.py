@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from orders.models import Tab
 from orders.serializers import ConfirmOrderSerializer, OrderResponseSerializer, TabPaymentRequestSerializer, TabResponseSerializer
 from orders.services import OrderService
+from orders.tab_broadcasts import broadcast_tab_update
 from orders.tab_payment_service import TabPaymentService
 from orders.tab_service import TabService
 from restaurants.models import Restaurant, RestaurantStaff
@@ -71,6 +72,7 @@ class TabOrderView(APIView):
 
         response_data = OrderResponseSerializer(order).data
         response_data["tab"] = TabResponseSerializer(tab).data
+        broadcast_tab_update(tab, "tab.order_added")
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 

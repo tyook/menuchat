@@ -5,6 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from orders.models import Tab, TabPayment
+from orders.tab_broadcasts import broadcast_tab_update
 from orders.tab_service import TabService
 
 
@@ -65,6 +66,7 @@ class TabPaymentService:
             payment.payment_status = "paid"
             payment.paid_at = timezone.now()
             payment.save(update_fields=["payment_status", "paid_at"])
+            broadcast_tab_update(payment.tab, "tab.payment_received")
 
             tab = payment.tab
             if tab.amount_remaining <= 0:

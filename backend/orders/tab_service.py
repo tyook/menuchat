@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from integrations.models import POSConnection
 from orders.models import Tab, TabPayment
+from orders.tab_broadcasts import broadcast_tab_update
 
 
 class TabService:
@@ -43,6 +44,7 @@ class TabService:
         if tab.status == "open":
             tab.status = "closing"
             tab.save(update_fields=["status"])
+            broadcast_tab_update(tab, "tab.closing")
 
     @staticmethod
     def finalize_tab(tab):
@@ -51,6 +53,7 @@ class TabService:
         tab.closed_at = timezone.now()
         tab.save(update_fields=["status", "closed_at"])
         tab.orders.filter(payment_status="deferred").update(payment_status="paid", paid_at=timezone.now())
+        broadcast_tab_update(tab, "tab.closed")
 
     @staticmethod
     def force_close_unpaid(tab):
