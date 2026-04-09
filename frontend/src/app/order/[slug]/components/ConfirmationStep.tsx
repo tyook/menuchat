@@ -12,6 +12,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useCreatePayment } from "@/hooks/use-create-payment";
 import { BusynessBanner } from "./BusynessBanner";
 import { useConfirmOrder } from "@/hooks/use-confirm-order";
+import { useTabOrder } from "@/hooks/use-tab-order";
 import { UpsellSuggestions } from "./UpsellSuggestions";
 import type { ConfirmOrderItem } from "@/types";
 
@@ -40,12 +41,14 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
     setPaymentMode,
     removeItem,
     updateItemQuantity,
+    paymentModel,
   } = useOrderStore();
   const { allergyNote } = usePreferencesStore();
   const { isAuthenticated } = useAuthStore();
   const { data: profile } = useProfile();
   const createPaymentMutation = useCreatePayment(slug);
   const confirmOrderMutation = useConfirmOrder(slug);
+  const tabOrderMutation = useTabOrder(slug);
 
   // Auto-fill name and phone if customer is logged in
   useEffect(() => {
@@ -68,6 +71,19 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
       ? allergyNote.split(",").map((a) => a.trim()).filter(Boolean)
       : [];
     const allAllergies = Array.from(new Set([...parsedAllergies, ...prefAllergies]));
+
+    if (paymentModel === "tab") {
+      tabOrderMutation.mutate({
+        items,
+        rawInput,
+        tableIdentifier,
+        language,
+        customerName,
+        customerPhone,
+        allergies: allAllergies,
+      });
+      return;
+    }
 
     if (paymentMode === "pos_collected") {
       confirmOrderMutation.mutate(
@@ -100,9 +116,11 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
     }
   };
 
-  const isSubmitting = paymentMode === "pos_collected"
-    ? confirmOrderMutation.isPending
-    : createPaymentMutation.isPending;
+  const isSubmitting = paymentModel === "tab"
+    ? tabOrderMutation.isPending
+    : paymentMode === "pos_collected"
+      ? confirmOrderMutation.isPending
+      : createPaymentMutation.isPending;
 
   if (parsedItems.length === 0) {
     return (
@@ -246,8 +264,8 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
           disabled={isSubmitting || !customerName.trim()}
         >
           {isSubmitting
-            ? (paymentMode === "pos_collected" ? "Placing order..." : "Setting up payment...")
-            : "Proceed to Pay"}
+            ? (paymentModel === "tab" ? "Placing order..." : paymentMode === "pos_collected" ? "Placing order..." : "Setting up payment...")
+            : (paymentModel === "tab" ? "Place Order" : "Proceed to Pay")}
         </Button>
       </div>
     </div>
