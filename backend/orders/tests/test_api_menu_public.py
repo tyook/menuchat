@@ -40,3 +40,20 @@ class TestPublicMenu:
     def test_nonexistent_restaurant_returns_404(self, api_client):
         response = api_client.get("/api/order/nonexistent/menu/")
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestPublicMenuPaymentModel:
+    def test_menu_includes_payment_model(self, api_client):
+        restaurant = RestaurantFactory(slug="menu-pm-test", payment_model="tab")
+        MenuVersionFactory(restaurant=restaurant, is_active=True)
+        response = api_client.get("/api/order/menu-pm-test/menu/")
+        assert response.status_code == 200
+        assert response.data["payment_model"] == "tab"
+
+    def test_menu_default_payment_model_is_upfront(self, api_client):
+        restaurant = RestaurantFactory(slug="menu-pm-default")
+        MenuVersionFactory(restaurant=restaurant, is_active=True)
+        response = api_client.get("/api/order/menu-pm-default/menu/")
+        assert response.status_code == 200
+        assert response.data["payment_model"] == "upfront"

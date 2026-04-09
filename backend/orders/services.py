@@ -841,6 +841,7 @@ class OrderService:
                 categories, many=True
             ).data,
             "payment_mode": payment_mode,
+            "payment_model": restaurant.payment_model,
         }
 
     @staticmethod
