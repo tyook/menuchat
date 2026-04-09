@@ -1,9 +1,66 @@
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
 
 from restaurants.models import MenuItem, MenuItemModifier, MenuItemVariant, Restaurant
+
+
+class Tab(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        CLOSING = "closing", "Closing"
+        CLOSED = "closed", "Closed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    restaurant = models.ForeignKey(
+        "restaurants.Restaurant", on_delete=models.CASCADE, related_name="tabs"
+    )
+    table_identifier = models.CharField(max_length=50)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["restaurant", "table_identifier"],
+                condition=models.Q(status="open"),
+                name="unique_open_tab_per_table",
+            )
+        ]
+
+    def __str__(self):
+        return f"Tab {self.table_identifier} ({self.status}) - {self.restaurant.name}"
+
+    @property
+    def subtotal(self):
+        if hasattr(self, "orders") and self.orders.exists():
+            return sum(order.subtotal for order in self.orders.all())
+        return Decimal("0.00")
+
+    @property
+    def tax_amount(self):
+        if hasattr(self, "orders") and self.orders.exists():
+            return sum(order.tax_amount for order in self.orders.all())
+        return Decimal("0.00")
+
+    @property
+    def total(self):
+        if hasattr(self, "orders") and self.orders.exists():
+            return sum(order.total_price for order in self.orders.all())
+        return Decimal("0.00")
+
+    @property
+    def amount_paid(self):
+        if hasattr(self, "payments") and self.payments.exists():
+            return sum(p.amount for p in self.payments.filter(payment_status="paid"))
+        return Decimal("0.00")
+
+    @property
+    def amount_remaining(self):
+        return self.total - self.amount_paid
 
 
 class Order(models.Model):

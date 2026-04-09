@@ -1,11 +1,19 @@
 import factory
 
-from orders.models import Order, OrderItem
+from orders.models import Order, OrderItem, Tab
 from restaurants.tests.factories import (
     MenuItemFactory,
     MenuItemVariantFactory,
     RestaurantFactory,
 )
+
+
+class TabFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Tab
+
+    restaurant = factory.SubFactory(RestaurantFactory)
+    table_identifier = factory.Sequence(lambda n: f"T{n}")
 
 
 class OrderFactory(factory.django.DjangoModelFactory):
