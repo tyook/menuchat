@@ -106,6 +106,7 @@ class Order(models.Model):
             ("pending", "Pending"),
             ("paid", "Paid"),
             ("pos_collected", "POS Collected"),
+            ("deferred", "Deferred"),
             ("failed", "Failed"),
             ("refunded", "Refunded"),
         ],
@@ -142,6 +143,9 @@ class Order(models.Model):
         related_name="orders",
     )
     paid_at = models.DateTimeField(null=True, blank=True)
+    tab = models.ForeignKey(
+        Tab, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders"
+    )
 
     customer_allergies = models.JSONField(default=list, blank=True, help_text="Snapshot of customer allergies at time of order")
 

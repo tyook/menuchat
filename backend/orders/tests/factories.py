@@ -27,6 +27,7 @@ class OrderFactory(factory.django.DjangoModelFactory):
     user = None
     customer_name = ""
     customer_phone = ""
+    tab = None
 
 
 class OrderItemFactory(factory.django.DjangoModelFactory):

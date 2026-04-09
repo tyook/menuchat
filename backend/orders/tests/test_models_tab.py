@@ -1,7 +1,8 @@
 import pytest
 from django.db import IntegrityError
 from django.utils import timezone
-from orders.models import Tab
+from orders.models import Order, Tab
+from orders.tests.factories import OrderFactory, TabFactory
 from restaurants.tests.factories import RestaurantFactory
 
 
@@ -38,3 +39,30 @@ class TestTabModel:
         assert tab.subtotal == 0
         assert tab.tax_amount == 0
         assert tab.total == 0
+
+
+@pytest.mark.django_db
+class TestOrderTabRelation:
+    def test_order_can_have_tab(self):
+        tab = TabFactory()
+        order = OrderFactory(restaurant=tab.restaurant, tab=tab)
+        assert order.tab == tab
+        assert order in tab.orders.all()
+
+    def test_order_tab_is_optional(self):
+        order = OrderFactory()
+        assert order.tab is None
+
+    def test_deferred_payment_status(self):
+        tab = TabFactory()
+        order = OrderFactory(restaurant=tab.restaurant, tab=tab, payment_status="deferred", status="confirmed")
+        order.full_clean()
+        assert order.payment_status == "deferred"
+
+    def test_tab_totals_with_orders(self):
+        tab = TabFactory()
+        OrderFactory(restaurant=tab.restaurant, tab=tab, subtotal=10, tax_amount=1, total_price=11)
+        OrderFactory(restaurant=tab.restaurant, tab=tab, subtotal=20, tax_amount=2, total_price=22)
+        assert tab.subtotal == 30
+        assert tab.tax_amount == 3
+        assert tab.total == 33
