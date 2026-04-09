@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from orders.broadcast import broadcast_order_to_kitchen
 from orders.models import Tab
 from orders.serializers import ConfirmOrderSerializer, OrderResponseSerializer, TabPaymentRequestSerializer, TabResponseSerializer
 from orders.services import OrderService
@@ -73,6 +74,7 @@ class TabOrderView(APIView):
         response_data = OrderResponseSerializer(order).data
         response_data["tab"] = TabResponseSerializer(tab).data
         broadcast_tab_update(tab, "tab.order_added")
+        broadcast_order_to_kitchen(order)
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 

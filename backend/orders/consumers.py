@@ -86,6 +86,11 @@ class TabConsumer(AsyncWebsocketConsumer):
         self.tab_id = str(self.scope["url_route"]["kwargs"]["tab_id"])
         self.group_name = f"tab_{self.tab_id}"
 
+        # Verify tab exists
+        if not await self._tab_exists():
+            await self.close()
+            return
+
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -95,3 +100,8 @@ class TabConsumer(AsyncWebsocketConsumer):
 
     async def tab_update(self, event):
         await self.send(text_data=json.dumps(event["data"]))
+
+    @database_sync_to_async
+    def _tab_exists(self):
+        from orders.models import Tab
+        return Tab.objects.filter(id=self.tab_id).exists()

@@ -2,6 +2,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import stripe
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 
 from orders.models import Tab, TabPayment
@@ -12,50 +13,54 @@ from orders.tab_service import TabService
 class TabPaymentService:
     @staticmethod
     def create_payment(tab, payment_type, split_count=None, item_ids=None, user=None):
-        if tab.status != "closing":
-            raise ValueError("Tab must be in 'closing' status to accept payments")
+        with transaction.atomic():
+            # Re-fetch with lock to prevent race conditions
+            tab = Tab.objects.select_for_update().get(pk=tab.pk)
 
-        amount = TabPaymentService._calculate_amount(tab, payment_type, split_count, item_ids)
-        tax_portion = TabPaymentService._calculate_tax_portion(tab, amount)
+            if tab.status != "closing":
+                raise ValueError("Tab must be in 'closing' status to accept payments")
 
-        payment = TabPayment.objects.create(
-            tab=tab,
-            type=payment_type,
-            amount=amount,
-            tax_amount=tax_portion,
-            split_count=split_count,
-        )
+            amount = TabPaymentService._calculate_amount(tab, payment_type, split_count, item_ids)
+            tax_portion = TabPaymentService._calculate_tax_portion(tab, amount)
 
-        if item_ids:
-            from orders.models import OrderItem
-            payment.items.set(OrderItem.objects.filter(id__in=item_ids))
+            payment = TabPayment.objects.create(
+                tab=tab,
+                type=payment_type,
+                amount=amount,
+                tax_amount=tax_portion,
+                split_count=split_count,
+            )
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
-        restaurant = tab.restaurant
+            if item_ids:
+                from orders.models import OrderItem
+                payment.items.set(OrderItem.objects.filter(id__in=item_ids))
 
-        intent_params = {
-            "amount": int(amount * 100),
-            "currency": restaurant.currency.lower(),
-            "automatic_payment_methods": {"enabled": True},
-            "metadata": {
-                "tab_id": str(tab.id),
-                "tab_payment_id": str(payment.id),
-                "restaurant_id": str(restaurant.id),
-            },
-        }
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            restaurant = tab.restaurant
 
-        from restaurants.models import ConnectedAccount
-        try:
-            connected = ConnectedAccount.objects.get(restaurant=restaurant, onboarding_complete=True)
-            intent_params["transfer_data"] = {"destination": connected.stripe_account_id}
-        except ConnectedAccount.DoesNotExist:
-            pass
+            intent_params = {
+                "amount": int(amount * 100),
+                "currency": restaurant.currency.lower(),
+                "automatic_payment_methods": {"enabled": True},
+                "metadata": {
+                    "tab_id": str(tab.id),
+                    "tab_payment_id": str(payment.id),
+                    "restaurant_id": str(restaurant.id),
+                },
+            }
 
-        intent = stripe.PaymentIntent.create(**intent_params)
-        payment.stripe_payment_intent_id = intent.id
-        payment.save(update_fields=["stripe_payment_intent_id"])
+            from restaurants.models import ConnectedAccount
+            try:
+                connected = ConnectedAccount.objects.get(restaurant=restaurant, onboarding_complete=True)
+                intent_params["transfer_data"] = {"destination": connected.stripe_account_id}
+            except ConnectedAccount.DoesNotExist:
+                pass
 
-        return payment, intent.client_secret
+            intent = stripe.PaymentIntent.create(**intent_params)
+            payment.stripe_payment_intent_id = intent.id
+            payment.save(update_fields=["stripe_payment_intent_id"])
+
+            return payment, intent.client_secret
 
     @staticmethod
     def confirm_payment(payment):

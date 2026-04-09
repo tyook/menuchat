@@ -576,9 +576,11 @@ class OrderService:
             return
 
         from orders.tab_service import TabService
+        from orders.tab_broadcasts import broadcast_tab_update
         tab_payment.payment_status = "paid"
         tab_payment.paid_at = timezone.now()
         tab_payment.save(update_fields=["payment_status", "paid_at"])
+        broadcast_tab_update(tab_payment.tab, "tab.payment_received")
 
         tab = tab_payment.tab
         if tab.amount_remaining <= 0:
