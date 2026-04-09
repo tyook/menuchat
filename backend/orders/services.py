@@ -244,6 +244,7 @@ class OrderService:
         customer_email: str = "",
         customer_phone: str = "",
         customer_allergies: list | None = None,
+        tab=None,
     ) -> Order:
         """Create an order with its items. Returns the created Order."""
         order = Order.objects.create(
@@ -263,6 +264,7 @@ class OrderService:
             tax_amount=pricing.tax_amount,
             total_price=pricing.total,
             customer_allergies=customer_allergies or [],
+            tab=tab,
         )
 
         for item_data in validated_items:

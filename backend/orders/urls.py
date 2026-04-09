@@ -1,5 +1,6 @@
 from django.urls import path
 
+from orders.tab_views import KitchenTabCloseView, TabCloseView, TabDetailView, TabOrderView
 from orders.views import (
     CartUpsellView,
     ConfirmOrderView,
@@ -48,4 +49,8 @@ urlpatterns = [
     path("order/<slug:slug>/queue/<uuid:order_id>/", OrderQueueView.as_view(), name="order-queue"),
     path("webhooks/stripe/", StripeWebhookView.as_view(), name="stripe-webhook"),
     path("webhooks/stripe-connect/", StripeConnectWebhookView.as_view(), name="stripe-connect-webhook"),
+    path("order/<slug:slug>/tab/", TabDetailView.as_view(), name="tab-detail"),
+    path("order/<slug:slug>/tab/order/", TabOrderView.as_view(), name="tab-order"),
+    path("order/<slug:slug>/tab/close/", TabCloseView.as_view(), name="tab-close"),
+    path("kitchen/tab/<uuid:tab_id>/close/", KitchenTabCloseView.as_view(), name="kitchen-tab-close"),
 ]
