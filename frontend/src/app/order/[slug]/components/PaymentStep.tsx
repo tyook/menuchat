@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
-import { confirmPayment, createPayment, saveCardConsent } from "@/lib/api";
+import { confirmPayment, confirmTabPayment, createPayment, saveCardConsent } from "@/lib/api";
 import type { SavedPaymentMethod, ConfirmOrderItem } from "@/types";
 
 const stripePromise = loadStripe(
@@ -84,7 +84,7 @@ function PaymentForm({
 }) {
   const stripe = useStripe();
   const elements = useElements();
-  const { setStep } = useOrderStore();
+  const { setStep, paymentModel, tabPaymentId } = useOrderStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
@@ -117,12 +117,21 @@ function PaymentForm({
       setPaymentError(error.message || "Payment failed. Please try again.");
       setIsProcessing(false);
     } else {
-      // Verify payment with backend so order status transitions to confirmed
-      if (slug && orderId) {
-        try {
-          await confirmPayment(slug, orderId);
-        } catch {
-          // Non-fatal: webhook will eventually confirm the order
+      if (paymentModel === "tab") {
+        if (slug && tabPaymentId) {
+          try {
+            await confirmTabPayment(slug, tabPaymentId);
+          } catch {
+            // Non-fatal: webhook will eventually confirm
+          }
+        }
+      } else {
+        if (slug && orderId) {
+          try {
+            await confirmPayment(slug, orderId);
+          } catch {
+            // Non-fatal: webhook will eventually confirm the order
+          }
         }
       }
       setStep("submitted");
