@@ -115,6 +115,9 @@ import type {
   MenuVersion,
   ParsedMenu,
   CartUpsellResponse,
+  TabResponse,
+  TabOrderResponse,
+  TabPaymentResponse,
 } from "@/types";
 
 // ── Auth ──
@@ -295,6 +298,82 @@ export async function saveCardConsent(
   await apiFetch(`/api/order/${slug}/save-card/${orderId}/`, {
     method: "PATCH",
   });
+}
+
+// ── Tab ──
+export async function fetchTab(
+  slug: string,
+  tableIdentifier: string
+): Promise<TabResponse | null> {
+  try {
+    return await apiFetch<TabResponse>(
+      `/api/order/${slug}/tab/?table=${encodeURIComponent(tableIdentifier)}`
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function createTabOrder(
+  slug: string,
+  items: ConfirmOrderItem[],
+  rawInput: string,
+  tableIdentifier: string,
+  language: string,
+  customerName?: string,
+  customerPhone?: string,
+  allergies?: string[]
+): Promise<TabOrderResponse> {
+  return apiFetch<TabOrderResponse>(`/api/order/${slug}/tab/order/`, {
+    method: "POST",
+    body: JSON.stringify({
+      items,
+      raw_input: rawInput,
+      table_identifier: tableIdentifier,
+      language,
+      customer_name: customerName || "",
+      customer_phone: customerPhone || "",
+      allergies: allergies || [],
+    }),
+  });
+}
+
+export async function closeTab(
+  slug: string,
+  tableIdentifier: string
+): Promise<TabResponse> {
+  return apiFetch<TabResponse>(`/api/order/${slug}/tab/close/`, {
+    method: "POST",
+    body: JSON.stringify({ table_identifier: tableIdentifier }),
+  });
+}
+
+export async function createTabPayment(
+  slug: string,
+  tabId: string,
+  type: "full" | "split_even" | "pay_by_item",
+  splitCount?: number,
+  itemIds?: number[]
+): Promise<TabPaymentResponse> {
+  return apiFetch<TabPaymentResponse>(`/api/order/${slug}/tab/pay/`, {
+    method: "POST",
+    body: JSON.stringify({
+      tab_id: tabId,
+      type,
+      split_count: splitCount,
+      item_ids: itemIds,
+    }),
+  });
+}
+
+export async function confirmTabPayment(
+  slug: string,
+  paymentId: string
+): Promise<TabResponse> {
+  return apiFetch<TabResponse>(
+    `/api/order/${slug}/tab/confirm-payment/${paymentId}/`,
+    { method: "POST" }
+  );
 }
 
 // ── Upsell ──
