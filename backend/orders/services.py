@@ -543,35 +543,62 @@ class OrderService:
 
     @staticmethod
     def _handle_payment_succeeded(intent: dict) -> None:
+        from orders.models import TabPayment
+
+        # Try Order first (existing behavior)
         try:
             order = Order.objects.get(stripe_payment_intent_id=intent["id"])
+            updated = Order.objects.filter(
+                id=order.id, payment_status="pending"
+            ).update(status="confirmed", payment_status="paid", paid_at=timezone.now())
+            if updated:
+                order.refresh_from_db()
+                OrderService.set_status_timestamp(order, "confirmed")
+                broadcast_order_to_kitchen(order)
+                broadcast_order_to_customer(order)
+                from orders.tasks import broadcast_queue_updates
+                broadcast_queue_updates.apply_async(
+                    args=[str(order.restaurant_id), str(order.id)],
+                )
+                OrderService._send_confirmation_emails(order)
+                from integrations.tasks import dispatch_order_to_pos
+                dispatch_order_to_pos.delay(str(order.id))
+            return
         except Order.DoesNotExist:
+            pass
+
+        # Try TabPayment
+        try:
+            tab_payment = TabPayment.objects.select_related("tab").get(
+                stripe_payment_intent_id=intent["id"]
+            )
+        except TabPayment.DoesNotExist:
             return
 
-        updated = Order.objects.filter(
-            id=order.id, payment_status="pending"
-        ).update(status="confirmed", payment_status="paid", paid_at=timezone.now())
-        if updated:
-            order.refresh_from_db()
-            OrderService.set_status_timestamp(order, "confirmed")
-            broadcast_order_to_kitchen(order)
-            broadcast_order_to_customer(order)
-            from orders.tasks import broadcast_queue_updates
-            broadcast_queue_updates.apply_async(
-                args=[str(order.restaurant_id), str(order.id)],
-            )
-            OrderService._send_confirmation_emails(order)
-            from integrations.tasks import dispatch_order_to_pos
-            dispatch_order_to_pos.delay(str(order.id))
+        from orders.tab_service import TabService
+        tab_payment.payment_status = "paid"
+        tab_payment.paid_at = timezone.now()
+        tab_payment.save(update_fields=["payment_status", "paid_at"])
+
+        tab = tab_payment.tab
+        if tab.amount_remaining <= 0:
+            TabService.finalize_tab(tab)
 
     @staticmethod
     def _handle_payment_failed(intent: dict) -> None:
+        from orders.models import TabPayment
+
         try:
             order = Order.objects.get(stripe_payment_intent_id=intent["id"])
             order.payment_status = "failed"
             order.save(update_fields=["payment_status"])
         except Order.DoesNotExist:
-            pass
+            try:
+                tab_payment = TabPayment.objects.get(stripe_payment_intent_id=intent["id"])
+                tab_payment.payment_status = "failed"
+                tab_payment.save(update_fields=["payment_status"])
+            except TabPayment.DoesNotExist:
+                pass
 
     @staticmethod
     def _handle_checkout_completed(session: dict) -> None:
