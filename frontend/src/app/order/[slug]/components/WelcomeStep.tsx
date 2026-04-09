@@ -1,14 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useOrderStore } from "@/stores/order-store";
+import { useTab } from "@/hooks/use-tab";
 
 interface WelcomeStepProps {
   restaurantName: string;
+  slug: string;
 }
 
-export function WelcomeStep({ restaurantName }: WelcomeStepProps) {
-  const setStep = useOrderStore((s) => s.setStep);
+export function WelcomeStep({ restaurantName, slug }: WelcomeStepProps) {
+  const { setStep, paymentModel, tableIdentifier, setTabData } = useOrderStore();
+  const { data: existingTab } = useTab(slug, tableIdentifier, paymentModel === "tab");
+
+  useEffect(() => {
+    if (existingTab) {
+      setTabData(existingTab);
+    }
+  }, [existingTab, setTabData]);
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-6 text-center">
@@ -33,6 +43,26 @@ export function WelcomeStep({ restaurantName }: WelcomeStepProps) {
         <p className="text-muted-foreground text-sm">
           Type or speak your order in any language
         </p>
+        {existingTab && (
+          <div className="rounded-lg bg-zinc-800 p-4 text-center w-full">
+            <p className="mb-2 text-muted-foreground">
+              You have an open tab (${existingTab.total})
+            </p>
+            <Button
+              variant="gradient"
+              className="w-full"
+              onClick={() => setStep("ordering")}
+            >
+              Continue Ordering
+            </Button>
+            <button
+              onClick={() => setStep("tab_review")}
+              className="mt-2 w-full py-2 text-sm text-muted-foreground"
+            >
+              View Tab &amp; Pay
+            </button>
+          </div>
+        )}
         <Button
           variant="gradient"
           size="lg"

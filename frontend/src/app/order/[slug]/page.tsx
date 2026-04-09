@@ -71,7 +71,7 @@ export default function OrderPage() {
           <Settings className="h-5 w-5" />
         </Button>
       </div>
-      {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} />}
+      {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} slug={slug} />}
       {step === "ordering" && <OrderingStep slug={slug} categories={menu.categories} />}
       {step === "cart" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
       {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
