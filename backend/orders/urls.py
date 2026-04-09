@@ -1,6 +1,13 @@
 from django.urls import path
 
-from orders.tab_views import KitchenTabCloseView, TabCloseView, TabDetailView, TabOrderView
+from orders.tab_views import (
+    KitchenTabCloseView,
+    TabCloseView,
+    TabConfirmPaymentView,
+    TabDetailView,
+    TabOrderView,
+    TabPayView,
+)
 from orders.views import (
     CartUpsellView,
     ConfirmOrderView,
@@ -53,4 +60,10 @@ urlpatterns = [
     path("order/<slug:slug>/tab/order/", TabOrderView.as_view(), name="tab-order"),
     path("order/<slug:slug>/tab/close/", TabCloseView.as_view(), name="tab-close"),
     path("kitchen/tab/<uuid:tab_id>/close/", KitchenTabCloseView.as_view(), name="kitchen-tab-close"),
+    path("order/<slug:slug>/tab/pay/", TabPayView.as_view(), name="tab-pay"),
+    path(
+        "order/<slug:slug>/tab/confirm-payment/<uuid:payment_id>/",
+        TabConfirmPaymentView.as_view(),
+        name="tab-confirm-payment",
+    ),
 ]
