@@ -89,6 +89,7 @@ export interface PublicMenu {
   restaurant_name: string;
   tax_rate: string;
   payment_mode: "stripe" | "pos_collected";
+  payment_model: "upfront" | "tab";
   categories: MenuCategory[];
 }
 
@@ -288,4 +289,48 @@ export interface UpsellSuggestion {
 
 export interface CartUpsellResponse {
   suggestions: UpsellSuggestion[];
+}
+
+// Tab types
+export interface TabOrderItem {
+  id: number;
+  name: string;
+  variant_label: string;
+  variant_price: string;
+  quantity: number;
+  special_requests: string;
+  line_total: string;
+  modifiers?: { id: number; name: string; price_adjustment: string }[];
+}
+
+export interface TabOrder {
+  id: string;
+  status: string;
+  items: TabOrderItem[];
+  subtotal: string;
+  tax_amount: string;
+  total_price: string;
+  created_at: string;
+}
+
+export interface TabResponse {
+  id: string;
+  table_identifier: string;
+  status: "open" | "closing" | "closed";
+  orders: TabOrder[];
+  subtotal: string;
+  tax_amount: string;
+  total: string;
+  amount_paid: string;
+  amount_remaining: string;
+  opened_at: string;
+}
+
+export interface TabOrderResponse extends OrderResponse {
+  tab: TabResponse;
+}
+
+export interface TabPaymentResponse {
+  payment_id: string;
+  client_secret: string;
 }
