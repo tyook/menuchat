@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { isNativePlatform } from "@/lib/native";
+import { DeepLinkHandler } from "./DeepLinkHandler";
 
 export function NativeInitializer() {
   usePushNotifications();
@@ -19,5 +20,5 @@ export function NativeInitializer() {
     configureStatusBar();
   }, []);
 
-  return null;
+  return <DeepLinkHandler />;
 }
