@@ -1,3 +1,6 @@
+import { isNativePlatform } from "./native";
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "./token-storage";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
 
 function getCookie(name: string): string {
@@ -11,11 +14,30 @@ let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
   try {
-    const resp = await fetch(`${API_URL}/api/auth/refresh/`, {
-      method: "POST",
-      credentials: "include",
-    });
-    return resp.ok;
+    if (isNativePlatform()) {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return false;
+      const resp = await fetch(`${API_URL}/api/auth/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.access_token && data.refresh_token) {
+          await setTokens(data.access_token, data.refresh_token);
+        }
+        return true;
+      }
+      await clearTokens();
+      return false;
+    } else {
+      const resp = await fetch(`${API_URL}/api/auth/refresh/`, {
+        method: "POST",
+        credentials: "include",
+      });
+      return resp.ok;
+    }
   } catch {
     return false;
   }
@@ -33,17 +55,25 @@ export async function apiFetch<T>(
     ...(options.headers as Record<string, string>),
   };
 
-  if (method !== "GET" && method !== "HEAD") {
-    const csrfToken = getCookie("csrftoken");
-    if (csrfToken) {
-      headers["X-CSRFToken"] = csrfToken;
+  if (isNativePlatform()) {
+    const token = await getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  } else {
+    // existing CSRF logic (only for web)
+    if (method !== "GET" && method !== "HEAD") {
+      const csrfToken = getCookie("csrftoken");
+      if (csrfToken) {
+        headers["X-CSRFToken"] = csrfToken;
+      }
     }
   }
 
   const response = await fetch(url, {
     ...options,
     headers,
-    credentials: "include",
+    ...(isNativePlatform() ? {} : { credentials: "include" as RequestCredentials }),
   });
 
   if (response.status === 401 && !_isRetry) {
