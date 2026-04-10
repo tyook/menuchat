@@ -20,6 +20,15 @@ def broadcast_order_to_kitchen(order):
         },
     )
 
+    # Push notification to restaurant owner
+    from notifications.services import send_push_notification
+    send_push_notification(
+        user=order.restaurant.owner,
+        title="New Order",
+        body=f"New order #{order.order_number} received",
+        data={"type": "new_order", "order_id": str(order.id)},
+    )
+
 
 def broadcast_order_to_customer(order):
     """Send queue update to the customer's WebSocket group."""
@@ -35,3 +44,14 @@ def broadcast_order_to_customer(order):
             "data": queue_info,
         },
     )
+
+    # Push notification when order is ready
+    from notifications.services import send_push_notification
+    if order.status == "ready":
+        send_push_notification(
+            user=order.user if order.user else None,
+            order=order if not order.user else None,
+            title="Order Ready!",
+            body=f"Your order from {order.restaurant.name} is ready for pickup",
+            data={"type": "order_ready", "order_id": str(order.id)},
+        )
