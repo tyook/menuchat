@@ -9,6 +9,8 @@ import { AppleAuthInit } from "@/components/AppleAuthInit";
 import { OnboardingBanner } from "@/components/onboarding/onboarding-banner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CookieBanner } from "@/components/CookieBanner";
+import { WebOnlyScripts } from "@/components/WebOnlyScripts";
+import { NativeInitializer } from "@/components/NativeInitializer";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -45,14 +47,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Script
-          src="https://accounts.google.com/gsi/client"
-          strategy="lazyOnload"
-        />
-        <Script
-          src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
-          strategy="lazyOnload"
-        />
+        <WebOnlyScripts />
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
           strategy="lazyOnload"
@@ -63,6 +58,7 @@ export default function RootLayout({
               <OnboardingBanner />
               <ConditionalHeader />
               <AppleAuthInit />
+              <NativeInitializer />
               {children}
               <CookieBanner />
             </TooltipProvider>

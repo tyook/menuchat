@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isNativePlatform } from "@/lib/native";
+import type { PluginListenerHandle } from "@capacitor/core";
 
 interface UseWebSocketOptions {
   url: string;
@@ -30,6 +32,7 @@ export function useWebSocket({
     if (!enabled) return;
 
     let disposed = false;
+    let appStateListener: PluginListenerHandle | null = null;
 
     function connect() {
       if (disposed) return;
@@ -65,12 +68,28 @@ export function useWebSocket({
 
     connect();
 
+    // Reconnect WebSocket when native app returns to foreground
+    if (isNativePlatform()) {
+      import("@capacitor/app").then(({ App }) => {
+        App.addListener("appStateChange", ({ isActive }) => {
+          if (isActive && enabledRef.current) {
+            if (wsRef.current?.readyState !== WebSocket.OPEN) {
+              connect();
+            }
+          }
+        }).then((handle) => {
+          appStateListener = handle;
+        });
+      });
+    }
+
     return () => {
       disposed = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       wsRef.current?.close();
+      appStateListener?.remove();
     };
   }, [url, reconnectInterval, enabled]);
 

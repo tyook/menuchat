@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script>
+    // SPA fallback: redirect unmatched Capacitor routes to index
+    // The Next.js client-side router will resolve the correct page
+    sessionStorage.setItem('capacitor_redirect', window.location.pathname + window.location.search);
+    window.location.replace('/');
+  </script>
+</head>
+<body></body>
+</html>

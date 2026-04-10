@@ -1,0 +1,94 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Settings, User } from "lucide-react";
+import { useOrderStore } from "@/stores/order-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { useMenu } from "@/hooks/use-menu";
+import { Button } from "@/components/ui/button";
+import { PreferencesDialog } from "@/components/PreferencesDialog";
+import { WelcomeStep } from "./components/WelcomeStep";
+import { OrderingStep } from "./components/OrderingStep";
+import { ConfirmationStep } from "./components/ConfirmationStep";
+import { PaymentStep } from "./components/PaymentStep";
+import { SubmittedStep } from "./components/SubmittedStep";
+import TabReviewStep from "./components/TabReviewStep";
+import TabStatusBar from "./components/TabStatusBar";
+
+export default function OrderPage() {
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
+  const step = useOrderStore((s) => s.step);
+  const reset = useOrderStore((s) => s.reset);
+  const setPaymentModel = useOrderStore((s) => s.setPaymentModel);
+  const { data: menu, isLoading, error } = useMenu(slug);
+  const { isAuthenticated, checkAuth } = useAuthStore();
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    checkAuth();
+  }, [checkAuth]);
+
+  useEffect(() => {
+    reset();
+  }, [reset]);
+
+  useEffect(() => {
+    if (menu?.payment_model) {
+      setPaymentModel(menu.payment_model);
+    }
+  }, [menu, setPaymentModel]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (error || !menu) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Restaurant not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        {mounted && (isAuthenticated ? (
+          <Link href="/account/profile" className="text-sm text-muted-foreground hover:text-foreground">
+            <User className="h-5 w-5" />
+          </Link>
+        ) : (
+          <Link href="/account/login" className="text-sm text-muted-foreground hover:text-foreground">
+            Sign in
+          </Link>
+        ))}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setPrefsOpen(true)}
+          title="Preferences"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      </div>
+      <TabStatusBar />
+      {step === "welcome" && <WelcomeStep restaurantName={menu.restaurant_name} slug={slug} />}
+      {step === "ordering" && <OrderingStep slug={slug} categories={menu.categories} />}
+      {step === "cart" && <ConfirmationStep slug={slug} taxRate={menu.tax_rate} paymentMode={menu.payment_mode ?? "stripe"} />}
+      {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
+      {step === "submitted" && <SubmittedStep slug={slug} />}
+      {step === "tab_review" && <TabReviewStep slug={slug} />}
+
+      <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
+    </main>
+  );
+}
