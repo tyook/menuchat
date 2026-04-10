@@ -162,7 +162,9 @@ export function SocialLoginButtons({
       try {
         const { SignInWithApple } = await import("@capacitor-community/apple-sign-in");
         const result = await SignInWithApple.authorize({
-          options: { requestedScopes: ["fullName", "email"] },
+          clientId: process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || "com.menuchat.qrordering",
+          redirectURI: "",
+          scopes: "email name",
         });
         const name = result.response.givenName
           ? `${result.response.givenName} ${result.response.familyName || ""}`.trim()

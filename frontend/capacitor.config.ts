@@ -13,6 +13,11 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
+    GoogleAuth: {
+      scopes: ["profile", "email"],
+      serverClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
+      forceCodeForRefreshToken: true,
+    },
   },
 };
 
