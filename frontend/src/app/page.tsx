@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   UtensilsCrossed,
@@ -12,6 +16,16 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const redirect = sessionStorage.getItem('capacitor_redirect');
+    if (redirect) {
+      sessionStorage.removeItem('capacitor_redirect');
+      router.replace(redirect);
+    }
+  }, [router]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* ───────────────────── HERO ───────────────────── */}

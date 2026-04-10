@@ -1,17 +1,11 @@
-"use client";
+import TableOrderPageClient from "./TableOrderPageClient";
 
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
-import { useOrderStore } from "@/stores/order-store";
-import OrderPage from "../page";
+export function generateStaticParams() {
+  return [{ slug: "__placeholder__", tableId: "__placeholder__" }];
+}
+
+export const dynamicParams = true;
 
 export default function TableOrderPage() {
-  const params = useParams<{ slug: string; tableId: string }>();
-  const setTableIdentifier = useOrderStore((s) => s.setTableIdentifier);
-
-  useEffect(() => {
-    setTableIdentifier(params.tableId);
-  }, [params.tableId, setTableIdentifier]);
-
-  return <OrderPage />;
+  return <TableOrderPageClient />;
 }
