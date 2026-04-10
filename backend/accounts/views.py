@@ -117,7 +117,7 @@ class RefreshView(APIView):
         return csrf_exempt(view)
 
     def post(self, request):
-        refresh_token = request.COOKIES.get("refresh_token")
+        refresh_token = request.COOKIES.get("refresh_token") or request.data.get("refresh_token")
         if not refresh_token:
             return Response(
                 {"detail": "Refresh token not found."},
@@ -156,8 +156,12 @@ class WsTokenView(APIView):
     def get(self, request):
         token = request.COOKIES.get("access_token", "")
         if not token:
+            auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ", 1)[1]
+        if not token:
             return Response(
-                {"detail": "No access token cookie."},
+                {"detail": "No access token found."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response({"token": token})

@@ -19,12 +19,14 @@ def split_name(name: str) -> tuple[str, str]:
 def set_auth_cookies(response: Response, user: User) -> Response:
     """Generate JWT tokens and set them as httpOnly cookies on the response."""
     refresh = RefreshToken.for_user(user)
+    access_token = str(refresh.access_token)
+    refresh_token_str = str(refresh)
     secure = getattr(settings, "AUTH_COOKIE_SECURE", not settings.DEBUG)
     samesite = getattr(settings, "AUTH_COOKIE_SAMESITE", "Lax")
 
     response.set_cookie(
         key="access_token",
-        value=str(refresh.access_token),
+        value=access_token,
         httponly=True,
         secure=secure,
         samesite=samesite,
@@ -33,13 +35,19 @@ def set_auth_cookies(response: Response, user: User) -> Response:
     )
     response.set_cookie(
         key="refresh_token",
-        value=str(refresh),
+        value=refresh_token_str,
         httponly=True,
         secure=secure,
         samesite=samesite,
         path="/api/auth/refresh/",
         max_age=int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()),
     )
+
+    # Include tokens in body (for native apps)
+    if isinstance(response.data, dict):
+        response.data["access_token"] = access_token
+        response.data["refresh_token"] = refresh_token_str
+
     return response
 
 
