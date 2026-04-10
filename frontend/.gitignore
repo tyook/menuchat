@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor build artifacts (but track ios/ and android/ directories)
+ios/App/App/public/
+android/app/src/main/assets/public/
