@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { isNativePlatform, getPlatform } from "@/lib/native";
 
 interface AppleAuthResponse {
   authorization: { id_token: string };
@@ -91,6 +92,7 @@ export function SocialLoginButtons({
 
   useEffect(() => {
     setMounted(true);
+    if (isNativePlatform()) return; // Skip web Google SDK initialization on native
     // GIS script may already be loaded (lazyOnload), or may still be loading
     if ((window as unknown as Record<string, unknown>).google) {
       initGoogle();
@@ -105,7 +107,22 @@ export function SocialLoginButtons({
     }
   }, [initGoogle]);
 
-  const handleGoogleClick = () => {
+  const handleGoogleClick = async () => {
+    if (isNativePlatform()) {
+      setLoading("google");
+      try {
+        const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+        const result = await GoogleAuth.signIn();
+        await googleLogin(result.authentication.idToken, linkOrderId);
+        onSuccess?.();
+      } catch (err) {
+        onError?.(err instanceof Error ? err.message : "Google login failed");
+      } finally {
+        setLoading(null);
+      }
+      return;
+    }
+
     if (!googleReady) {
       onError?.("Google Sign-In is still loading. Please try again.");
       return;
@@ -140,6 +157,29 @@ export function SocialLoginButtons({
   };
 
   const handleAppleLogin = async () => {
+    if (isNativePlatform()) {
+      setLoading("apple");
+      try {
+        const { SignInWithApple } = await import("@capacitor-community/apple-sign-in");
+        const result = await SignInWithApple.authorize({
+          options: { requestedScopes: ["fullName", "email"] },
+        });
+        const name = result.response.givenName
+          ? `${result.response.givenName} ${result.response.familyName || ""}`.trim()
+          : undefined;
+        await appleLogin(result.response.identityToken, name, linkOrderId);
+        onSuccess?.();
+      } catch (err) {
+        const errorObj = err as { error?: string };
+        if (errorObj?.error !== "popup_closed_by_user") {
+          onError?.(err instanceof Error ? err.message : "Apple login failed");
+        }
+      } finally {
+        setLoading(null);
+      }
+      return;
+    }
+
     setLoading("apple");
     try {
       const AppleID = (window as unknown as Record<string, unknown>)
@@ -183,16 +223,18 @@ export function SocialLoginButtons({
         </svg>
         {loading === "google" ? "Signing in..." : "Continue with Google"}
       </button>
-      <button
-        className={`bg-card border border-border rounded-xl py-3 px-4 hover:bg-card/80 flex items-center justify-center gap-3 text-foreground transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed${buttonClassName ? ` ${buttonClassName}` : ""}`}
-        onClick={handleAppleLogin}
-        disabled={disabled || loading !== null || !mounted}
-      >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-          <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.36c1.37.07 2.33.74 3.13.8 1.21-.23 2.37-.94 3.67-.84 1.58.13 2.76.79 3.52 2.01-3.31 1.98-2.6 5.98.48 7.26-.61 1.4-1.42 2.78-2.8 3.69zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-        </svg>
-        {loading === "apple" ? "Signing in..." : "Continue with Apple"}
-      </button>
+      {(!isNativePlatform() || getPlatform() === "ios") && (
+        <button
+          className={`bg-card border border-border rounded-xl py-3 px-4 hover:bg-card/80 flex items-center justify-center gap-3 text-foreground transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed${buttonClassName ? ` ${buttonClassName}` : ""}`}
+          onClick={handleAppleLogin}
+          disabled={disabled || loading !== null || !mounted}
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.36c1.37.07 2.33.74 3.13.8 1.21-.23 2.37-.94 3.67-.84 1.58.13 2.76.79 3.52 2.01-3.31 1.98-2.6 5.98.48 7.26-.61 1.4-1.42 2.78-2.8 3.69zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+          {loading === "apple" ? "Signing in..." : "Continue with Apple"}
+        </button>
+      )}
     </div>
   );
 }
