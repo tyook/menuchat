@@ -15,6 +15,11 @@
     "@types/scriptjs" "0.0.2"
     scriptjs "^2.5.9"
 
+"@capacitor-mlkit/barcode-scanning@^8.0.1":
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/@capacitor-mlkit/barcode-scanning/-/barcode-scanning-8.0.1.tgz#02ba70b5da87b6054275129c3ccf32af42ce1565"
+  integrity sha512-94SyxzbcQ2HBd7yxS34dqc0PzwdOw8/98xBrjw1ioznE/Ksky/iwsip5Bm8P8Qg+dgnJYWz7NcIPjd+6bLjVoQ==
+
 "@capacitor/android@6":
   version "6.2.1"
   resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-6.2.1.tgz#705347b62605b692093a96c81ce335875ea954e2"
