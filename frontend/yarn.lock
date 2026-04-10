@@ -60,6 +60,11 @@
   resolved "https://registry.yarnpkg.com/@capacitor/preferences/-/preferences-6.0.4.tgz#1311497ffd06535454b4d732535d384c3d78b39f"
   integrity sha512-ziauSI1pgdyl+gduvvf8lInvzF3Wdyu/ok+u7NlnhKp8XOj9plJgtnXZWFiR8CiCK5wMvo+gFaNh3zhMyEUwpA==
 
+"@capacitor/push-notifications@6":
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/@capacitor/push-notifications/-/push-notifications-6.0.5.tgz#c98d893d724abc20a879318af7a4de3a719b807e"
+  integrity sha512-CsRmb0cnZd9Uwx24ym4My5fNKrQvwI4D51aMEph5pUZy+LAjp6q0y4NJe8DEgwaVdAqVLbb4rqn75AZ4WSiFYg==
+
 "@codetrix-studio/capacitor-google-auth@^3.4.0-rc.4":
   version "3.4.0-rc.4"
   resolved "https://registry.yarnpkg.com/@codetrix-studio/capacitor-google-auth/-/capacitor-google-auth-3.4.0-rc.4.tgz#bcc4471f7f4fdfc3d2bd5000600cd5ed4979872b"
