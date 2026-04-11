@@ -26,13 +26,13 @@ Enable the voice ordering agent to detect recommendation requests and respond wi
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Intent detection | LLM-based, inside the agent | More accurate than keyword matching; single round-trip |
+| Intent detection | LLM-based, inside the agent | More accurate than keyword matching; single API round-trip (two sequential LLM calls server-side: intent detection + recommendation generation) |
 | Response display | Inline expandable cards (Option C) | Compact browsing + full detail on tap; matches existing MenuItemCard pattern |
 | Profile source | Server-side User model (`dietary_preferences`, `allergies`) | Already exists at `/api/auth/me/`; no frontend extraction needed |
 | Guest handling | No dietary filtering, recommend from menu data | Agent never asks the user questions; simplest UX |
 | Featured items | Owner-controlled `is_featured` boolean on MenuItem | Simple, no analytics dependency; owner controls narrative |
 | Quantity support | Agent sets `quantity` per recommendation | Handles "food for N people" requests; pre-fills quantity picker |
-| Architecture | Extend existing agent + endpoint (Approach A) | Minimal new infrastructure; one agent, one endpoint, one round-trip |
+| Architecture | Extend existing agent + endpoint (Approach A) | Minimal new infrastructure; one agent, one endpoint, one API round-trip |
 
 ## Architecture
 
@@ -49,6 +49,8 @@ Replaces `OrderParsingAgent`. Same agent handles both order parsing and recommen
 
 **Response model:**
 
+The `OrderAgent` is responsible for **intent detection only** when the intent is `"recommendation"`. It does NOT produce recommendation items itself — that is delegated to the existing `RecommendationAgent` via `RecommendationService`. This means two sequential LLM calls happen server-side for recommendation requests: one for intent detection (OrderAgent) and one for recommendation generation (RecommendationAgent). For order requests, only one LLM call happens (OrderAgent produces the ParsedOrder directly, as today).
+
 ```python
 # backend/orders/llm/base.py
 
@@ -58,11 +60,15 @@ class AgentResponse(BaseModel):
     # Populated when intent == "order"
     order: ParsedOrder | None = None
     
-    # Populated when intent == "recommendation"
-    recommendations: list[RecommendedItem] | None = None
+    # Populated when intent == "recommendation" — raw user request context
+    # (e.g., "popular items", "food for 4 people", "something spicy")
+    # Used by RecommendationService to inform the RecommendationAgent
+    recommendation_context: str | None = None
 ```
 
-The `RecommendedItem` schema gains a `quantity` field (default 1).
+The `OrderAgent` extracts a `recommendation_context` string summarizing what the user wants (e.g., "popular items for 4 people, spicy preference"). The `RecommendationService` then uses this context along with user profile data and order history to run the `RecommendationAgent`, which produces the actual `RecommendedItem` list.
+
+The `RecommendedItem` schema in `recommendation_schemas.py` gains a `quantity` field (default 1).
 
 #### 2. `is_featured` on MenuItem
 
@@ -92,7 +98,7 @@ is_featured = models.BooleanField(default=False)
 3. If `"order"` — existing `validate_and_price_order()` flow, unchanged
 4. If `"recommendation"` — calls `RecommendationService.get_recommendations()` with user's profile data, returns enriched recommendation items
 
-The view layer passes `request.user` to `parse_order()` so the service can access `user.dietary_preferences` and `user.allergies`.
+The view layer passes `request.user` to `parse_order()` so the service can access `user.dietary_preferences` and `user.allergies`. Currently `ParseOrderView` uses `permission_classes = [AllowAny]` with no `authentication_classes`. To make `request.user` populated for logged-in users while still allowing guests, add `authentication_classes = [CookieJWTAuthentication]` while keeping `permission_classes = [AllowAny]`. This way authenticated users get their profile loaded, and unauthenticated users get `AnonymousUser` (handled as the guest case).
 
 #### 5. Recommendation Service Enhancement
 
@@ -101,12 +107,17 @@ The view layer passes `request.user` to `parse_order()` so the service can acces
 - All modifiers for each recommended item
 - The `is_featured` flag
 - Agent-suggested `quantity`
+- Results capped at 3 items (the existing `RecommendationAgent` instructions say 3-5; update to say "up to 3" for this voice flow to keep the chat UI compact)
+
+The `recommendation_context` from the `OrderAgent` is passed to `RecommendationService` as additional context for the `RecommendationAgent`, so it can factor in specifics like "food for 4 people" or "something spicy."
 
 This gives the frontend everything it needs to render the full expandable card without extra API calls.
 
+Note: The existing `Recommendation` schema includes a `greeting` field. This is intentionally dropped from the voice recommendation response — the cards speak for themselves in the chat UI.
+
 ### API Response Shape
 
-Same endpoint: `POST /api/orders/{slug}/parse/`
+Same endpoint: `POST /api/order/{slug}/parse/`
 
 **Response when intent is "order"** (existing shape + `type` discriminator):
 
@@ -154,9 +165,11 @@ Same endpoint: `POST /api/orders/{slug}/parse/`
 
 #### 1. `useParseOrder` Hook
 
-Updated to handle both response types:
-- If `type === "order"` — existing flow: call `setParsedResult()`, show "Added X items" confirmation
-- If `type === "recommendation"` — return recommendations for the component to render (not added to order store)
+Updated to handle both response types. The hook exposes the response type so both the hook's internal `onSuccess` and `VoiceChatTab`'s `onSuccess` callback can branch correctly:
+- If `type === "order"` — existing flow: hook calls `setParsedResult()`, VoiceChatTab shows "Added X items" confirmation
+- If `type === "recommendation"` — hook does NOT call `setParsedResult()`. VoiceChatTab's `onSuccess` stores recommendations in local `useState` for card rendering
+
+Both the hook and the component's `onSuccess` callback must check `result.type` before accessing `result.items`, since the `items` array has different shapes for each type.
 
 #### 2. VoiceChatTab Recommendation Cards
 
@@ -175,7 +188,7 @@ Recommendations are stored in `useState` local to `VoiceChatTab` (transient UI s
 - Quantity picker (pre-filled with agent's suggested quantity)
 - "Add to Cart — $X.XX" button
 
-**Add to Cart:** Calls existing `addItemFromMenu()` on the order store. After adding, the card shows a green checkmark for 1.2s (same feedback pattern as `MenuItemCard`).
+**Add to Cart:** Calls existing `addItemFromMenu()` on the order store. The recommendation API response returns flat objects (`{id, label, price}`), which the `RecommendationCard` component maps to the `MenuItem`, `MenuItemVariant`, and `MenuItemModifier` types that `addItemFromMenu()` expects. After adding, the card shows a green checkmark for 1.2s (same feedback pattern as `MenuItemCard`).
 
 **Lifecycle:** Recommendation cards persist until the user submits a new voice/text input. A new submission (whether order or recommendation) replaces the previous cards.
 
@@ -204,7 +217,7 @@ View: passes request.user + raw_input to OrderService.parse_order()
 OrderService: builds menu context → calls OrderAgent
     |
     v
-OrderAgent: detects recommendation intent → returns AgentResponse(intent="recommendation", recommendations=[...])
+OrderAgent: detects recommendation intent → returns AgentResponse(intent="recommendation", recommendation_context="popular items for 4 people")
     |
     v
 OrderService: calls RecommendationService.get_recommendations() with user profile
@@ -243,7 +256,8 @@ addItemFromMenu() on order store (existing cart logic)
 | `backend/orders/llm/menu_context.py` | Add `[FEATURED]` marker for featured items |
 | `backend/orders/llm/recommendation_schemas.py` | Add `quantity` field to `RecommendedItem` |
 | `backend/orders/recommendation_service.py` | Enrich response with all variants, modifiers, `is_featured` |
-| `backend/orders/services.py` | `parse_order()` handles both intents, passes `user` for profile data |
+| `backend/orders/services.py` | `parse_order()` handles both intents, accepts `user` param for profile data |
+| `backend/orders/views.py` | Add `authentication_classes = [CookieJWTAuthentication]` to `ParseOrderView`, pass `request.user` to `parse_order()` |
 | `backend/restaurants/serializers/restaurant_serializers.py` | Expose `is_featured` in `PublicMenuItemSerializer` |
 | `backend/restaurants/serializers/menu_upload_serializers.py` | Accept `is_featured` in menu upload |
 | `backend/restaurants/views.py` | Pass `is_featured` through menu item CRUD |
