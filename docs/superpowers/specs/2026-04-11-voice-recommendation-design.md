@@ -98,7 +98,7 @@ is_featured = models.BooleanField(default=False)
 3. If `"order"` — existing `validate_and_price_order()` flow, unchanged
 4. If `"recommendation"` — calls `RecommendationService.get_recommendations()` with user's profile data, returns enriched recommendation items
 
-The view layer passes `request.user` to `parse_order()` so the service can access `user.dietary_preferences` and `user.allergies`. Currently `ParseOrderView` uses `permission_classes = [AllowAny]` with no `authentication_classes`. To make `request.user` populated for logged-in users while still allowing guests, add `authentication_classes = [CookieJWTAuthentication]` while keeping `permission_classes = [AllowAny]`. This way authenticated users get their profile loaded, and unauthenticated users get `AnonymousUser` (handled as the guest case).
+The view layer passes `request.user` to `parse_order()` so the service can access `user.dietary_preferences` and `user.allergies`. `ParseOrderView` currently uses `permission_classes = [AllowAny]` with no explicit `authentication_classes`, which means it inherits `CookieJWTAuthentication` from the DRF `DEFAULT_AUTHENTICATION_CLASSES` setting. So `request.user` is already populated for authenticated users today. For explicitness, add `authentication_classes = [CookieJWTAuthentication]` to make this dependency visible in the view. Keep `permission_classes = [AllowAny]` so guests still work — unauthenticated users get `AnonymousUser` (handled as the guest case).
 
 #### 5. Recommendation Service Enhancement
 
@@ -107,7 +107,7 @@ The view layer passes `request.user` to `parse_order()` so the service can acces
 - All modifiers for each recommended item
 - The `is_featured` flag
 - Agent-suggested `quantity`
-- Results capped at 3 items (the existing `RecommendationAgent` instructions say 3-5; update to say "up to 3" for this voice flow to keep the chat UI compact)
+- Results capped at 3 items for this voice flow (the existing `RecommendationAgent` instructions say 3-5; rather than changing the shared agent instructions, pass a `max_items=3` parameter from `RecommendationService` and post-filter the results, so other callers can still get 3-5)
 
 The `recommendation_context` from the `OrderAgent` is passed to `RecommendationService` as additional context for the `RecommendationAgent`, so it can factor in specifics like "food for 4 people" or "something spicy."
 
@@ -169,7 +169,7 @@ Updated to handle both response types. The hook exposes the response type so bot
 - If `type === "order"` — existing flow: hook calls `setParsedResult()`, VoiceChatTab shows "Added X items" confirmation
 - If `type === "recommendation"` — hook does NOT call `setParsedResult()`. VoiceChatTab's `onSuccess` stores recommendations in local `useState` for card rendering
 
-Both the hook and the component's `onSuccess` callback must check `result.type` before accessing `result.items`, since the `items` array has different shapes for each type.
+Both the hook and the component's `onSuccess` callback must check `result.type` before accessing `result.items`, since the `items` array has different shapes for each type. Specifically, the hook's existing `onSuccess` unconditionally calls `setParsedResult(result.items, ...)` — this must be guarded with `if (result.type === "order")` to prevent runtime errors when recommendation items (which lack `line_total`, etc.) are passed to the order store.
 
 #### 2. VoiceChatTab Recommendation Cards
 
@@ -208,7 +208,7 @@ Data flows through existing menu CRUD endpoints — no new endpoint needed.
 User speaks/types "What's popular here?"
     |
     v
-VoiceChatTab → useParseOrder → POST /api/orders/{slug}/parse/
+VoiceChatTab → useParseOrder → POST /api/order/{slug}/parse/
     |
     v
 View: passes request.user + raw_input to OrderService.parse_order()
