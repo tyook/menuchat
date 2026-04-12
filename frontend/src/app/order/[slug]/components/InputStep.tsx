@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Send, ShoppingCart } from "lucide-react";
+import { Send, ShoppingCart, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useParseOrder } from "@/hooks/use-parse-order";
 import { SPEECH_LANGUAGES } from "@/lib/constants";
+import type { UnavailableItem } from "@/types";
 
 interface InputStepProps {
   slug: string;
@@ -18,6 +19,7 @@ export function InputStep({ slug }: InputStepProps) {
   const { preferredLanguage } = usePreferencesStore();
   const [input, setInput] = useState(parsedItems.length > 0 ? "" : rawInput);
   const [speechLang, setSpeechLang] = useState(preferredLanguage);
+  const [unavailableItems, setUnavailableItems] = useState<UnavailableItem[]>([]);
   const { isListening, transcript, startListening, stopListening, isSupported } =
     useSpeechRecognition({ lang: speechLang || undefined });
 
@@ -30,8 +32,17 @@ export function InputStep({ slug }: InputStepProps) {
     if (!text) return;
 
     setRawInput(text);
+    setUnavailableItems([]);
 
-    parseOrderMutation.mutate(text);
+    parseOrderMutation.mutate(text, {
+      onSuccess: (result) => {
+        if (result.type !== "order") return;
+        if (result.unavailable_items && result.unavailable_items.length > 0) {
+          setUnavailableItems(result.unavailable_items);
+          setTimeout(() => setUnavailableItems([]), 5000);
+        }
+      },
+    });
   };
 
   const toggleVoice = () => {
@@ -178,6 +189,24 @@ export function InputStep({ slug }: InputStepProps) {
           </button>
         </div>
       </div>}
+
+      {/* Unavailable items banner */}
+      {unavailableItems.length > 0 && (
+        <div className="w-full glass-card rounded-2xl p-4 animate-fade-in-up border border-red-500/20 bg-red-500/5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="text-sm text-red-400">
+              {unavailableItems.map((item, i) => (
+                <p key={i}>
+                  <span className="font-medium">{item.name}</span>
+                  {" is currently "}
+                  {item.reason === "sold_out" ? "sold out" : "unavailable"}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {useOrderStore.getState().error && (
         <p className="text-destructive text-sm">
