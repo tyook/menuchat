@@ -4,8 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from orders.llm.agent import OrderParsingAgent
-from orders.llm.base import ParsedOrder, ParsedOrderItem
+from orders.llm.base import AgentResponse, ParsedOrder, ParsedOrderItem
 from orders.llm.menu_context import build_menu_context
+from orders.llm.recommendation_schemas import Recommendation, RecommendedItem
 from restaurants.tests.factories import (
     MenuCategoryFactory,
     MenuItemFactory,
@@ -14,6 +15,37 @@ from restaurants.tests.factories import (
     MenuVersionFactory,
     RestaurantFactory,
 )
+
+
+class TestAgentResponse:
+    def test_order_intent(self):
+        order = ParsedOrder(
+            items=[ParsedOrderItem(menu_item_id=1, variant_id=10, quantity=1)],
+            language="en",
+        )
+        response = AgentResponse(intent="order", order=order)
+        assert response.intent == "order"
+        assert response.order is not None
+        assert response.recommendation_context is None
+
+    def test_recommendation_intent(self):
+        response = AgentResponse(
+            intent="recommendation",
+            recommendation_context="popular items for 4 people",
+        )
+        assert response.intent == "recommendation"
+        assert response.order is None
+        assert response.recommendation_context == "popular items for 4 people"
+
+
+class TestRecommendedItemQuantity:
+    def test_quantity_defaults_to_one(self):
+        item = RecommendedItem(menu_item_id=1, variant_id=10, reason="Great choice")
+        assert item.quantity == 1
+
+    def test_quantity_can_be_set(self):
+        item = RecommendedItem(menu_item_id=1, variant_id=10, reason="For sharing", quantity=3)
+        assert item.quantity == 3
 
 
 class TestParsedOrder:

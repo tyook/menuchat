@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -13,3 +15,10 @@ class ParsedOrder(BaseModel):
     items: list[ParsedOrderItem]
     allergies: list[str] = Field(default_factory=list)
     language: str = "en"
+
+
+class AgentResponse(BaseModel):
+    """Union response from the OrderAgent — either an order or a recommendation intent."""
+    intent: Literal["order", "recommendation"]
+    order: ParsedOrder | None = None
+    recommendation_context: str | None = None

@@ -5,6 +5,7 @@ class RecommendedItem(BaseModel):
     menu_item_id: int
     variant_id: int
     reason: str = Field(description="Brief explanation of why this item is recommended")
+    quantity: int = Field(default=1, description="Suggested quantity for this item")
 
 
 class Recommendation(BaseModel):
