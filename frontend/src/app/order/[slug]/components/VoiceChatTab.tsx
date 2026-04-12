@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Check } from "lucide-react";
+import { Send, Check, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderStore } from "@/stores/order-store";
 import { usePreferencesStore } from "@/stores/preferences-store";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useParseOrder } from "@/hooks/use-parse-order";
 import { SPEECH_LANGUAGES } from "@/lib/constants";
+import type { UnavailableItem, RecommendationItem } from "@/types";
+import { RecommendationCard } from "./RecommendationCard";
 
 interface VoiceChatTabProps {
   slug: string;
@@ -19,6 +21,8 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
   const [input, setInput] = useState("");
   const [speechLang, setSpeechLang] = useState(preferredLanguage);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
+  const [unavailableItems, setUnavailableItems] = useState<UnavailableItem[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const { isListening, transcript, startListening, stopListening, isSupported } =
     useSpeechRecognition({ lang: speechLang || undefined });
 
@@ -33,12 +37,25 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
     setRawInput(text);
     setInput("");
 
+    setRecommendations([]);
+    setUnavailableItems([]);
     parseOrderMutation.mutate(text, {
       onSuccess: (result) => {
-        const count = result.items.reduce((sum, i) => sum + i.quantity, 0);
-        const names = result.items.map((i) => `${i.quantity}x ${i.name}`).join(", ");
-        setAddedMessage(`Added ${names} (${count} item${count !== 1 ? "s" : ""})`);
-        setTimeout(() => setAddedMessage(null), 3000);
+        if (result.type === "recommendation") {
+          setRecommendations(result.items);
+          return;
+        }
+        // type === "order" — existing logic below
+        if (result.items.length > 0) {
+          const count = result.items.reduce((sum, i) => sum + i.quantity, 0);
+          const names = result.items.map((i) => `${i.quantity}x ${i.name}`).join(", ");
+          setAddedMessage(`Added ${names} (${count} item${count !== 1 ? "s" : ""})`);
+          setTimeout(() => setAddedMessage(null), 3000);
+        }
+        if (result.unavailable_items && result.unavailable_items.length > 0) {
+          setUnavailableItems(result.unavailable_items);
+          setTimeout(() => setUnavailableItems([]), 5000);
+        }
       },
     });
   };
@@ -168,7 +185,7 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
               <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" style={{ animationDelay: "0.2s" }} />
               <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" style={{ animationDelay: "0.4s" }} />
             </div>
-            <p className="text-sm text-muted-foreground">Understanding your order...</p>
+            <p className="text-sm text-muted-foreground">Thinking...</p>
           </div>
         </div>
       )}
@@ -180,6 +197,36 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
             <Check className="h-4 w-4 text-green-500 shrink-0" />
             <p className="text-sm text-green-400">{addedMessage}</p>
           </div>
+        </div>
+      )}
+
+      {/* Unavailable items banner */}
+      {unavailableItems.length > 0 && (
+        <div className="w-full glass-card rounded-2xl p-4 animate-fade-in-up border border-red-500/20 bg-red-500/5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="text-sm text-red-400">
+              {unavailableItems.map((item, i) => (
+                <p key={i}>
+                  <span className="font-medium">{item.name}</span>
+                  {" is currently "}
+                  {item.reason === "sold_out" ? "sold out" : "unavailable"}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recommendation cards */}
+      {recommendations.length > 0 && (
+        <div className="w-full space-y-2 animate-fade-in-up">
+          <p className="text-xs font-medium text-muted-foreground px-1">
+            Recommended for you
+          </p>
+          {recommendations.map((item) => (
+            <RecommendationCard key={item.menu_item_id} item={item} />
+          ))}
         </div>
       )}
 
