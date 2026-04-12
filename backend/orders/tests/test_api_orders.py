@@ -5,7 +5,7 @@ import pytest
 import stripe
 from rest_framework import status
 
-from orders.llm.base import ParsedOrder, ParsedOrderItem
+from orders.llm.base import AgentResponse, ParsedOrder, ParsedOrderItem
 from orders.models import Order
 from orders.tests.factories import OrderFactory
 from restaurants.tests.factories import (
@@ -37,19 +37,22 @@ class TestParseOrder:
             "modifier": modifier,
         }
 
-    @patch("orders.services.OrderParsingAgent.run")
+    @patch("orders.services.OrderAgent.run")
     def test_parse_returns_structured_order(self, mock_run, api_client, menu_setup):
-        mock_run.return_value = ParsedOrder(
-            items=[
-                ParsedOrderItem(
-                    menu_item_id=menu_setup["item"].id,
-                    variant_id=menu_setup["variant"].id,
-                    quantity=1,
-                    modifier_ids=[menu_setup["modifier"].id],
-                    special_requests="no pickles",
-                )
-            ],
-            language="en",
+        mock_run.return_value = AgentResponse(
+            intent="order",
+            order=ParsedOrder(
+                items=[
+                    ParsedOrderItem(
+                        menu_item_id=menu_setup["item"].id,
+                        variant_id=menu_setup["variant"].id,
+                        quantity=1,
+                        modifier_ids=[menu_setup["modifier"].id],
+                        special_requests="no pickles",
+                    )
+                ],
+                language="en",
+            ),
         )
 
         response = api_client.post(
@@ -64,17 +67,20 @@ class TestParseOrder:
         assert response.data["total_price"] == "14.99"
         assert response.data["language"] == "en"
 
-    @patch("orders.services.OrderParsingAgent.run")
+    @patch("orders.services.OrderAgent.run")
     def test_parse_rejects_invalid_item_ids(self, mock_run, api_client, menu_setup):
-        mock_run.return_value = ParsedOrder(
-            items=[
-                ParsedOrderItem(
-                    menu_item_id=99999,  # Doesn't exist
-                    variant_id=99999,
-                    quantity=1,
-                )
-            ],
-            language="en",
+        mock_run.return_value = AgentResponse(
+            intent="order",
+            order=ParsedOrder(
+                items=[
+                    ParsedOrderItem(
+                        menu_item_id=99999,  # Doesn't exist
+                        variant_id=99999,
+                        quantity=1,
+                    )
+                ],
+                language="en",
+            ),
         )
 
         response = api_client.post(

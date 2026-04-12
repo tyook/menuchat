@@ -5,6 +5,7 @@ import pytest
 from django.utils import timezone
 from rest_framework import status
 
+from orders.llm.base import AgentResponse, ParsedOrder
 from restaurants.models import Subscription
 from restaurants.tests.factories import MenuCategoryFactory, MenuItemFactory, MenuItemVariantFactory, MenuVersionFactory, RestaurantFactory
 
@@ -22,9 +23,9 @@ def _setup_restaurant_with_menu():
 @pytest.mark.django_db
 class TestSubscriptionGate:
     @patch("orders.services.OrderService.validate_and_price_order")
-    @patch("orders.services.OrderParsingAgent.run")
+    @patch("orders.services.OrderAgent.run")
     def test_parse_order_increments_order_count(self, mock_agent, mock_validate, api_client):
-        mock_agent.return_value = {"items": [], "language": "en"}
+        mock_agent.return_value = AgentResponse(intent="order", order=ParsedOrder(items=[]))
         mock_validate.return_value = {"items": [], "language": "en"}
         restaurant = _setup_restaurant_with_menu()
         sub = Subscription.objects.create(
@@ -81,10 +82,10 @@ class TestSubscriptionGate:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @patch("orders.services.OrderService.validate_and_price_order")
-    @patch("orders.services.OrderParsingAgent.run")
+    @patch("orders.services.OrderAgent.run")
     def test_parse_order_allowed_when_over_limit_soft_cap(self, mock_agent, mock_validate, api_client):
         """Soft cap: orders continue even when over limit."""
-        mock_agent.return_value = {"items": [], "language": "en"}
+        mock_agent.return_value = AgentResponse(intent="order", order=ParsedOrder(items=[]))
         mock_validate.return_value = {"items": [], "language": "en"}
         restaurant = _setup_restaurant_with_menu()
         Subscription.objects.create(
@@ -108,10 +109,10 @@ class TestSubscriptionGate:
         restaurant = _setup_restaurant_with_menu()
         # No Subscription object created
         with (
-            patch("orders.services.OrderParsingAgent.run") as mock_agent,
+            patch("orders.services.OrderAgent.run") as mock_agent,
             patch("orders.services.OrderService.validate_and_price_order") as mock_validate,
         ):
-            mock_agent.return_value = {"items": [], "language": "en"}
+            mock_agent.return_value = AgentResponse(intent="order", order=ParsedOrder(items=[]))
             mock_validate.return_value = {"items": [], "language": "en"}
             response = api_client.post(
                 f"/api/order/{restaurant.slug}/parse/",

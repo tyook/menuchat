@@ -10,8 +10,9 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from orders.broadcast import broadcast_order_to_customer, broadcast_order_to_kitchen
-from orders.llm.agent import OrderParsingAgent
+from orders.llm.agent import OrderAgent
 from orders.llm.base import ParsedOrder
+from orders.recommendation_service import RecommendationService
 from orders.llm.menu_context import build_menu_context
 from orders.models import Order, OrderItem
 from restaurants.models import (
@@ -87,7 +88,7 @@ class OrderService:
                 menu_item = MenuItem.objects.get(
                     id=item_data["menu_item_id"],
                     category__version__restaurant=restaurant,
-                    is_active=True,
+                    status=MenuItem.Status.ACTIVE,
                 )
                 variant = MenuItemVariant.objects.get(
                     id=item_data["variant_id"],
@@ -150,6 +151,7 @@ class OrderService:
         Returns a dict ready for the frontend confirmation step.
         """
         validated_items = []
+        unavailable_items = []
         total_price = Decimal("0.00")
 
         for parsed_item in parsed.items:
@@ -157,14 +159,28 @@ class OrderService:
                 menu_item = MenuItem.objects.get(
                     id=parsed_item.menu_item_id,
                     category__version__restaurant=restaurant,
-                    is_active=True,
+                    status=MenuItem.Status.ACTIVE,
                 )
                 variant = MenuItemVariant.objects.get(
                     id=parsed_item.variant_id,
                     menu_item=menu_item,
                 )
-            except (MenuItem.DoesNotExist, MenuItemVariant.DoesNotExist):
-                continue  # Skip invalid items
+            except MenuItem.DoesNotExist:
+                # Check if the item exists but is sold out or inactive
+                try:
+                    item = MenuItem.objects.get(
+                        id=parsed_item.menu_item_id,
+                        category__version__restaurant=restaurant,
+                    )
+                    unavailable_items.append({
+                        "name": item.name,
+                        "reason": "sold_out" if item.status == MenuItem.Status.SOLD_OUT else "inactive",
+                    })
+                except MenuItem.DoesNotExist:
+                    pass
+                continue
+            except MenuItemVariant.DoesNotExist:
+                continue
 
             # Validate modifiers
             valid_modifiers = []
@@ -209,6 +225,7 @@ class OrderService:
 
         return {
             "items": validated_items,
+            "unavailable_items": unavailable_items,
             "allergies": parsed.allergies,
             "total_price": str(total_price),
             "language": parsed.language,
@@ -328,23 +345,41 @@ class OrderService:
     # ── LLM Order Parsing ──────────────────────────────────────────
 
     @staticmethod
-    def parse_order(restaurant: Restaurant, raw_input: str) -> dict:
+    def parse_order(restaurant: Restaurant, raw_input: str, user=None) -> dict:
         """Parse a natural language order via LLM and validate/price it.
 
         Checks subscription, runs LLM, validates against DB, increments count.
-        Returns validated order dict for frontend confirmation.
+        Returns validated order dict or recommendation dict for frontend.
         """
         subscription = OrderService.check_subscription(restaurant)
 
         menu_context = build_menu_context(restaurant)
-        parsed = OrderParsingAgent.run(
+        agent_response = OrderAgent.run(
             raw_input=raw_input,
             menu_context=menu_context,
         )
+
+        if agent_response.intent == "recommendation":
+            # Do NOT increment order count for recommendations —
+            # only actual orders consume the subscription quota.
+            rec_result = RecommendationService.get_recommendations(
+                restaurant=restaurant,
+                user=user if user and user.is_authenticated else None,
+                recommendation_context=agent_response.recommendation_context,
+                max_items=3,
+            )
+            # Drop `greeting` from rec_result — the cards speak for themselves
+            # in the voice chat UI (see spec: Non-Goals).
+            return {
+                "type": "recommendation",
+                "items": rec_result["items"],
+            }
+
+        # intent == "order"
+        parsed = agent_response.order
         result = OrderService.validate_and_price_order(restaurant, parsed)
-
         OrderService.increment_order_count(subscription)
-
+        result["type"] = "order"
         return result
 
     # ── Payment ────────────────────────────────────────────────────
@@ -885,7 +920,7 @@ class OrderService:
                 item = MenuItem.objects.get(
                     id=ci["menu_item_id"],
                     category__version__restaurant=restaurant,
-                    is_active=True,
+                    status=MenuItem.Status.ACTIVE,
                 )
                 variant = MenuItemVariant.objects.get(
                     id=ci["variant_id"], menu_item=item
@@ -927,7 +962,7 @@ class OrderService:
                 item = MenuItem.objects.prefetch_related("variants").get(
                     id=s.menu_item_id,
                     category__version__restaurant=restaurant,
-                    is_active=True,
+                    status=MenuItem.Status.ACTIVE,
                 )
             except MenuItem.DoesNotExist:
                 continue

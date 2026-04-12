@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.authentication import CookieJWTAuthentication
 from orders.broadcast import broadcast_order_to_customer
 from integrations.models import POSConnection
 from integrations.tasks import dispatch_order_to_pos
@@ -22,6 +23,7 @@ class PublicMenuView(APIView):
 
 
 class ParseOrderView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [AllowAny]
 
     def post(self, request, slug):
@@ -31,7 +33,7 @@ class ParseOrderView(APIView):
         serializer.is_valid(raise_exception=True)
 
         result = OrderService.parse_order(
-            restaurant, serializer.validated_data["raw_input"]
+            restaurant, serializer.validated_data["raw_input"], user=request.user
         )
         return Response(result)
 
