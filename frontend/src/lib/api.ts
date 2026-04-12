@@ -130,7 +130,7 @@ export async function apiFetch<T>(
 
 import type {
   PublicMenu,
-  ParsedOrderResponse,
+  ParseOrderResult,
   ConfirmOrderItem,
   OrderResponse,
   CreatePaymentResponse,
@@ -243,8 +243,8 @@ export async function fetchMenu(slug: string): Promise<PublicMenu> {
 export async function parseOrder(
   slug: string,
   rawInput: string
-): Promise<ParsedOrderResponse> {
-  return apiFetch<ParsedOrderResponse>(`/api/order/${slug}/parse/`, {
+): Promise<ParseOrderResult> {
+  return apiFetch<ParseOrderResult>(`/api/order/${slug}/parse/`, {
     method: "POST",
     body: JSON.stringify({ raw_input: rawInput }),
   });
@@ -605,6 +605,18 @@ export async function parseMenuImages(slug: string, images: File[]): Promise<Par
   const formData = new FormData();
   images.forEach((img) => formData.append("images", img));
   return apiFetch<ParsedMenu>(`/api/restaurants/${slug}/menu/upload/parse/`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function uploadMenuItemImage(
+  slug: string,
+  image: File
+): Promise<{ image_url: string }> {
+  const formData = new FormData();
+  formData.append("image", image);
+  return apiFetch<{ image_url: string }>(`/api/restaurants/${slug}/menu/upload/image/`, {
     method: "POST",
     body: formData,
   });
