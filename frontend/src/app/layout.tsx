@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CookieBanner } from "@/components/CookieBanner";
 import { WebOnlyScripts } from "@/components/WebOnlyScripts";
 import { NativeInitializer } from "@/components/NativeInitializer";
+import { AuthInitializer } from "@/components/AuthInitializer";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -57,6 +58,7 @@ export default function RootLayout({
             <TooltipProvider>
               <OnboardingBanner />
               <ConditionalHeader />
+              <AuthInitializer />
               <AppleAuthInit />
               <NativeInitializer />
               {children}
