@@ -707,6 +707,13 @@ export async function fetchAnalytics(
   );
 }
 
+// ── Billing History ──
+import type { BillingInvoice } from "@/types";
+
+export async function fetchBillingHistory(slug: string): Promise<BillingInvoice[]> {
+  return apiFetch<BillingInvoice[]>(`/api/restaurants/${slug}/subscription/invoices/`);
+}
+
 // ── Onboarding ──
 export async function completeOnboarding(): Promise<{ status: string }> {
   return apiFetch("/api/account/onboarding/complete/", { method: "POST" });

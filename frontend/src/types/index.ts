@@ -13,6 +13,16 @@ export interface Subscription {
   is_active: boolean;
 }
 
+export interface BillingInvoice {
+  id: string;
+  date: number;
+  amount: number;
+  currency: string;
+  status: string;
+  plan: string;
+  receipt_url: string;
+}
+
 // Restaurant types
 export interface Restaurant {
   id: string;
