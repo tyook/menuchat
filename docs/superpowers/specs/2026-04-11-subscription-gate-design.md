@@ -15,7 +15,8 @@ When a customer visits `/order/{slug}`, the page loads the restaurant's menu and
 - **Preserve legacy restaurant access** — Restaurants with no `Subscription` record continue to work (matching existing `check_subscription()` behavior).
 - **Prorate upgrades** — Stripe's default proration behavior (already configured).
 - **Payment failure email** — When a subscription transitions to `past_due`, send the restaurant owner an email: "Your payment failed. Please update your payment method to avoid service interruption."
-- **No billing page changes** — Upgrade, cancel, reactivate flows already exist and work.
+- **Payment success email** — When `invoice.paid` webhook fires for a subscription invoice, send the restaurant owner a receipt email with amount, plan, and period.
+- **Billing history on billing page** — Fetch invoices from Stripe List Invoices API, display a simple table (date, amount, plan, status, PDF receipt link) on the existing billing page.
 - **Discriminated union responses** — Both available and unavailable responses include an `available` boolean for clean frontend type narrowing.
 
 ## Design
@@ -126,6 +127,64 @@ New HTML email template following the style of `subscription_activated.html`.
 
 After saving the subscription, check if the new status is `past_due` and the previous status was not `past_due` (to avoid duplicate emails on repeated webhook deliveries). If so, dispatch `send_payment_failed_email_task`.
 
+### Backend: Payment success email
+
+**File:** `backend/restaurants/notifications.py`
+
+Add `send_payment_success_email(restaurant, amount, plan, period_end)` following the existing pattern. Email content: "Your payment of ${amount} for {restaurant_name} ({plan_name} plan) has been received. Next billing date: {period_end}." Include a link to the billing page.
+
+**File:** `backend/restaurants/tasks.py`
+
+Add a Celery task `send_payment_success_email_task`.
+
+**File:** `backend/orders/templates/emails/payment_success.html`
+
+New HTML email template following the style of `subscription_activated.html`.
+
+**File:** `backend/orders/services.py` — `_handle_invoice_paid`
+
+Currently only resets `order_count`. Add: extract amount, plan, and period end from the invoice data, then dispatch `send_payment_success_email_task`. Only send for subscription invoices (skip one-time charges) — the existing `if not subscription_id: return` guard already handles this.
+
+### Backend + Frontend: Billing history
+
+**File:** `backend/restaurants/views.py`
+
+Add `BillingHistoryView` — a new endpoint at `GET /api/restaurants/{slug}/subscription/invoices/` that fetches invoices from Stripe's List Invoices API using the subscription's `stripe_customer_id`. Return a list of:
+
+```python
+{
+    "id": invoice.id,
+    "date": invoice.created,          # Unix timestamp
+    "amount": invoice.amount_paid,     # In cents
+    "currency": invoice.currency,
+    "status": invoice.status,          # "paid", "open", "void", etc.
+    "plan": plan_name,                 # Extracted from line items
+    "receipt_url": invoice.hosted_invoice_url,  # Stripe-hosted receipt
+}
+```
+
+Paginate with `limit=12` (1 year of monthly invoices). Uses `IsAuthenticated` + `IsRestaurantOwnerOrStaff` permissions.
+
+**File:** `backend/restaurants/urls.py`
+
+Add URL pattern for `subscription/invoices/`.
+
+**File:** `frontend/src/hooks/use-billing-history.ts`
+
+New hook `useBillingHistory(slug)` — fetches from the invoices endpoint.
+
+**File:** `frontend/src/lib/api.ts`
+
+Add `fetchBillingHistory(slug)` function.
+
+**File:** `frontend/src/types/index.ts`
+
+Add `BillingInvoice` interface matching the API response shape.
+
+**File:** `frontend/src/app/account/restaurants/[slug]/billing/BillingPageClient.tsx`
+
+Add a "Billing History" section below the plan selection grid. Simple table with columns: Date, Amount, Plan, Status, Receipt (link). Show "No billing history yet" for restaurants still on trial.
+
 ## Edge Cases
 
 | Scenario | Result |
@@ -144,19 +203,24 @@ After saving the subscription, check if the new status is `past_due` and the pre
 
 ## Files Changed
 
-1. `backend/orders/services.py` — Extract `is_subscription_active()` helper, refactor `check_subscription()`, trigger payment failure email in `_handle_subscription_updated`
+1. `backend/orders/services.py` — Extract `is_subscription_active()` helper, refactor `check_subscription()`, trigger payment failure email in `_handle_subscription_updated`, trigger payment success email in `_handle_invoice_paid`
 2. `backend/orders/views.py` — Subscription check in `PublicMenuView`
-3. `backend/restaurants/notifications.py` — Add `send_payment_failed_email()`
-4. `backend/restaurants/tasks.py` — Add `send_payment_failed_email_task`
+3. `backend/restaurants/notifications.py` — Add `send_payment_failed_email()` and `send_payment_success_email()`
+4. `backend/restaurants/tasks.py` — Add `send_payment_failed_email_task` and `send_payment_success_email_task`
 5. `backend/orders/templates/emails/payment_failed.html` — New email template
-6. `frontend/src/app/order/[slug]/OrderPageClient.tsx` — Handle `available: false`
-7. `frontend/src/types/index.ts` — Add `MenuUnavailable` type, update `PublicMenu`
-8. `frontend/src/lib/api.ts` — Update `fetchMenu` return type
-9. `frontend/src/hooks/use-menu.ts` — Return type follows from `fetchMenu`
+6. `backend/orders/templates/emails/payment_success.html` — New email template
+7. `backend/restaurants/views.py` — Add `BillingHistoryView`
+8. `backend/restaurants/urls.py` — Add invoices endpoint
+9. `frontend/src/app/order/[slug]/OrderPageClient.tsx` — Handle `available: false`
+10. `frontend/src/types/index.ts` — Add `MenuUnavailable`, `BillingInvoice` types, update `PublicMenu`
+11. `frontend/src/lib/api.ts` — Update `fetchMenu` return type, add `fetchBillingHistory`
+12. `frontend/src/hooks/use-menu.ts` — Return type follows from `fetchMenu`
+13. `frontend/src/hooks/use-billing-history.ts` — New hook for billing history
+14. `frontend/src/app/account/restaurants/[slug]/billing/BillingPageClient.tsx` — Add billing history table
 
 ## Out of Scope
 
-- Billing page UI changes (already functional)
+- Billing page UI changes beyond billing history table (upgrade/cancel/reactivate flows already functional)
 - Cancel/reactivate/upgrade backend flows (already implemented)
 - `HasActiveSubscription` permission on owner dashboard (already enforced)
 - Webhook handlers for subscription lifecycle (already working)
