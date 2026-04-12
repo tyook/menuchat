@@ -310,29 +310,49 @@ class OrderService:
     # ── Subscription Check ─────────────────────────────────────────
 
     @staticmethod
+    def is_subscription_active(restaurant: Restaurant) -> bool:
+        """Return True if the restaurant may accept orders."""
+        try:
+            subscription = restaurant.subscription
+        except Subscription.DoesNotExist:
+            return True  # Legacy restaurant, allow access
+
+        if not subscription.is_active:
+            return False
+
+        # is_active returns True for "trialing" status, but trial may have expired
+        if (
+            subscription.status == "trialing"
+            and subscription.trial_end
+            and subscription.trial_end < timezone.now()
+        ):
+            return False
+
+        return True
+
+    @staticmethod
     def check_subscription(restaurant: Restaurant) -> Subscription | None:
         """Check that the restaurant's subscription is active.
 
         Raises PermissionDenied if subscription is inactive or trial expired.
         Returns the subscription (or None for legacy restaurants).
         """
+        if not OrderService.is_subscription_active(restaurant):
+            try:
+                subscription = restaurant.subscription
+                if subscription.status == "trialing":
+                    raise PermissionDenied(
+                        "Free trial has expired. Please subscribe to continue."
+                    )
+            except Subscription.DoesNotExist:
+                pass
+            raise PermissionDenied(
+                "Subscription is not active. Please subscribe to continue."
+            )
         try:
-            subscription = restaurant.subscription
-            if not subscription.is_active:
-                raise PermissionDenied(
-                    "Subscription is not active. Please subscribe to continue."
-                )
-            if (
-                subscription.status == "trialing"
-                and subscription.trial_end
-                and subscription.trial_end < timezone.now()
-            ):
-                raise PermissionDenied(
-                    "Free trial has expired. Please subscribe to continue."
-                )
-            return subscription
+            return restaurant.subscription
         except Subscription.DoesNotExist:
-            return None  # Legacy restaurant, allow access
+            return None
 
     @staticmethod
     def increment_order_count(subscription: Subscription | None) -> None:
