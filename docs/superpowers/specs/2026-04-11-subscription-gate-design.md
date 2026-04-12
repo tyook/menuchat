@@ -14,6 +14,7 @@ When a customer visits `/order/{slug}`, the page loads the restaurant's menu and
 - **Keep existing trial behavior** — New restaurants still get a 14-day free trial automatically.
 - **Preserve legacy restaurant access** — Restaurants with no `Subscription` record continue to work (matching existing `check_subscription()` behavior).
 - **Prorate upgrades** — Stripe's default proration behavior (already configured).
+- **Payment failure email** — When a subscription transitions to `past_due`, send the restaurant owner an email: "Your payment failed. Please update your payment method to avoid service interruption."
 - **No billing page changes** — Upgrade, cancel, reactivate flows already exist and work.
 - **Discriminated union responses** — Both available and unavailable responses include an `available` boolean for clean frontend type narrowing.
 
@@ -100,6 +101,31 @@ Update `fetchMenu` return type to `Promise<PublicMenu | MenuUnavailable>`.
 
 Return type follows from `fetchMenu` — `PublicMenu | MenuUnavailable`.
 
+### Backend: Payment failure email
+
+**File:** `backend/restaurants/notifications.py`
+
+Add `send_payment_failed_email(restaurant)` following the existing pattern (HTML template + plain text fallback):
+
+```python
+def send_payment_failed_email(restaurant) -> None:
+    """Notify restaurant owner that their subscription payment failed."""
+```
+
+Email content: "Your payment for {restaurant_name} failed. Please update your payment method to avoid service interruption." Include a link to the billing page (`/account/restaurants/{slug}/billing`).
+
+**File:** `backend/restaurants/tasks.py`
+
+Add a Celery task `send_payment_failed_email_task` (same pattern as `send_subscription_activated_email_task`).
+
+**File:** `backend/orders/templates/emails/payment_failed.html`
+
+New HTML email template following the style of `subscription_activated.html`.
+
+**File:** `backend/orders/services.py` — `_handle_subscription_updated`
+
+After saving the subscription, check if the new status is `past_due` and the previous status was not `past_due` (to avoid duplicate emails on repeated webhook deliveries). If so, dispatch `send_payment_failed_email_task`.
+
 ## Edge Cases
 
 | Scenario | Result |
@@ -118,12 +144,15 @@ Return type follows from `fetchMenu` — `PublicMenu | MenuUnavailable`.
 
 ## Files Changed
 
-1. `backend/orders/services.py` — Extract `is_subscription_active()` helper, refactor `check_subscription()`
+1. `backend/orders/services.py` — Extract `is_subscription_active()` helper, refactor `check_subscription()`, trigger payment failure email in `_handle_subscription_updated`
 2. `backend/orders/views.py` — Subscription check in `PublicMenuView`
-3. `frontend/src/app/order/[slug]/OrderPageClient.tsx` — Handle `available: false`
-4. `frontend/src/types/index.ts` — Add `MenuUnavailable` type, update `PublicMenu`
-5. `frontend/src/lib/api.ts` — Update `fetchMenu` return type
-6. `frontend/src/hooks/use-menu.ts` — Return type follows from `fetchMenu`
+3. `backend/restaurants/notifications.py` — Add `send_payment_failed_email()`
+4. `backend/restaurants/tasks.py` — Add `send_payment_failed_email_task`
+5. `backend/orders/templates/emails/payment_failed.html` — New email template
+6. `frontend/src/app/order/[slug]/OrderPageClient.tsx` — Handle `available: false`
+7. `frontend/src/types/index.ts` — Add `MenuUnavailable` type, update `PublicMenu`
+8. `frontend/src/lib/api.ts` — Update `fetchMenu` return type
+9. `frontend/src/hooks/use-menu.ts` — Return type follows from `fetchMenu`
 
 ## Out of Scope
 
