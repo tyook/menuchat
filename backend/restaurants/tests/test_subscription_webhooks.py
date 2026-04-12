@@ -132,3 +132,77 @@ class TestSubscriptionWebhooks:
 
         sub.refresh_from_db()
         assert sub.status == "canceled"
+
+    @patch("stripe.Webhook.construct_event")
+    @patch("restaurants.tasks.send_payment_failed_email_task.delay")
+    def test_subscription_updated_to_past_due_sends_email(self, mock_email_task, mock_construct, api_client):
+        restaurant = RestaurantFactory()
+        sub = Subscription.objects.create(
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
+            stripe_subscription_id="sub_test456",
+            stripe_customer_id="cus_test456",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+
+        mock_construct.return_value = {
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": "sub_test456",
+                    "status": "past_due",
+                    "current_period_start": int(timezone.now().timestamp()),
+                    "current_period_end": int((timezone.now() + timedelta(days=30)).timestamp()),
+                    "cancel_at_period_end": False,
+                    "metadata": {"plan": "growth"},
+                }
+            },
+        }
+
+        response = api_client.post(
+            "/api/webhooks/stripe/",
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        mock_email_task.assert_called_once_with(str(restaurant.id))
+
+    @patch("stripe.Webhook.construct_event")
+    @patch("restaurants.tasks.send_payment_failed_email_task.delay")
+    def test_subscription_updated_past_due_to_past_due_no_duplicate_email(self, mock_email_task, mock_construct, api_client):
+        """No duplicate email if already past_due."""
+        restaurant = RestaurantFactory()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="growth",
+            status="past_due",
+            stripe_subscription_id="sub_test789",
+            stripe_customer_id="cus_test789",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+
+        mock_construct.return_value = {
+            "type": "customer.subscription.updated",
+            "data": {
+                "object": {
+                    "id": "sub_test789",
+                    "status": "past_due",
+                    "current_period_start": int(timezone.now().timestamp()),
+                    "current_period_end": int((timezone.now() + timedelta(days=30)).timestamp()),
+                    "cancel_at_period_end": False,
+                    "metadata": {"plan": "growth"},
+                }
+            },
+        }
+
+        api_client.post(
+            "/api/webhooks/stripe/",
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        mock_email_task.assert_not_called()

@@ -696,6 +696,7 @@ class OrderService:
             sub = Subscription.objects.get(
                 stripe_subscription_id=sub_data["id"]
             )
+            old_status = sub.status
             sub.status = sub_data["status"]
             sub.cancel_at_period_end = sub_data.get(
                 "cancel_at_period_end", False
@@ -715,6 +716,12 @@ class OrderService:
                 sub.plan = plan
 
             sub.save()
+
+            # Send payment failed email on transition to past_due
+            if sub.status == "past_due" and old_status != "past_due":
+                from restaurants.tasks import send_payment_failed_email_task
+                send_payment_failed_email_task.delay(str(sub.restaurant_id))
+
         except Subscription.DoesNotExist:
             pass
 
