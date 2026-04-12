@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Send, ShoppingCart, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderStore } from "@/stores/order-store";
-import { usePreferencesStore } from "@/stores/preferences-store";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { useParseOrder } from "@/hooks/use-parse-order";
-import { SPEECH_LANGUAGES } from "@/lib/constants";
+import { transcribeAudio } from "@/lib/api";
 import type { UnavailableItem } from "@/types";
 
 interface InputStepProps {
@@ -16,25 +15,22 @@ interface InputStepProps {
 
 export function InputStep({ slug }: InputStepProps) {
   const { setStep, setRawInput, rawInput, parsedItems } = useOrderStore();
-  const { preferredLanguage } = usePreferencesStore();
   const [input, setInput] = useState(parsedItems.length > 0 ? "" : rawInput);
-  const [speechLang, setSpeechLang] = useState(preferredLanguage);
   const [unavailableItems, setUnavailableItems] = useState<UnavailableItem[]>([]);
-  const { isListening, transcript, startListening, stopListening, isSupported } =
-    useSpeechRecognition({ lang: speechLang || undefined });
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const { isRecording, startRecording, stopRecording, isSupported } =
+    useAudioRecorder();
 
   const parseOrderMutation = useParseOrder(slug);
 
-  const currentInput = isListening ? transcript : input;
+  const handleSubmit = async (text?: string) => {
+    const value = (text ?? input).trim();
+    if (!value) return;
 
-  const handleSubmit = async () => {
-    const text = currentInput.trim();
-    if (!text) return;
-
-    setRawInput(text);
+    setRawInput(value);
     setUnavailableItems([]);
 
-    parseOrderMutation.mutate(text, {
+    parseOrderMutation.mutate(value, {
       onSuccess: (result) => {
         if (result.type !== "order") return;
         if (result.unavailable_items && result.unavailable_items.length > 0) {
@@ -45,12 +41,24 @@ export function InputStep({ slug }: InputStepProps) {
     });
   };
 
-  const toggleVoice = () => {
-    if (isListening) {
-      stopListening();
-      setInput(transcript);
+  const toggleVoice = async () => {
+    if (isRecording) {
+      const blob = await stopRecording();
+      if (!blob) return;
+
+      setIsTranscribing(true);
+      try {
+        const transcript = await transcribeAudio(slug, blob);
+        setInput(transcript);
+        setIsTranscribing(false);
+        if (transcript.trim()) {
+          handleSubmit(transcript);
+        }
+      } catch {
+        setIsTranscribing(false);
+      }
     } else {
-      startListening();
+      startRecording();
     }
   };
 
@@ -72,17 +80,17 @@ export function InputStep({ slug }: InputStepProps) {
           {/* Ambient radial glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(217,119,6,0.2),rgba(234,88,12,0.08)_50%,transparent_70%)] rounded-full pointer-events-none" />
 
-          {/* "Listening..." label */}
-          {isListening && (
+          {/* "Listening..." / "Transcribing..." label */}
+          {(isRecording || isTranscribing) && (
             <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground animate-fade-in-up">
-              Listening...
+              {isTranscribing ? "Transcribing..." : "Listening..."}
             </p>
           )}
 
           {/* Orb + pulse rings container */}
           <div className="relative flex items-center justify-center">
             {/* Pulse rings — only when recording */}
-            {isListening && (
+            {isRecording && (
               <>
                 <div
                   className="absolute top-1/2 left-1/2 border border-primary/15 rounded-full animate-pulse-ring"
@@ -98,10 +106,11 @@ export function InputStep({ slug }: InputStepProps) {
             {/* Microphone orb button */}
             <button
               onClick={toggleVoice}
-              className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center gradient-primary glow-primary-lg transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background"
-              aria-label={isListening ? "Stop recording" : "Start recording"}
+              disabled={isTranscribing || parseOrderMutation.isPending}
+              className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center gradient-primary glow-primary-lg transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+              aria-label={isRecording ? "Stop recording" : "Start recording"}
             >
-              {isListening ? (
+              {isRecording ? (
                 /* Waveform visualization */
                 <div className="flex items-center gap-[3px]">
                   {waveHeights.map((h, i) => (
@@ -118,6 +127,9 @@ export function InputStep({ slug }: InputStepProps) {
                     />
                   ))}
                 </div>
+              ) : isTranscribing ? (
+                /* Spinner while transcribing */
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-foreground" />
               ) : (
                 /* Mic icon (SVG) */
                 <svg
@@ -140,48 +152,23 @@ export function InputStep({ slug }: InputStepProps) {
             </button>
           </div>
 
-          {/* Language selector */}
-          <select
-            value={speechLang}
-            onChange={(e) => setSpeechLang(e.target.value)}
-            disabled={isListening}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
-          >
-            {SPEECH_LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Live transcript display */}
-      {isListening && (
-        <div className="w-full glass-card rounded-2xl p-4 min-h-[80px] animate-fade-in-up">
-          <p className="text-foreground/70 text-sm leading-relaxed">
-            {transcript || (
-              <span className="text-muted-foreground italic">Start speaking…</span>
-            )}
-            <span className="w-0.5 h-4 bg-primary/70 animate-blink-cursor inline-block ml-1 align-middle" />
-          </p>
         </div>
       )}
 
       {/* Text input fallback */}
-      {!isListening && <div className="w-full animate-fade-in-up-delay-2">
+      {!isRecording && !isTranscribing && <div className="w-full animate-fade-in-up-delay-2">
         <div className="glass-card rounded-xl p-1 flex items-end gap-2">
           <Textarea
-            value={currentInput}
+            value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Or type your order here…"
             rows={3}
-            disabled={isListening}
+            disabled={parseOrderMutation.isPending}
             className="flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm placeholder:text-muted-foreground/60 disabled:opacity-50"
           />
           <button
-            onClick={handleSubmit}
-            disabled={!currentInput.trim()}
+            onClick={() => handleSubmit()}
+            disabled={!input.trim() || parseOrderMutation.isPending}
             className="mb-1 mr-1 p-2.5 bg-primary/20 rounded-lg text-primary hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/50"
             aria-label="Submit order"
           >

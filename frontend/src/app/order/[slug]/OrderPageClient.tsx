@@ -70,6 +70,22 @@ export default function OrderPage() {
     );
   }
 
+  if (!menu.payment_ready) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center px-6 max-w-md">
+          <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+            <Settings className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Restaurant Setup in Progress</h1>
+          <p className="text-muted-foreground">
+            {menu.restaurant_name} is still setting up their ordering system. Please check back soon.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background">
       <div className="fixed top-4 right-4 z-40 flex items-center gap-2">

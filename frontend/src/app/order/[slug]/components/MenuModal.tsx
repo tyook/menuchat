@@ -44,7 +44,14 @@ export function MenuModal({ categories, currency = "$" }: MenuModalProps) {
                     return (
                       <div key={item.id} className="flex justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium leading-snug">{item.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium leading-snug">{item.name}</p>
+                            {item.is_featured && (
+                              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                                Featured
+                              </span>
+                            )}
+                          </div>
                           {item.description && (
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                               {item.description}

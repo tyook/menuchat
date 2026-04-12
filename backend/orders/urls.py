@@ -22,12 +22,14 @@ from orders.views import (
     SaveCardConsentView,
     StripeConnectWebhookView,
     StripeWebhookView,
+    TranscribeAudioView,
     UpsellSuggestionsView,
 )
 
 urlpatterns = [
     path("order/<slug:slug>/menu/", PublicMenuView.as_view(), name="public-menu"),
     path("order/<slug:slug>/parse/", ParseOrderView.as_view(), name="parse-order"),
+    path("order/<slug:slug>/transcribe/", TranscribeAudioView.as_view(), name="transcribe-audio"),
     path("order/<slug:slug>/confirm/", ConfirmOrderView.as_view(), name="confirm-order"),
     path("order/<slug:slug>/create-payment/", CreatePaymentView.as_view(), name="create-payment"),
     path("order/<slug:slug>/save-card/<uuid:order_id>/", SaveCardConsentView.as_view(), name="save-card-consent"),

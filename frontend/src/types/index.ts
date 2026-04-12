@@ -123,6 +123,7 @@ export interface ParsedOrderItem {
   name: string;
   description?: string;
   image_url?: string;
+  is_featured?: boolean;
   variant: {
     id: number;
     label: string;

@@ -251,6 +251,22 @@ export async function parseOrder(
   });
 }
 
+export async function transcribeAudio(
+  slug: string,
+  audioBlob: Blob
+): Promise<string> {
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.webm");
+  const result = await apiFetch<{ transcript: string }>(
+    `/api/order/${slug}/transcribe/`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+  return result.transcript;
+}
+
 export async function confirmOrder(
   slug: string,
   items: ConfirmOrderItem[],

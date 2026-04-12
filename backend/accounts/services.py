@@ -200,6 +200,7 @@ def get_order_history(user: User) -> list[dict]:
 
     orders = (
         Order.objects.filter(user=user)
+        .exclude(status__in=[Order.Status.PENDING_PAYMENT, Order.Status.PENDING])
         .select_related("restaurant")
         .prefetch_related("items__menu_item", "items__variant")
     )

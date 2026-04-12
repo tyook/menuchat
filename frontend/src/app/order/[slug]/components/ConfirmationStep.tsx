@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -155,10 +156,17 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
                 />
               )}
               <div className="flex-1 min-w-0 mr-4">
-                <p className="text-foreground font-semibold">{item.name}</p>
-                {item.description && (
-                  <p className="text-muted-foreground text-xs mt-0.5">{item.description}</p>
-                )}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-foreground font-semibold">{item.name}</p>
+                  {item.is_featured && (
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                      Featured
+                    </span>
+                  )}
+                  {item.description && (
+                    <DescriptionToggle description={item.description} />
+                  )}
+                </div>
                 <p className="text-muted-foreground text-xs mt-0.5">
                   {item.variant.label} — ${item.variant.price}
                 </p>
@@ -280,5 +288,24 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
         </Button>
       </div>
     </div>
+  );
+}
+
+function DescriptionToggle({ description }: { description: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setShow((prev) => !prev)}
+        className="shrink-0 w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors"
+        aria-label={show ? "Hide description" : "Show description"}
+      >
+        <Info className="h-3 w-3 text-muted-foreground" />
+      </button>
+      {show && (
+        <p className="w-full text-muted-foreground text-xs mt-0.5">{description}</p>
+      )}
+    </>
   );
 }

@@ -1,5 +1,8 @@
+import logging
+
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,6 +49,44 @@ class ParseOrderView(APIView):
             restaurant, serializer.validated_data["raw_input"], user=request.user
         )
         return Response(result)
+
+
+logger = logging.getLogger(__name__)
+
+
+class TranscribeAudioView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, slug):
+        # Validate restaurant exists (same gate as parse)
+        OrderService.get_restaurant_by_slug(slug)
+
+        audio_file = request.FILES.get("audio")
+        if not audio_file:
+            return Response(
+                {"detail": "No audio file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        import openai
+        from django.conf import settings as django_settings
+
+        client = openai.OpenAI(api_key=django_settings.OPENAI_API_KEY)
+
+        try:
+            result = client.audio.transcriptions.create(
+                model="gpt-4o-mini-transcribe",
+                file=(audio_file.name or "audio.webm", audio_file.read(), audio_file.content_type or "audio/webm"),
+            )
+            return Response({"transcript": result.text})
+        except openai.OpenAIError as exc:
+            logger.exception("OpenAI transcription failed")
+            return Response(
+                {"detail": f"Transcription failed: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class ConfirmOrderView(APIView):

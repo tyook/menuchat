@@ -211,6 +211,9 @@ class OrderService:
                 {
                     "menu_item_id": menu_item.id,
                     "name": menu_item.name,
+                    "description": menu_item.description or None,
+                    "image_url": menu_item.image_url or None,
+                    "is_featured": menu_item.is_featured,
                     "variant": {
                         "id": variant.id,
                         "label": variant.label,
@@ -908,6 +911,12 @@ class OrderService:
         except POSConnection.DoesNotExist:
             payment_mode = "stripe"
 
+        # Check if Stripe Connect payment is set up
+        from restaurants.models import ConnectedAccount
+        payment_ready = ConnectedAccount.objects.filter(
+            restaurant=restaurant, onboarding_complete=True
+        ).exists()
+
         return {
             "restaurant_name": restaurant.name,
             "tax_rate": str(restaurant.tax_rate),
@@ -916,6 +925,7 @@ class OrderService:
             ).data,
             "payment_mode": payment_mode,
             "payment_model": restaurant.payment_model,
+            "payment_ready": payment_ready,
         }
 
     @staticmethod

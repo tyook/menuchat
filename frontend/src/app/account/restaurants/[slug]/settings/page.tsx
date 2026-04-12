@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import SettingsPageClient from "./SettingsPageClient";
 
 export function generateStaticParams() {
@@ -7,5 +8,13 @@ export function generateStaticParams() {
 export const dynamicParams = true;
 
 export default function SettingsPage() {
-  return <SettingsPageClient />;
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    }>
+      <SettingsPageClient />
+    </Suspense>
+  );
 }

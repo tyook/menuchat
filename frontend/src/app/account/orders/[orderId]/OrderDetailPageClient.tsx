@@ -136,7 +136,7 @@ export default function OrderDetailPage() {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              Tax ({(Number(order.tax_rate) * 100).toFixed(1)}%)
+              Tax ({Number(order.tax_rate).toFixed(2)}%)
             </span>
             <span>${Number(order.tax_amount).toFixed(2)}</span>
           </div>

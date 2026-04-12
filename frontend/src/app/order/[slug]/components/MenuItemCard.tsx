@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Minus, Check, Info } from "lucide-react";
+import { Plus, Minus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,6 @@ export function MenuItemCard({ item, isExpanded, onToggleExpand }: MenuItemCardP
   const [selectedModifiers, setSelectedModifiers] = useState<MenuItemModifier[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  const [showDescription, setShowDescription] = useState(false);
 
   const isSoldOut = item.is_sold_out === true;
   const hasOptions = item.variants.length > 1 || item.modifiers.length > 0;
@@ -91,20 +90,15 @@ export function MenuItemCard({ item, isExpanded, onToggleExpand }: MenuItemCardP
                 Sold out
               </span>
             )}
-            {item.description && !isSoldOut && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDescription((prev) => !prev);
-                }}
-                className="shrink-0 w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors"
-                aria-label={showDescription ? "Hide description" : "Show description"}
-              >
-                <Info className="h-3 w-3 text-muted-foreground" />
-              </button>
+            {item.is_featured && !isSoldOut && (
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                Featured
+              </span>
             )}
           </div>
+          {item.description && (
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5 line-clamp-2">{item.description}</p>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={cn("text-sm font-bold", isSoldOut ? "text-muted-foreground line-through" : "text-primary")}>
@@ -123,13 +117,6 @@ export function MenuItemCard({ item, isExpanded, onToggleExpand }: MenuItemCardP
           )}
         </div>
       </button>
-
-      {/* Description tooltip */}
-      {showDescription && item.description && (
-        <div className="px-4 pb-3 -mt-1">
-          <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-        </div>
-      )}
 
       {/* Expanded options */}
       {isExpanded && !isSoldOut && (

@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Send, Check, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrderStore } from "@/stores/order-store";
-import { usePreferencesStore } from "@/stores/preferences-store";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useAudioRecorder } from "@/hooks/use-audio-recorder";
 import { useParseOrder } from "@/hooks/use-parse-order";
-import { SPEECH_LANGUAGES } from "@/lib/constants";
+import { transcribeAudio } from "@/lib/api";
 import type { UnavailableItem, RecommendationItem } from "@/types";
 import { RecommendationCard } from "./RecommendationCard";
 
@@ -17,29 +16,26 @@ interface VoiceChatTabProps {
 
 export function VoiceChatTab({ slug }: VoiceChatTabProps) {
   const { setRawInput } = useOrderStore();
-  const { preferredLanguage } = usePreferencesStore();
   const [input, setInput] = useState("");
-  const [speechLang, setSpeechLang] = useState(preferredLanguage);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [unavailableItems, setUnavailableItems] = useState<UnavailableItem[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
-  const { isListening, transcript, startListening, stopListening, isSupported } =
-    useSpeechRecognition({ lang: speechLang || undefined });
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const { isRecording, startRecording, stopRecording, isSupported } =
+    useAudioRecorder();
 
   const parseOrderMutation = useParseOrder(slug);
 
-  const currentInput = isListening ? transcript : input;
+  const submitText = (text: string) => {
+    const value = text.trim();
+    if (!value || parseOrderMutation.isPending) return;
 
-  const handleSubmit = async () => {
-    const text = currentInput.trim();
-    if (!text || parseOrderMutation.isPending) return;
-
-    setRawInput(text);
+    setRawInput(value);
     setInput("");
 
     setRecommendations([]);
     setUnavailableItems([]);
-    parseOrderMutation.mutate(text, {
+    parseOrderMutation.mutate(value, {
       onSuccess: (result) => {
         if (result.type === "recommendation") {
           setRecommendations(result.items);
@@ -60,12 +56,28 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
     });
   };
 
-  const toggleVoice = () => {
-    if (isListening) {
-      stopListening();
-      setInput(transcript);
+  const handleSubmit = () => {
+    submitText(input);
+  };
+
+  const toggleVoice = async () => {
+    if (isRecording) {
+      const blob = await stopRecording();
+      if (!blob) return;
+
+      setIsTranscribing(true);
+      try {
+        const transcript = await transcribeAudio(slug, blob);
+        setIsTranscribing(false);
+        if (transcript.trim()) {
+          setInput(transcript);
+          submitText(transcript);
+        }
+      } catch {
+        setIsTranscribing(false);
+      }
     } else {
-      startListening();
+      startRecording();
     }
   };
 
@@ -86,14 +98,14 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
         <div className="relative flex flex-col items-center gap-4 animate-fade-in-up-delay-1">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(217,119,6,0.2),rgba(234,88,12,0.08)_50%,transparent_70%)] rounded-full pointer-events-none" />
 
-          {isListening && (
+          {(isRecording || isTranscribing) && (
             <p className="text-[11px] uppercase tracking-[3px] text-muted-foreground animate-fade-in-up">
-              Listening...
+              {isTranscribing ? "Transcribing..." : "Listening..."}
             </p>
           )}
 
           <div className="relative flex items-center justify-center">
-            {isListening && (
+            {isRecording && (
               <>
                 <div
                   className="absolute top-1/2 left-1/2 border border-primary/15 rounded-full animate-pulse-ring"
@@ -108,11 +120,11 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
 
             <button
               onClick={toggleVoice}
-              disabled={parseOrderMutation.isPending}
+              disabled={isTranscribing || parseOrderMutation.isPending}
               className="relative w-[120px] h-[120px] rounded-full flex items-center justify-center gradient-primary glow-primary-lg transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
-              aria-label={isListening ? "Stop recording" : "Start recording"}
+              aria-label={isRecording ? "Stop recording" : "Start recording"}
             >
-              {isListening ? (
+              {isRecording ? (
                 <div className="flex items-center gap-[3px]">
                   {waveHeights.map((h, i) => (
                     <div
@@ -128,6 +140,8 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
                     />
                   ))}
                 </div>
+              ) : isTranscribing ? (
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-foreground" />
               ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -149,35 +163,11 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
             </button>
           </div>
 
-          <select
-            value={speechLang}
-            onChange={(e) => setSpeechLang(e.target.value)}
-            disabled={isListening || parseOrderMutation.isPending}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
-          >
-            {SPEECH_LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Live transcript display */}
-      {isListening && (
-        <div className="w-full glass-card rounded-2xl p-4 min-h-[80px] animate-fade-in-up">
-          <p className="text-foreground/70 text-sm leading-relaxed">
-            {transcript || (
-              <span className="text-muted-foreground italic">Start speaking…</span>
-            )}
-            <span className="w-0.5 h-4 bg-primary/70 animate-blink-cursor inline-block ml-1 align-middle" />
-          </p>
         </div>
       )}
 
       {/* Inline loading indicator */}
-      {parseOrderMutation.isPending && (
+      {(isTranscribing || parseOrderMutation.isPending) && (
         <div className="w-full glass-card rounded-2xl p-4 animate-fade-in-up">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
@@ -185,7 +175,9 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
               <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" style={{ animationDelay: "0.2s" }} />
               <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" style={{ animationDelay: "0.4s" }} />
             </div>
-            <p className="text-sm text-muted-foreground">Thinking...</p>
+            <p className="text-sm text-muted-foreground">
+              {isTranscribing ? "Transcribing..." : "Thinking..."}
+            </p>
           </div>
         </div>
       )}
@@ -231,20 +223,20 @@ export function VoiceChatTab({ slug }: VoiceChatTabProps) {
       )}
 
       {/* Text input */}
-      {!isListening && (
+      {!isRecording && !isTranscribing && (
         <div className="w-full animate-fade-in-up-delay-2">
           <div className="glass-card rounded-xl p-1 flex items-end gap-2">
             <Textarea
-              value={currentInput}
+              value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Or type your order here…"
               rows={3}
-              disabled={isListening || parseOrderMutation.isPending}
+              disabled={parseOrderMutation.isPending}
               className="flex-1 resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm placeholder:text-muted-foreground/60 disabled:opacity-50"
             />
             <button
               onClick={handleSubmit}
-              disabled={!currentInput.trim() || parseOrderMutation.isPending}
+              disabled={!input.trim() || parseOrderMutation.isPending}
               className="mb-1 mr-1 p-2.5 bg-primary/20 rounded-lg text-primary hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/50"
               aria-label="Submit order"
             >
