@@ -73,11 +73,15 @@ export interface MenuItemVariant {
   is_default: boolean;
 }
 
+export type MenuItemStatus = "active" | "sold_out" | "inactive";
+
 export interface MenuItem {
   id: number;
   name: string;
   description: string;
   image_url: string;
+  is_sold_out?: boolean;
+  is_featured?: boolean;
   variants: MenuItemVariant[];
   modifiers: MenuItemModifier[];
 }
@@ -100,6 +104,8 @@ export interface PublicMenu {
 export interface ParsedOrderItem {
   menu_item_id: number;
   name: string;
+  description?: string;
+  image_url?: string;
   variant: {
     id: number;
     label: string;
@@ -111,12 +117,44 @@ export interface ParsedOrderItem {
   line_total: string;
 }
 
+export interface UnavailableItem {
+  name: string;
+  reason: "sold_out" | "inactive";
+}
+
 export interface ParsedOrderResponse {
   items: ParsedOrderItem[];
+  unavailable_items?: UnavailableItem[];
   allergies: string[];
   total_price: string;
   language: string;
 }
+
+export interface RecommendationItem {
+  menu_item_id: number;
+  name: string;
+  description: string;
+  image_url: string;
+  variant_id: number;
+  variant_label: string;
+  variant_price: string;
+  quantity: number;
+  reason: string;
+  is_featured: boolean;
+  modifiers: MenuItemModifier[];
+  variants: MenuItemVariant[];
+}
+
+export interface RecommendationResponse {
+  type: "recommendation";
+  items: RecommendationItem[];
+}
+
+export interface OrderParseResponse extends ParsedOrderResponse {
+  type: "order";
+}
+
+export type ParseOrderResult = OrderParseResponse | RecommendationResponse;
 
 export interface ConfirmOrderItem {
   menu_item_id: number;
@@ -216,6 +254,7 @@ export interface ParsedMenuVariant {
 export interface ParsedMenuItem {
   name: string;
   description: string | null;
+  image_url: string | null;
   variants: ParsedMenuVariant[];
 }
 
