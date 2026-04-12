@@ -9,6 +9,7 @@ from restaurants.views_menu_upload import (
     MenuVersionListView,
 )
 from restaurants.views import (
+    BillingHistoryView,
     CancelSubscriptionView,
     ConnectDashboardView,
     ConnectOnboardView,
@@ -99,6 +100,11 @@ urlpatterns = [
         "restaurants/<slug:slug>/subscription/reactivate/",
         ReactivateSubscriptionView.as_view(),
         name="subscription-reactivate",
+    ),
+    path(
+        "restaurants/<slug:slug>/subscription/invoices/",
+        BillingHistoryView.as_view(),
+        name="subscription-invoices",
     ),
     # Payouts
     path(

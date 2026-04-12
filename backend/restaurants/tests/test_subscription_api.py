@@ -189,3 +189,75 @@ class TestCancelSubscription:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["cancel_at_period_end"] is False
         mock_modify.assert_called_once_with("sub_test123", cancel_at_period_end=False)
+
+
+@pytest.mark.django_db
+class TestBillingHistory:
+    @patch("stripe.Invoice.list")
+    def test_billing_history_returns_invoices(self, mock_invoice_list, api_client):
+        restaurant = RestaurantFactory()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
+            stripe_subscription_id="sub_hist_test",
+            stripe_customer_id="cus_hist_test",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+        api_client.force_authenticate(user=restaurant.owner)
+
+        mock_invoice_list.return_value = {
+            "data": [
+                {
+                    "id": "inv_001",
+                    "created": 1712000000,
+                    "amount_paid": 9900,
+                    "currency": "usd",
+                    "status": "paid",
+                    "lines": {
+                        "data": [
+                            {
+                                "description": "Growth plan",
+                                "price": {"metadata": {"plan": "growth"}},
+                            }
+                        ]
+                    },
+                    "hosted_invoice_url": "https://invoice.stripe.com/inv_001",
+                }
+            ]
+        }
+
+        response = api_client.get(
+            f"/api/restaurants/{restaurant.slug}/subscription/invoices/"
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["id"] == "inv_001"
+        assert response.data[0]["amount"] == 9900
+        assert response.data[0]["status"] == "paid"
+        assert response.data[0]["receipt_url"] == "https://invoice.stripe.com/inv_001"
+
+    def test_billing_history_requires_auth(self, api_client):
+        restaurant = RestaurantFactory()
+        response = api_client.get(
+            f"/api/restaurants/{restaurant.slug}/subscription/invoices/"
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_non_owner_cannot_view_billing_history(self, api_client):
+        restaurant = RestaurantFactory()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
+            stripe_customer_id="cus_other_test",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+        other_user = UserFactory()
+        api_client.force_authenticate(user=other_user)
+        response = api_client.get(
+            f"/api/restaurants/{restaurant.slug}/subscription/invoices/"
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
