@@ -255,6 +255,7 @@ export interface ParsedMenuItem {
   name: string;
   description: string | null;
   image_url: string | null;
+  is_featured?: boolean;
   variants: ParsedMenuVariant[];
 }
 
