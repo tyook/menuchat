@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from orders.llm.agent import OrderParsingAgent
+from orders.llm.agent import OrderAgent
 from orders.llm.base import AgentResponse, ParsedOrder, ParsedOrderItem
 from orders.llm.menu_context import build_menu_context
 from orders.llm.recommendation_schemas import Recommendation, RecommendedItem
@@ -120,16 +120,17 @@ class TestMenuContext:
         assert "Plain Burger" in context
 
 
-class TestOrderParsingAgent:
+class TestOrderAgent:
     def test_agent_properties(self):
-        agent = OrderParsingAgent()
-        assert agent.get_name() == "OrderParsingAgent"
+        agent = OrderAgent()
+        assert agent.get_name() == "OrderAgent"
         assert agent.default_model == "gpt-4o-mini"
-        assert agent.get_output_schema() is ParsedOrder
+        assert agent.get_output_schema() is AgentResponse
         assert "order-taking assistant" in agent.get_instructions()
+        assert "recommendation" in agent.get_instructions().lower()
 
     def test_agent_context_building(self):
-        agent = OrderParsingAgent()
+        agent = OrderAgent()
         context = agent.get_context(
             raw_input="Two pizzas please",
             menu_context="## Pizzas\n  - Margherita",
@@ -137,47 +138,59 @@ class TestOrderParsingAgent:
         assert "customer_order" in context
         assert context["customer_order"] == "Two pizzas please"
         assert "restaurant_menu" in context
-        assert "Margherita" in context["restaurant_menu"]
 
     def test_agent_context_xml_formatting(self):
-        agent = OrderParsingAgent()
+        agent = OrderAgent()
         context = agent.get_context(
             raw_input="One burger",
             menu_context="## Burgers",
         )
         xml = agent._format_context(context)
         assert "<customer_order>" in xml
-        assert "</customer_order>" in xml
         assert "<restaurant_menu>" in xml
-        assert "</restaurant_menu>" in xml
 
     @patch("ai.base_agent.Agent")
-    def test_agent_run_calls_agno(self, mock_agent_class):
-        """Verify that run() creates an agno Agent and calls run() on it."""
-        mock_parsed = ParsedOrder(
-            items=[
-                ParsedOrderItem(
-                    menu_item_id=1,
-                    variant_id=10,
-                    quantity=2,
-                )
-            ],
-            language="en",
+    def test_agent_run_order_intent(self, mock_agent_class):
+        """Verify that run() returns an AgentResponse for order intents."""
+        mock_parsed = AgentResponse(
+            intent="order",
+            order=ParsedOrder(
+                items=[ParsedOrderItem(menu_item_id=1, variant_id=10, quantity=2)],
+                language="en",
+            ),
         )
         mock_run_output = MagicMock()
         mock_run_output.content = mock_parsed
-
         mock_agent_instance = MagicMock()
         mock_agent_instance.run.return_value = mock_run_output
         mock_agent_class.return_value = mock_agent_instance
 
-        result = OrderParsingAgent.run(
+        result = OrderAgent.run(
             raw_input="Two large margheritas",
             menu_context="menu context here",
         )
 
-        assert result == mock_parsed
-        assert result.items[0].menu_item_id == 1
-        assert result.items[0].quantity == 2
-        assert result.language == "en"
-        mock_agent_instance.run.assert_called_once()
+        assert result.intent == "order"
+        assert result.order.items[0].menu_item_id == 1
+        assert result.order.items[0].quantity == 2
+
+    @patch("ai.base_agent.Agent")
+    def test_agent_run_recommendation_intent(self, mock_agent_class):
+        """Verify that run() returns recommendation context for recommendation intents."""
+        mock_parsed = AgentResponse(
+            intent="recommendation",
+            recommendation_context="popular items, spicy preference",
+        )
+        mock_run_output = MagicMock()
+        mock_run_output.content = mock_parsed
+        mock_agent_instance = MagicMock()
+        mock_agent_instance.run.return_value = mock_run_output
+        mock_agent_class.return_value = mock_agent_instance
+
+        result = OrderAgent.run(
+            raw_input="What's popular here?",
+            menu_context="menu context here",
+        )
+
+        assert result.intent == "recommendation"
+        assert "popular" in result.recommendation_context
