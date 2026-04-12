@@ -10,7 +10,7 @@ import logging
 from orders.llm.menu_context import build_menu_context
 from orders.llm.recommendation_agent import RecommendationAgent
 from orders.models import Order, OrderItem
-from restaurants.models import MenuItem, MenuItemVariant, Restaurant
+from restaurants.models import MenuItem, MenuItemModifier, MenuItemVariant, Restaurant
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,8 @@ class RecommendationService:
         dietary_preferences: list[str] | None = None,
         allergies: list[str] | None = None,
         language: str = "en",
+        recommendation_context: str | None = None,
+        max_items: int | None = None,
     ) -> dict:
         """
         Generate AI-powered menu recommendations for a customer.
@@ -98,6 +100,8 @@ class RecommendationService:
         kwargs = {"menu_context": menu_context, "preferences": preferences}
         if order_history:
             kwargs["order_history"] = order_history
+        if recommendation_context:
+            kwargs["recommendation_context"] = recommendation_context
 
         result = RecommendationAgent.run(**kwargs)
 
@@ -106,21 +110,42 @@ class RecommendationService:
         for rec in result.items:
             try:
                 item = MenuItem.objects.select_related("category__version").get(
-                    id=rec.menu_item_id, is_active=True
+                    id=rec.menu_item_id, status=MenuItem.Status.ACTIVE
                 )
                 variant = MenuItemVariant.objects.get(
                     id=rec.variant_id, menu_item=item
                 )
+                all_variants = [
+                    {
+                        "id": v.id,
+                        "label": v.label,
+                        "price": str(v.price),
+                        "is_default": v.is_default,
+                    }
+                    for v in item.variants.all()
+                ]
+                all_modifiers = [
+                    {
+                        "id": m.id,
+                        "name": m.name,
+                        "price_adjustment": str(m.price_adjustment),
+                    }
+                    for m in item.modifiers.all()
+                ]
                 validated_items.append(
                     {
                         "menu_item_id": item.id,
-                        "menu_item_name": item.name,
-                        "menu_item_description": item.description or "",
+                        "name": item.name,
+                        "description": item.description or "",
+                        "image_url": item.image_url or "",
                         "variant_id": variant.id,
                         "variant_label": variant.label,
                         "variant_price": str(variant.price),
-                        "image_url": item.image_url or "",
+                        "quantity": rec.quantity,
                         "reason": rec.reason,
+                        "is_featured": item.is_featured,
+                        "variants": all_variants,
+                        "modifiers": all_modifiers,
                     }
                 )
             except (MenuItem.DoesNotExist, MenuItemVariant.DoesNotExist):
@@ -130,6 +155,9 @@ class RecommendationService:
                     rec.variant_id,
                 )
                 continue
+
+            if max_items and len(validated_items) >= max_items:
+                break
 
         return {
             "items": validated_items,
