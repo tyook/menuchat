@@ -95,3 +95,68 @@ def send_subscription_activated_email(restaurant, plan: str) -> None:
         )
     except Exception:
         logger.exception("Failed to send subscription activated email for %s", restaurant.slug)
+
+
+def send_payment_failed_email(restaurant) -> None:
+    """Notify restaurant owner that their subscription payment failed."""
+    owner = restaurant.owner
+    if not owner.email:
+        return
+
+    context = {
+        "restaurant_name": restaurant.name,
+        "restaurant_slug": restaurant.slug,
+        "owner_name": owner.first_name or owner.name or "",
+        "frontend_url": settings.FRONTEND_URL,
+    }
+    html_message = render_to_string("emails/payment_failed.html", context)
+    plain_message = strip_tags(html_message)
+
+    try:
+        send_mail(
+            subject=f"Payment failed — {restaurant.name}",
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[owner.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Failed to send payment failed email for %s", restaurant.slug)
+
+
+def send_payment_success_email(restaurant, amount_cents: int, plan: str, period_end_timestamp: int) -> None:
+    """Notify restaurant owner that their subscription payment was received."""
+    owner = restaurant.owner
+    if not owner.email:
+        return
+
+    plan_config = settings.SUBSCRIPTION_PLANS.get(plan, {})
+    plan_name = plan_config.get("name", plan.title())
+    amount = f"${amount_cents / 100:,.2f}"
+    from datetime import datetime, UTC
+    period_end = datetime.fromtimestamp(period_end_timestamp, tz=UTC).strftime("%B %d, %Y")
+
+    context = {
+        "restaurant_name": restaurant.name,
+        "restaurant_slug": restaurant.slug,
+        "owner_name": owner.first_name or owner.name or "",
+        "amount": amount,
+        "plan_name": plan_name,
+        "period_end": period_end,
+        "frontend_url": settings.FRONTEND_URL,
+    }
+    html_message = render_to_string("emails/payment_success.html", context)
+    plain_message = strip_tags(html_message)
+
+    try:
+        send_mail(
+            subject=f"Payment received — {restaurant.name}",
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[owner.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Failed to send payment success email for %s", restaurant.slug)

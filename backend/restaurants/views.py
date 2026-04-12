@@ -236,6 +236,54 @@ class ReactivateSubscriptionView(RestaurantMixin, APIView):
         return Response(SubscriptionSerializer(subscription).data)
 
 
+class BillingHistoryView(RestaurantMixin, APIView):
+    """GET /api/restaurants/:slug/subscription/invoices/ - List Stripe invoices."""
+
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
+    def get(self, request, slug):
+        restaurant = self.get_restaurant()
+        try:
+            subscription = restaurant.subscription
+        except Subscription.DoesNotExist:
+            return Response([])
+
+        if not subscription.stripe_customer_id:
+            return Response([])
+
+        import stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+
+        invoices = stripe.Invoice.list(
+            customer=subscription.stripe_customer_id,
+            limit=12,
+        )
+
+        result = []
+        for inv in invoices["data"]:
+            # Extract plan name from line items
+            plan_name = ""
+            lines = inv.get("lines", {}).get("data", [])
+            if lines:
+                price_meta = lines[0].get("price", {}).get("metadata", {})
+                plan_name = price_meta.get("plan", "").title()
+                if not plan_name:
+                    plan_name = lines[0].get("description", "")
+
+            result.append({
+                "id": inv["id"],
+                "date": inv["created"],
+                "amount": inv["amount_paid"],
+                "currency": inv["currency"],
+                "status": inv["status"],
+                "plan": plan_name,
+                "receipt_url": inv.get("hosted_invoice_url", ""),
+            })
+
+        return Response(result)
+
+
 from rest_framework.pagination import PageNumberPagination
 from restaurants.serializers import PayoutListSerializer, PayoutDetailSerializer
 from restaurants.models import Payout

@@ -13,6 +13,7 @@ import {
   useCancelSubscription,
   useReactivateSubscription,
 } from "@/hooks/use-subscription";
+import { useBillingHistory } from "@/hooks/use-billing-history";
 
 const PLANS = [
   {
@@ -65,6 +66,7 @@ export default function BillingPage() {
   const createPortal = useCreateBillingPortal(params.slug);
   const cancelSub = useCancelSubscription(params.slug);
   const reactivateSub = useReactivateSubscription(params.slug);
+  const { data: invoices, isLoading: invoicesLoading } = useBillingHistory(params.slug);
 
   if (isAuthenticated === null || isLoading) {
     return (
@@ -280,6 +282,64 @@ export default function BillingPage() {
             );
           })}
         </div>
+
+        {/* Billing History */}
+        <h2 className="text-lg font-semibold mt-8 mb-4">Billing History</h2>
+        <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+          {invoicesLoading ? (
+            <div className="flex justify-center p-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          ) : !invoices || invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-6">
+              No billing history yet.
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Amount</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Plan</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right p-4 font-medium text-muted-foreground">Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id} className="border-b border-border last:border-0">
+                    <td className="p-4">
+                      {new Date(invoice.date * 1000).toLocaleDateString()}
+                    </td>
+                    <td className="p-4">
+                      ${(invoice.amount / 100).toFixed(2)}
+                    </td>
+                    <td className="p-4">{invoice.plan}</td>
+                    <td className="p-4">
+                      <Badge
+                        variant={invoice.status === "paid" ? "default" : "outline"}
+                      >
+                        {invoice.status}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-right">
+                      {invoice.receipt_url && (
+                        <a
+                          href={invoice.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          View
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
       </div>
     </div>
   );

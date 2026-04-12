@@ -38,7 +38,7 @@ export default function OrderPage() {
   }, [reset]);
 
   useEffect(() => {
-    if (menu?.payment_model) {
+    if (menu && menu.available !== false && menu.payment_model) {
       setPaymentModel(menu.payment_model);
     }
   }, [menu, setPaymentModel]);
@@ -47,6 +47,17 @@ export default function OrderPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (menu && menu.available === false) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
+        <h1 className="text-xl font-semibold mb-2">{menu.restaurant_name}</h1>
+        <p className="text-muted-foreground">
+          This restaurant is not currently accepting online orders.
+        </p>
       </div>
     );
   }

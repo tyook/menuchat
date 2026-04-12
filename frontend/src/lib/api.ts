@@ -130,6 +130,7 @@ export async function apiFetch<T>(
 
 import type {
   PublicMenu,
+  MenuUnavailable,
   ParseOrderResult,
   ConfirmOrderItem,
   OrderResponse,
@@ -236,8 +237,8 @@ export async function deletePaymentMethod(pmId: string): Promise<void> {
 }
 
 // ── Public Order Flow ──
-export async function fetchMenu(slug: string): Promise<PublicMenu> {
-  return apiFetch<PublicMenu>(`/api/order/${slug}/menu/`);
+export async function fetchMenu(slug: string): Promise<PublicMenu | MenuUnavailable> {
+  return apiFetch<PublicMenu | MenuUnavailable>(`/api/order/${slug}/menu/`);
 }
 
 export async function parseOrder(
@@ -704,6 +705,13 @@ export async function fetchAnalytics(
   return apiFetch<AnalyticsResponse>(
     `/api/restaurants/${slug}/analytics/?period=${period}`
   );
+}
+
+// ── Billing History ──
+import type { BillingInvoice } from "@/types";
+
+export async function fetchBillingHistory(slug: string): Promise<BillingInvoice[]> {
+  return apiFetch<BillingInvoice[]>(`/api/restaurants/${slug}/subscription/invoices/`);
 }
 
 // ── Onboarding ──
