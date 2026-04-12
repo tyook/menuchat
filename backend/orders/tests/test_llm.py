@@ -58,12 +58,34 @@ class TestMenuContext:
         restaurant = RestaurantFactory()
         version = MenuVersionFactory(restaurant=restaurant, is_active=True)
         cat = MenuCategoryFactory(version=version)
-        MenuItemFactory(category=cat, name="Active Item", is_active=True)
-        MenuItemFactory(category=cat, name="Hidden Item", is_active=False)
+        MenuItemFactory(category=cat, name="Active Item", status="active")
+        MenuItemFactory(category=cat, name="Hidden Item", status="inactive")
 
         context = build_menu_context(restaurant)
         assert "Active Item" in context
         assert "Hidden Item" not in context
+
+    def test_build_menu_context_includes_featured_marker(self):
+        restaurant = RestaurantFactory()
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Mains")
+        item = MenuItemFactory(category=cat, name="Signature Burger", is_featured=True)
+        MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("12.99"))
+
+        context = build_menu_context(restaurant)
+        assert "[FEATURED]" in context
+        assert "Signature Burger" in context
+
+    def test_build_menu_context_no_featured_marker_when_false(self):
+        restaurant = RestaurantFactory()
+        version = MenuVersionFactory(restaurant=restaurant, is_active=True)
+        cat = MenuCategoryFactory(version=version, name="Mains")
+        item = MenuItemFactory(category=cat, name="Plain Burger", is_featured=False)
+        MenuItemVariantFactory(menu_item=item, label="Regular", price=Decimal("10.99"))
+
+        context = build_menu_context(restaurant)
+        assert "[FEATURED]" not in context
+        assert "Plain Burger" in context
 
 
 class TestOrderParsingAgent:

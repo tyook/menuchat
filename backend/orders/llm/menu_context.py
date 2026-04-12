@@ -1,4 +1,4 @@
-from restaurants.models import MenuCategory, MenuVersion, Restaurant
+from restaurants.models import MenuCategory, MenuItem, MenuVersion, Restaurant
 
 
 def build_menu_context(restaurant: Restaurant) -> str:
@@ -20,11 +20,19 @@ def build_menu_context(restaurant: Restaurant) -> str:
 
     for category in categories:
         lines.append(f"## {category.name}")
-        active_items = category.items.filter(is_active=True).order_by("sort_order")
+        visible_items = category.items.filter(
+            status__in=[MenuItem.Status.ACTIVE, MenuItem.Status.SOLD_OUT]
+        ).order_by("sort_order")
 
-        for item in active_items:
-            upsell_marker = " [UPSELLABLE]" if item.is_upsellable else ""
-            lines.append(f"  - {item.name} (item_id: {item.id}){upsell_marker}")
+        for item in visible_items:
+            markers = ""
+            if item.status == MenuItem.Status.SOLD_OUT:
+                markers += " [SOLD OUT]"
+            if item.is_upsellable:
+                markers += " [UPSELLABLE]"
+            if item.is_featured:
+                markers += " [FEATURED]"
+            lines.append(f"  - {item.name} (item_id: {item.id}){markers}")
             if item.description:
                 lines.append(f"    Description: {item.description}")
 
