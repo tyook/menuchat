@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,14 @@ import {
   useAdminMenu,
   useAddCategory,
   useAddMenuItem,
-  useDeactivateMenuItem,
+  useDeleteMenuItem,
+  useSetMenuItemStatus,
+  useToggleFeatured,
   useToggleUpsellable,
+  useUpdateMenuItem,
+  useUpdateMenuItemImage,
 } from "@/hooks/use-admin-menu";
+import { useUploadMenuItemImage } from "@/hooks/use-menu-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
@@ -39,11 +44,96 @@ export default function MenuManagementPage() {
     variantPrice: "",
   });
 
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    description: string;
+    variants: { id: number; label: string; price: string; is_default: boolean }[];
+  }>({ name: "", description: "", variants: [] });
+
   const { data: menu, isLoading } = useAdminMenu(params.slug, isAuthenticated === true);
   const addCategory = useAddCategory(params.slug);
   const addMenuItem = useAddMenuItem(params.slug);
-  const deactivateMenuItem = useDeactivateMenuItem(params.slug);
+  const deleteMenuItem = useDeleteMenuItem(params.slug);
+  const setMenuItemStatus = useSetMenuItemStatus(params.slug);
   const toggleUpsellable = useToggleUpsellable(params.slug);
+  const toggleFeatured = useToggleFeatured(params.slug);
+  const updateMenuItem = useUpdateMenuItem(params.slug);
+  const uploadImage = useUploadMenuItemImage(params.slug);
+  const updateItemImage = useUpdateMenuItemImage(params.slug);
+  const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pendingItemIdRef = useRef<number | null>(null);
+
+  const handleImageUpload = async (itemId: number, file: File) => {
+    setUploadingItemId(itemId);
+    try {
+      const result = await uploadImage.mutateAsync(file);
+      await updateItemImage.mutateAsync({ itemId, image_url: result.image_url });
+    } catch {
+      // error is handled by mutation
+    } finally {
+      setUploadingItemId(null);
+    }
+  };
+
+  const startEditing = (item: {
+    id: number;
+    name: string;
+    description: string;
+    variants: { id: number; label: string; price: string; is_default: boolean }[];
+  }) => {
+    setEditingItemId(item.id);
+    setEditForm({
+      name: item.name,
+      description: item.description || "",
+      variants: item.variants.map((v) => ({ ...v })),
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingItemId) return;
+    // Strip temporary negative ids so the backend creates them as new
+    const variants = editForm.variants.map((v) =>
+      v.id < 0 ? { label: v.label, price: v.price, is_default: v.is_default } : v
+    );
+    updateMenuItem.mutate(
+      {
+        itemId: editingItemId,
+        name: editForm.name,
+        description: editForm.description,
+        variants,
+      },
+      { onSuccess: () => setEditingItemId(null) },
+    );
+  };
+
+  let nextTempId = -1;
+  const addEditVariant = () => {
+    const tempId = nextTempId--;
+    setEditForm((prev) => ({
+      ...prev,
+      variants: [...prev.variants, { id: tempId, label: "", price: "", is_default: false }],
+    }));
+  };
+
+  const removeEditVariant = (index: number) => {
+    setEditForm((prev) => {
+      const variants = prev.variants.filter((_, i) => i !== index);
+      // Ensure at least one default
+      if (variants.length > 0 && !variants.some((v) => v.is_default)) {
+        variants[0] = { ...variants[0], is_default: true };
+      }
+      return { ...prev, variants };
+    });
+  };
+
+  const setDefaultVariant = (index: number) => {
+    setEditForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => ({ ...v, is_default: i === index })),
+    }));
+  };
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,10 +176,6 @@ export default function MenuManagementPage() {
         },
       }
     );
-  };
-
-  const handleDeactivateItem = (itemId: number) => {
-    deactivateMenuItem.mutate(itemId);
   };
 
   if (isAuthenticated === null || isLoading) {
@@ -152,78 +238,321 @@ export default function MenuManagementPage() {
               {cat.items.map((item) => (
                 <Card
                   key={item.id}
-                  className={`bg-card border border-border rounded-2xl p-4 hover:bg-muted/50 transition-colors ${!item.is_active ? "opacity-50" : ""}`}
+                  className={`bg-card border border-border rounded-2xl p-4 hover:bg-muted/50 transition-colors ${item.status !== "active" ? "opacity-60" : ""}`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.name}</span>
-                        {!item.is_active && (
-                          <Badge variant="secondary">Inactive</Badge>
+                  {editingItemId === item.id ? (
+                    /* ── Edit mode ── */
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        {item.image_url && (
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-14 h-14 rounded-lg object-cover shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 space-y-2">
+                          <div>
+                            <Label className="text-xs">Name</Label>
+                            <Input
+                              value={editForm.name}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, name: e.target.value })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Description</Label>
+                            <Input
+                              value={editForm.description}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, description: e.target.value })
+                              }
+                              placeholder="Optional description"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Variants</Label>
+                        <div className="space-y-2 mt-1">
+                          {editForm.variants.map((v, vi) => (
+                            <div key={v.id} className="flex gap-2 items-center">
+                              <div className="grid grid-cols-2 gap-2 flex-1">
+                                <Input
+                                  value={v.label}
+                                  onChange={(e) => {
+                                    const variants = [...editForm.variants];
+                                    variants[vi] = { ...v, label: e.target.value };
+                                    setEditForm({ ...editForm, variants });
+                                  }}
+                                  placeholder="Label (e.g. Large)"
+                                />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={v.price}
+                                  onChange={(e) => {
+                                    const variants = [...editForm.variants];
+                                    variants[vi] = { ...v, price: e.target.value };
+                                    setEditForm({ ...editForm, variants });
+                                  }}
+                                  placeholder="Price"
+                                />
+                              </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDefaultVariant(vi)}
+                                    className={`shrink-0 text-xs px-2 py-1 rounded ${v.is_default ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                                  >
+                                    Default
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Set as the default variant shown to customers</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              {editForm.variants.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="shrink-0 text-destructive hover:text-destructive h-8 w-8 p-0"
+                                  onClick={() => removeEditVariant(vi)}
+                                >
+                                  ×
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={addEditVariant}
+                        >
+                          + Add Variant
+                        </Button>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          disabled={updateMenuItem.isPending}
+                        >
+                          {updateMenuItem.isPending ? "Saving..." : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingItemId(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── View mode ── */
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-3">
+                        {item.status === "active" && (
+                          <div className="shrink-0">
+                            {uploadingItemId === item.id ? (
+                              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                              </div>
+                            ) : item.image_url ? (
+                              <button
+                                className="relative w-14 h-14 group"
+                                onClick={() => {
+                                  pendingItemIdRef.current = item.id;
+                                  imageInputRef.current?.click();
+                                }}
+                                title="Change image"
+                              >
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-14 h-14 rounded-lg object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-white text-[10px] font-medium">Change</span>
+                                </div>
+                              </button>
+                            ) : (
+                              <button
+                                className="w-14 h-14 rounded-lg border-2 border-dashed border-border hover:border-primary/40 flex items-center justify-center transition-colors"
+                                onClick={() => {
+                                  pendingItemIdRef.current = item.id;
+                                  imageInputRef.current?.click();
+                                }}
+                                title="Add photo"
+                              >
+                                <span className="text-muted-foreground text-[10px]">+ Photo</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{item.name}</span>
+                            {item.status === "sold_out" && (
+                              <Badge variant="outline" className="border-amber-500/50 text-amber-500">Sold out</Badge>
+                            )}
+                            {item.status === "inactive" && (
+                              <Badge variant="secondary">Inactive</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {item.description}
+                          </p>
+                          <div className="text-sm mt-1">
+                            {item.variants.map((v) => (
+                              <span key={v.id} className="mr-3">
+                                {v.label}: ${v.price}
+                                {v.is_default && " (default)"}
+                              </span>
+                            ))}
+                          </div>
+                          {item.modifiers.length > 0 && (
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Modifiers:{" "}
+                              {item.modifiers
+                                .map(
+                                  (m) =>
+                                    `${m.name} (+$${m.price_adjustment})`
+                                )
+                                .join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {item.status === "active" && (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5">
+                                  <Checkbox
+                                    id={`upsell-${item.id}`}
+                                    checked={item.is_upsellable}
+                                    onCheckedChange={(checked) =>
+                                      toggleUpsellable.mutate({
+                                        itemId: item.id,
+                                        is_upsellable: checked === true,
+                                      })
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={`upsell-${item.id}`}
+                                    className="text-xs text-muted-foreground cursor-pointer"
+                                  >
+                                    Upsellable
+                                  </Label>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Checked items may be suggested to customers as add-ons before they submit their order.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5">
+                                  <Checkbox
+                                    id={`featured-${item.id}`}
+                                    checked={item.is_featured}
+                                    onCheckedChange={(checked) =>
+                                      toggleFeatured.mutate({
+                                        itemId: item.id,
+                                        is_featured: checked === true,
+                                      })
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={`featured-${item.id}`}
+                                    className="text-xs text-muted-foreground cursor-pointer"
+                                  >
+                                    Featured
+                                  </Label>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Featured items are prioritized in AI recommendations.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => startEditing(item)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-amber-500 hover:text-amber-400"
+                              onClick={() =>
+                                setMenuItemStatus.mutate({ itemId: item.id, status: "sold_out" })
+                              }
+                            >
+                              Sold out
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setMenuItemStatus.mutate({ itemId: item.id, status: "inactive" })
+                              }
+                            >
+                              Deactivate
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("Permanently delete this item?")) {
+                                  deleteMenuItem.mutate(item.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                        {(item.status === "sold_out" || item.status === "inactive") && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-500 hover:text-green-400"
+                              onClick={() =>
+                                setMenuItemStatus.mutate({ itemId: item.id, status: "active" })
+                              }
+                            >
+                              Re-activate
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm("Permanently delete this item?")) {
+                                  deleteMenuItem.mutate(item.id);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-                      <div className="text-sm mt-1">
-                        {item.variants.map((v) => (
-                          <span key={v.id} className="mr-3">
-                            {v.label}: ${v.price}
-                            {v.is_default && " (default)"}
-                          </span>
-                        ))}
-                      </div>
-                      {item.modifiers.length > 0 && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          Modifiers:{" "}
-                          {item.modifiers
-                            .map(
-                              (m) =>
-                                `${m.name} (+$${m.price_adjustment})`
-                            )
-                            .join(", ")}
-                        </div>
-                      )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {item.is_active && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5">
-                              <Checkbox
-                                id={`upsell-${item.id}`}
-                                checked={item.is_upsellable}
-                                onCheckedChange={(checked) =>
-                                  toggleUpsellable.mutate({
-                                    itemId: item.id,
-                                    is_upsellable: checked === true,
-                                  })
-                                }
-                              />
-                              <Label
-                                htmlFor={`upsell-${item.id}`}
-                                className="text-xs text-muted-foreground cursor-pointer"
-                              >
-                                Upsellable
-                              </Label>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Checked items may be suggested to customers as add-ons before they submit their order.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {item.is_active && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeactivateItem(item.id)}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -318,6 +647,23 @@ export default function MenuManagementPage() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         hasExistingMenu={!!menu?.categories?.length}
+      />
+
+      {/* Hidden file input for item image uploads */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const itemId = pendingItemIdRef.current;
+          if (file && itemId) {
+            handleImageUpload(itemId, file);
+          }
+          e.target.value = "";
+          pendingItemIdRef.current = null;
+        }}
       />
     </div>
   );
