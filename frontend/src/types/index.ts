@@ -92,11 +92,18 @@ export interface MenuCategory {
   items: MenuItem[];
 }
 
+export interface MenuUnavailable {
+  available: false;
+  restaurant_name: string;
+}
+
 export interface PublicMenu {
+  available: true;
   restaurant_name: string;
   tax_rate: string;
   payment_mode: "stripe" | "pos_collected";
   payment_model: "upfront" | "tab";
+  payment_ready: boolean;
   categories: MenuCategory[];
 }
 
