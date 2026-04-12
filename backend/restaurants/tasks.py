@@ -58,3 +58,18 @@ def send_payment_failed_email_task(restaurant_id: str):
 
     from restaurants.notifications import send_payment_failed_email
     send_payment_failed_email(restaurant)
+
+
+@shared_task
+def send_payment_success_email_task(restaurant_id: str, amount_cents: int, plan: str, period_end_timestamp: int):
+    """Send payment success email after invoice paid (async)."""
+    from restaurants.models import Restaurant
+
+    try:
+        restaurant = Restaurant.objects.select_related("owner").get(id=restaurant_id)
+    except Restaurant.DoesNotExist:
+        logger.warning("send_payment_success_email_task: restaurant %s not found", restaurant_id)
+        return
+
+    from restaurants.notifications import send_payment_success_email
+    send_payment_success_email(restaurant, amount_cents, plan, period_end_timestamp)
