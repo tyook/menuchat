@@ -95,3 +95,31 @@ def send_subscription_activated_email(restaurant, plan: str) -> None:
         )
     except Exception:
         logger.exception("Failed to send subscription activated email for %s", restaurant.slug)
+
+
+def send_payment_failed_email(restaurant) -> None:
+    """Notify restaurant owner that their subscription payment failed."""
+    owner = restaurant.owner
+    if not owner.email:
+        return
+
+    context = {
+        "restaurant_name": restaurant.name,
+        "restaurant_slug": restaurant.slug,
+        "owner_name": owner.first_name or owner.name or "",
+        "frontend_url": settings.FRONTEND_URL,
+    }
+    html_message = render_to_string("emails/payment_failed.html", context)
+    plain_message = strip_tags(html_message)
+
+    try:
+        send_mail(
+            subject=f"Payment failed — {restaurant.name}",
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[owner.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Failed to send payment failed email for %s", restaurant.slug)
