@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,11 @@ export default function OrderStatusPageClient() {
   const orderId = params.orderId;
 
   const { data: order, isLoading, error } = useOrderStatus(slug, orderId);
-  const { isAuthenticated, register } = useAuthStore();
+  const { isAuthenticated, register, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const [showRegister, setShowRegister] = useState(false);
   const [registerForm, setRegisterForm] = useState({ email: "", password: "" });
