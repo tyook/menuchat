@@ -185,3 +185,56 @@ class TestIsSubscriptionActive:
             current_period_end=timezone.now() + timedelta(days=30),
         )
         assert OrderService.is_subscription_active(restaurant) is True
+
+
+@pytest.mark.django_db
+class TestPublicMenuSubscriptionGate:
+    def test_menu_returns_available_true_when_active(self, api_client):
+        restaurant = _setup_restaurant_with_menu()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="starter",
+            status="active",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+        response = api_client.get(f"/api/order/{restaurant.slug}/menu/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["available"] is True
+        assert "categories" in response.data
+
+    def test_menu_returns_available_false_when_canceled(self, api_client):
+        restaurant = _setup_restaurant_with_menu()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="starter",
+            status="canceled",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() - timedelta(days=1),
+        )
+        response = api_client.get(f"/api/order/{restaurant.slug}/menu/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["available"] is False
+        assert response.data["restaurant_name"] == restaurant.name
+        assert "categories" not in response.data
+
+    def test_menu_returns_available_false_when_trial_expired(self, api_client):
+        restaurant = _setup_restaurant_with_menu()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="starter",
+            status="trialing",
+            trial_end=timezone.now() - timedelta(days=1),
+            current_period_start=timezone.now() - timedelta(days=15),
+            current_period_end=timezone.now() - timedelta(days=1),
+        )
+        response = api_client.get(f"/api/order/{restaurant.slug}/menu/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["available"] is False
+
+    def test_menu_returns_available_true_when_no_subscription(self, api_client):
+        restaurant = _setup_restaurant_with_menu()
+        response = api_client.get(f"/api/order/{restaurant.slug}/menu/")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["available"] is True
+        assert "categories" in response.data

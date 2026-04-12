@@ -19,7 +19,17 @@ class PublicMenuView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, slug):
-        return Response(OrderService.get_public_menu(slug))
+        restaurant = OrderService.get_restaurant_by_slug(slug)
+
+        if not OrderService.is_subscription_active(restaurant):
+            return Response({
+                "available": False,
+                "restaurant_name": restaurant.name,
+            })
+
+        menu = OrderService.get_public_menu(slug)
+        menu["available"] = True
+        return Response(menu)
 
 
 class ParseOrderView(APIView):
