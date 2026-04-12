@@ -214,6 +214,7 @@ class CreatePaymentView(APIView):
                 args=[str(order.restaurant_id), str(order.id)],
             )
             dispatch_order_to_pos.delay(str(order.id))
+            OrderService._send_confirmation_emails(order)
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
