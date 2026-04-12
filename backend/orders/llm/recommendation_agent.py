@@ -51,6 +51,8 @@ class RecommendationAgent(BaseAgent):
             context["customer_preferences"] = kwargs["preferences"]
         if "order_history" in kwargs:
             context["order_history"] = kwargs["order_history"]
+        if "recommendation_context" in kwargs:
+            context["customer_request"] = kwargs["recommendation_context"]
         return context
 
     def prompt(self, **kwargs: Any) -> str:
