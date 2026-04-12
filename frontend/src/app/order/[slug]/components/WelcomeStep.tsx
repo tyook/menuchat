@@ -25,11 +25,11 @@ export function WelcomeStep({ restaurantName, slug }: WelcomeStepProps) {
       {/* Ambient glow orbs */}
       <div
         aria-hidden
-        className="absolute top-1/4 left-1/4 -z-10 h-[350px] w-[350px] rounded-full animate-glow-pulse pointer-events-none bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+        className="absolute top-1/4 left-1/4 -z-10 h-[350px] w-[350px] rounded-full animate-glow-pulse pointer-events-none bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
       />
       <div
         aria-hidden
-        className="absolute bottom-1/4 right-1/4 -z-10 h-[250px] w-[250px] rounded-full animate-glow-pulse pointer-events-none bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+        className="absolute bottom-1/4 right-1/4 -z-10 h-[250px] w-[250px] rounded-full animate-glow-pulse pointer-events-none bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
         style={{ animationDelay: "2s" }}
       />
 

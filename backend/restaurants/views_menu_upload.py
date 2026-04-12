@@ -7,11 +7,13 @@ from rest_framework.views import APIView
 from restaurants.llm.schemas import ParsedMenu
 from restaurants.models import MenuVersion
 from restaurants.serializers.menu_upload_serializers import (
+    ALLOWED_IMAGE_CONTENT_TYPES,
     MenuSaveSerializer,
     MenuUploadParseSerializer,
     MenuVersionRenameSerializer,
     MenuVersionSerializer,
 )
+from restaurants.services.image_upload_service import ImageUploadService
 from restaurants.services.menu_upload_service import MenuUploadService
 from restaurants.services.menu_version_service import MenuVersionService
 from restaurants.views import RestaurantMixin
@@ -72,6 +74,55 @@ class MenuUploadSaveView(RestaurantMixin, APIView):
             MenuVersionSerializer(new_version).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class MenuItemImageUploadView(RestaurantMixin, APIView):
+    """Upload a single image for a menu item and return the public URL."""
+
+    MAX_SIZE = 10 * 1024 * 1024  # 10MB
+
+    def post(self, request, slug):
+        self.get_restaurant()  # permission check
+
+        image = request.FILES.get("image")
+        if not image:
+            return Response(
+                {"detail": "No image file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        content_type = getattr(image, "content_type", "")
+        if content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+            return Response(
+                {"detail": "Upload a valid image file (jpeg, png, gif, webp, heic)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if image.size > self.MAX_SIZE:
+            return Response(
+                {"detail": "Image exceeds 10MB limit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            url = ImageUploadService.upload_menu_item_image(
+                restaurant_slug=slug,
+                image_file=image,
+            )
+        except RuntimeError as e:
+            logger.error("Image upload config error: %s", e)
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception:
+            logger.exception("Image upload failed for restaurant %s", slug)
+            return Response(
+                {"detail": "Failed to upload image. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response({"image_url": url}, status=status.HTTP_201_CREATED)
 
 
 class MenuVersionListView(RestaurantMixin, APIView):

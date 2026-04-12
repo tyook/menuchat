@@ -83,7 +83,7 @@ function OnboardingPageContent() {
   return (
     <div className="min-h-screen bg-background flex items-start justify-center px-4 py-8 relative overflow-hidden">
       {/* Ambient glow orb */}
-      <div className="absolute w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(124,58,237,0.10),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none top-1/4 left-1/2 -translate-x-1/2" />
+      <div className="absolute w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(217,119,6,0.10),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none top-1/4 left-1/2 -translate-x-1/2" />
 
       <div className="w-full max-w-xl relative z-10">
         {/* Step indicators */}

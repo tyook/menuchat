@@ -1,6 +1,7 @@
 from django.urls import path
 
 from restaurants.views_menu_upload import (
+    MenuItemImageUploadView,
     MenuUploadParseView,
     MenuUploadSaveView,
     MenuVersionActivateView,
@@ -113,6 +114,7 @@ urlpatterns = [
     # Menu Upload & Versions
     path("restaurants/<slug:slug>/menu/upload/parse/", MenuUploadParseView.as_view(), name="menu-upload-parse"),
     path("restaurants/<slug:slug>/menu/upload/save/", MenuUploadSaveView.as_view(), name="menu-upload-save"),
+    path("restaurants/<slug:slug>/menu/upload/image/", MenuItemImageUploadView.as_view(), name="menu-item-image-upload"),
     path("restaurants/<slug:slug>/menu/versions/", MenuVersionListView.as_view(), name="menu-versions"),
     path("restaurants/<slug:slug>/menu/versions/<int:pk>/", MenuVersionDetailView.as_view(), name="menu-version-detail"),
     path("restaurants/<slug:slug>/menu/versions/<int:pk>/activate/", MenuVersionActivateView.as_view(), name="menu-version-activate"),

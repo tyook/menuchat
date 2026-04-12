@@ -113,6 +113,7 @@ class MenuUploadService:
                     category=category,
                     name=parsed_item.name,
                     description=parsed_item.description or "",
+                    image_url=parsed_item.image_url or "",
                     sort_order=sort_idx,
                 )
                 for variant in parsed_item.variants:

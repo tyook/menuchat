@@ -147,17 +147,7 @@ class MenuItemDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView)
         return ctx
 
     def perform_destroy(self, instance):
-        """Soft-delete: deactivate instead of deleting."""
-        instance.is_active = False
-        instance.save()
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(
-            {"status": "deactivated", "id": instance.id},
-            status=status.HTTP_200_OK,
-        )
+        instance.delete()
 
 
 class FullMenuView(RestaurantMixin, APIView):

@@ -191,11 +191,11 @@ body {
 }
 
 .glow-primary {
-  box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 0 30px rgba(217, 119, 6, 0.25);
 }
 
 .glow-primary-lg {
-  box-shadow: 0 0 60px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 0 60px rgba(217, 119, 6, 0.3);
 }
 
 .ambient-orb {
@@ -221,7 +221,7 @@ body {
     --card-foreground: 210 40% 96%;
     --popover: 217 33% 17%;
     --popover-foreground: 210 40% 96%;
-    --primary: 263 70% 50%;
+    --primary: 32 95% 44%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 25% 27%;
     --secondary-foreground: 210 40% 96%;
@@ -233,18 +233,18 @@ body {
     --destructive-foreground: 0 0% 98%;
     --border: 215 20% 18%;
     --input: 215 20% 20%;
-    --ring: 263 70% 50%;
-    --chart-1: 263 70% 55%;
+    --ring: 32 95% 44%;
+    --chart-1: 32 95% 50%;
     --chart-2: 232 70% 65%;
     --chart-3: 280 65% 60%;
     --chart-4: 160 60% 45%;
     --chart-5: 340 75% 55%;
 
     /* Gradient tokens (not usable in hsl() but referenced in utility classes) */
-    --primary-from: #7c3aed;
-    --primary-to: #6366f1;
-    --accent-from: #f0abfc;
-    --accent-to: #818cf8;
+    --primary-from: #d97706;
+    --primary-to: #ea580c;
+    --accent-from: #fbbf24;
+    --accent-to: #f59e0b;
 
     /* Semantic status colors (HSL values for use with hsl()) */
     --success: 142 71% 45%;
@@ -263,7 +263,7 @@ body {
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 263 70% 50%;
+    --primary: 32 95% 44%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 30% 93%;
     --secondary-foreground: 222 47% 11%;
@@ -275,17 +275,17 @@ body {
     --destructive-foreground: 0 0% 98%;
     --border: 214 20% 84%;
     --input: 214 20% 84%;
-    --ring: 263 70% 50%;
-    --chart-1: 263 70% 55%;
+    --ring: 32 95% 44%;
+    --chart-1: 32 95% 50%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --primary-from: #7c3aed;
-    --primary-to: #6366f1;
-    --accent-from: #7c3aed;
-    --accent-to: #6366f1;
+    --primary-from: #d97706;
+    --primary-to: #ea580c;
+    --accent-from: #d97706;
+    --accent-to: #ea580c;
 
     --success: 142 71% 36%;
     --success-foreground: 0 0% 100%;
@@ -303,7 +303,7 @@ body {
     --card-foreground: 210 40% 96%;
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 96%;
-    --primary: 263 70% 50%;
+    --primary: 32 95% 44%;
     --primary-foreground: 0 0% 100%;
     --secondary: 222 40% 12%;
     --secondary-foreground: 210 40% 96%;
@@ -315,17 +315,17 @@ body {
     --destructive-foreground: 0 0% 98%;
     --border: 222 30% 14%;
     --input: 222 30% 16%;
-    --ring: 263 70% 50%;
-    --chart-1: 263 70% 55%;
+    --ring: 32 95% 44%;
+    --chart-1: 32 95% 50%;
     --chart-2: 48 96% 53%;
     --chart-3: 142 71% 45%;
     --chart-4: 0 84% 60%;
     --chart-5: 217 91% 60%;
 
-    --primary-from: #7c3aed;
-    --primary-to: #6366f1;
-    --accent-from: #f0abfc;
-    --accent-to: #818cf8;
+    --primary-from: #d97706;
+    --primary-to: #ea580c;
+    --accent-from: #fbbf24;
+    --accent-to: #f59e0b;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;

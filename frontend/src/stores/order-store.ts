@@ -107,6 +107,8 @@ export const useOrderStore = create<OrderState>((set) => ({
       const newItem: ParsedOrderItem = {
         menu_item_id: menuItem.id,
         name: menuItem.name,
+        description: menuItem.description || undefined,
+        image_url: menuItem.image_url || undefined,
         variant: { id: variant.id, label: variant.label, price: variant.price },
         quantity,
         modifiers,

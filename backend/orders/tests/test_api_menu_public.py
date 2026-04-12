@@ -31,8 +31,8 @@ class TestPublicMenu:
         restaurant = RestaurantFactory(slug="inactive-test")
         version = MenuVersionFactory(restaurant=restaurant, is_active=True)
         cat = MenuCategoryFactory(version=version)
-        MenuItemFactory(category=cat, is_active=True)
-        MenuItemFactory(category=cat, is_active=False)
+        MenuItemFactory(category=cat, status="active")
+        MenuItemFactory(category=cat, status="inactive")
 
         response = api_client.get("/api/order/inactive-test/menu/")
         assert len(response.data["categories"][0]["items"]) == 1

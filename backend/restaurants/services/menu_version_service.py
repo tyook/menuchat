@@ -136,7 +136,7 @@ class MenuVersionService:
                     name=item.name,
                     description=item.description,
                     image_url=item.image_url,
-                    is_active=item.is_active,
+                    status=item.status,
                     sort_order=item.sort_order,
                 )
                 for variant in item.variants.all():

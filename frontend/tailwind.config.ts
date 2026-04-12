@@ -50,8 +50,8 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
-  			violet: {
-  				glow: 'rgba(124, 58, 237, 0.2)',
+  			amber: {
+  				glow: 'rgba(217, 119, 6, 0.25)',
   			},
   			success: {
 				DEFAULT: 'hsl(var(--success))',

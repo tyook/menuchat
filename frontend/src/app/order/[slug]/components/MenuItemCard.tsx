@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Minus, Check } from "lucide-react";
+import { Plus, Minus, Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { cn } from "@/lib/utils";
 import { useOrderStore } from "@/stores/order-store";
 import type { MenuItem, MenuItemVariant, MenuItemModifier } from "@/types";
@@ -21,7 +22,9 @@ export function MenuItemCard({ item, isExpanded, onToggleExpand }: MenuItemCardP
   const [selectedModifiers, setSelectedModifiers] = useState<MenuItemModifier[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
+  const [showDescription, setShowDescription] = useState(false);
 
+  const isSoldOut = item.is_sold_out === true;
   const hasOptions = item.variants.length > 1 || item.modifiers.length > 0;
 
   const handleQuickAdd = () => {
@@ -63,44 +66,73 @@ export function MenuItemCard({ item, isExpanded, onToggleExpand }: MenuItemCardP
   ).toFixed(2);
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden transition-all duration-200">
+    <div className={cn(
+      "glass-card rounded-xl overflow-hidden transition-all duration-200",
+      isSoldOut && "opacity-50",
+    )}>
       {/* Collapsed row */}
       <button
         className="w-full flex items-center gap-3 p-4 text-left min-h-[56px]"
-        onClick={hasOptions ? onToggleExpand : handleQuickAdd}
+        onClick={isSoldOut ? undefined : (hasOptions ? onToggleExpand : handleQuickAdd)}
+        disabled={isSoldOut}
       >
         {item.image_url && (
-          <img
+          <ImageLightbox
             src={item.image_url}
             alt={item.name}
-            loading="lazy"
             className="w-12 h-12 rounded-lg object-cover shrink-0"
           />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-          {item.description && (
-            <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-          )}
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+            {isSoldOut && (
+              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-amber-500 bg-amber-500/10 rounded-full px-2 py-0.5">
+                Sold out
+              </span>
+            )}
+            {item.description && !isSoldOut && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDescription((prev) => !prev);
+                }}
+                className="shrink-0 w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors"
+                aria-label={showDescription ? "Hide description" : "Show description"}
+              >
+                <Info className="h-3 w-3 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-medium text-primary">
+          <span className={cn("text-sm font-bold", isSoldOut ? "text-muted-foreground line-through" : "text-primary")}>
             ${defaultVariant?.price}
           </span>
-          {justAdded ? (
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-              <Check className="h-4 w-4 text-green-500" />
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Plus className="h-4 w-4 text-primary" />
-            </div>
+          {!isSoldOut && (
+            justAdded ? (
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Check className="h-4 w-4 text-green-500" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Plus className="h-4 w-4 text-primary" />
+              </div>
+            )
           )}
         </div>
       </button>
 
+      {/* Description tooltip */}
+      {showDescription && item.description && (
+        <div className="px-4 pb-3 -mt-1">
+          <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+        </div>
+      )}
+
       {/* Expanded options */}
-      {isExpanded && (
+      {isExpanded && !isSoldOut && (
         <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-3 animate-fade-in-up">
           {/* Variant selector */}
           {item.variants.length > 1 && (

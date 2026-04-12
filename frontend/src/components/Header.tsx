@@ -52,26 +52,30 @@ export function Header() {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1 text-sm">
-          {mounted && user?.is_restaurant_owner && (
-            <Link href="/account/restaurants">
-              <Button variant="ghost" size="sm" className="gap-1.5">
-                <Store className="h-4 w-4" />
-                My Restaurants
-              </Button>
-            </Link>
+          {mounted && isAuthenticated && (
+            <>
+              {user?.is_restaurant_owner && (
+                <Link href="/account/restaurants">
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <Store className="h-4 w-4" />
+                    My Restaurants
+                  </Button>
+                </Link>
+              )}
+              <Link href="/account/profile">
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <UserIcon className="h-4 w-4" />
+                  Profile
+                </Button>
+              </Link>
+              <Link href="/account/orders">
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <ShoppingBag className="h-4 w-4" />
+                  Orders
+                </Button>
+              </Link>
+            </>
           )}
-          <Link href="/account/profile">
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <UserIcon className="h-4 w-4" />
-              Profile
-            </Button>
-          </Link>
-          <Link href="/account/orders">
-            <Button variant="ghost" size="sm" className="gap-1.5">
-              <ShoppingBag className="h-4 w-4" />
-              Orders
-            </Button>
-          </Link>
         </nav>
 
         {/* Spacer */}

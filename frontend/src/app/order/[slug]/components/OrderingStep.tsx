@@ -54,8 +54,8 @@ export function OrderingStep({ slug, categories }: OrderingStepProps) {
       <div className="flex-1 overflow-hidden relative">
         <div
           className={cn(
-            "absolute inset-0 overflow-y-auto",
-            activeTab === "menu" ? "visible" : "invisible",
+            "absolute inset-0 overflow-y-auto transition-opacity duration-200",
+            activeTab === "menu" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none",
           )}
         >
           <div className="max-w-lg mx-auto">
@@ -64,8 +64,8 @@ export function OrderingStep({ slug, categories }: OrderingStepProps) {
         </div>
         <div
           className={cn(
-            "absolute inset-0 overflow-y-auto",
-            activeTab === "voice" ? "visible" : "invisible",
+            "absolute inset-0 overflow-y-auto transition-opacity duration-200",
+            activeTab === "voice" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none",
           )}
         >
           <div className="max-w-lg mx-auto">

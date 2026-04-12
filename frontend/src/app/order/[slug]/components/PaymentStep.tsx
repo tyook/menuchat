@@ -23,7 +23,7 @@ const stripePromise = loadStripe(
 const stripeAppearance: Appearance = {
   theme: "night",
   variables: {
-    colorPrimary: "#7c3aed",
+    colorPrimary: "#d97706",
     colorBackground: "#1e293b",
     colorText: "#f1f5f9",
     colorTextSecondary: "#94a3b8",

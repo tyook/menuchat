@@ -6,7 +6,7 @@ export function LoadingStep() {
       {/* Ambient glow */}
       <div
         aria-hidden
-        className="absolute w-[200px] h-[200px] bg-[radial-gradient(circle,rgba(124,58,237,0.15),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none"
+        className="absolute w-[200px] h-[200px] bg-[radial-gradient(circle,rgba(217,119,6,0.15),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none"
       />
 
       {/* Loading orb */}

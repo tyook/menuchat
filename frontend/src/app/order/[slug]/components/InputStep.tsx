@@ -70,7 +70,7 @@ export function InputStep({ slug }: InputStepProps) {
       {isSupported && (
         <div className="relative flex flex-col items-center gap-4 animate-fade-in-up-delay-1">
           {/* Ambient radial glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(124,58,237,0.2),rgba(99,102,241,0.08)_50%,transparent_70%)] rounded-full pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(217,119,6,0.2),rgba(234,88,12,0.08)_50%,transparent_70%)] rounded-full pointer-events-none" />
 
           {/* "Listening..." label */}
           {isListening && (

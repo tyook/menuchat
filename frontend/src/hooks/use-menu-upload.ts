@@ -1,10 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { parseMenuImages, saveUploadedMenu } from "@/lib/api";
+import { parseMenuImages, saveUploadedMenu, uploadMenuItemImage } from "@/lib/api";
 import type { ParsedMenu } from "@/types";
 
 export function useParseMenuImages(slug: string) {
   return useMutation({
     mutationFn: (images: File[]) => parseMenuImages(slug, images),
+  });
+}
+
+export function useUploadMenuItemImage(slug: string) {
+  return useMutation({
+    mutationFn: (image: File) => uploadMenuItemImage(slug, image),
   });
 }
 

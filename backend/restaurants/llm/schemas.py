@@ -9,6 +9,7 @@ class ParsedMenuVariant(BaseModel):
 class ParsedMenuItem(BaseModel):
     name: str
     description: str | None = None
+    image_url: str | None = None
     variants: list[ParsedMenuVariant]
 
 

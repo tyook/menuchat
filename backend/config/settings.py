@@ -314,10 +314,11 @@ GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 APPLE_CLIENT_ID = config("APPLE_CLIENT_ID", default="")  # e.g. "com.yourapp.service"
 
 # ---------------------------------------------------------------------------
-# Firebase (push notifications)
+# Firebase (push notifications + storage)
 # ---------------------------------------------------------------------------
 _firebase_creds = config("FIREBASE_CREDENTIALS_JSON", default="")
 FIREBASE_CREDENTIALS = json.loads(_firebase_creds) if _firebase_creds else None
+FIREBASE_STORAGE_BUCKET = config("FIREBASE_STORAGE_BUCKET", default="")
 
 # ---------------------------------------------------------------------------
 # Logging

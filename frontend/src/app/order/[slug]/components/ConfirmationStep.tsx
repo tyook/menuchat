@@ -10,6 +10,7 @@ import { usePreferencesStore } from "@/stores/preferences-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfile } from "@/hooks/use-profile";
 import { useCreatePayment } from "@/hooks/use-create-payment";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { BusynessBanner } from "./BusynessBanner";
 import { useConfirmOrder } from "@/hooks/use-confirm-order";
 import { useTabOrder } from "@/hooks/use-tab-order";
@@ -146,8 +147,18 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
         {parsedItems.map((item, index) => (
           <div key={index} className="glass-card rounded-2xl p-5">
             <div className="flex justify-between items-start">
+              {item.image_url && (
+                <ImageLightbox
+                  src={item.image_url}
+                  alt={item.name}
+                  className="w-14 h-14 rounded-xl object-cover shrink-0 mr-3"
+                />
+              )}
               <div className="flex-1 min-w-0 mr-4">
                 <p className="text-foreground font-semibold">{item.name}</p>
+                {item.description && (
+                  <p className="text-muted-foreground text-xs mt-0.5">{item.description}</p>
+                )}
                 <p className="text-muted-foreground text-xs mt-0.5">
                   {item.variant.label} — ${item.variant.price}
                 </p>

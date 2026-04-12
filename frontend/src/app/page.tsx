@@ -33,38 +33,38 @@ export default function Home() {
         {/* ambient glow orbs */}
         <div
           aria-hidden
-          className="animate-glow-pulse absolute top-1/4 left-1/4 -z-10 h-[350px] w-[350px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+          className="animate-glow-pulse absolute top-1/4 left-1/4 -z-10 h-[350px] w-[350px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
         />
         <div
           aria-hidden
-          className="animate-glow-pulse absolute bottom-1/4 right-1/4 -z-10 h-[250px] w-[250px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+          className="animate-glow-pulse absolute bottom-1/4 right-1/4 -z-10 h-[250px] w-[250px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
           style={{ animationDelay: "2s" }}
         />
 
         {/* floating particles */}
         <div
           aria-hidden
-          className="animate-float-particle absolute top-[20%] left-[15%] h-[4px] w-[4px] bg-violet-400/30 rounded-full"
+          className="animate-float-particle absolute top-[20%] left-[15%] h-[4px] w-[4px] bg-amber-400/30 rounded-full"
           style={{ animationDelay: "0s" }}
         />
         <div
           aria-hidden
-          className="animate-float-particle absolute top-[35%] right-[18%] h-[3px] w-[3px] bg-violet-400/30 rounded-full"
+          className="animate-float-particle absolute top-[35%] right-[18%] h-[3px] w-[3px] bg-amber-400/30 rounded-full"
           style={{ animationDelay: "1s" }}
         />
         <div
           aria-hidden
-          className="animate-float-particle absolute bottom-[30%] left-[25%] h-[5px] w-[5px] bg-violet-400/30 rounded-full"
+          className="animate-float-particle absolute bottom-[30%] left-[25%] h-[5px] w-[5px] bg-amber-400/30 rounded-full"
           style={{ animationDelay: "2s" }}
         />
         <div
           aria-hidden
-          className="animate-float-particle absolute bottom-[20%] right-[20%] h-[3px] w-[3px] bg-violet-400/30 rounded-full"
+          className="animate-float-particle absolute bottom-[20%] right-[20%] h-[3px] w-[3px] bg-amber-400/30 rounded-full"
           style={{ animationDelay: "0.5s" }}
         />
         <div
           aria-hidden
-          className="animate-float-particle absolute top-[60%] left-[10%] h-[4px] w-[4px] bg-violet-400/30 rounded-full"
+          className="animate-float-particle absolute top-[60%] left-[10%] h-[4px] w-[4px] bg-amber-400/30 rounded-full"
           style={{ animationDelay: "1.5s" }}
         />
 
@@ -126,7 +126,7 @@ export default function Home() {
                   <QrCode className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <p className="text-[11px] uppercase tracking-[3px] text-violet-400 mb-2">
+              <p className="text-[11px] uppercase tracking-[3px] text-amber-400 mb-2">
                 Step 1
               </p>
               <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -150,7 +150,7 @@ export default function Home() {
                   <Mic className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <p className="text-[11px] uppercase tracking-[3px] text-violet-400 mb-2">
+              <p className="text-[11px] uppercase tracking-[3px] text-amber-400 mb-2">
                 Step 2
               </p>
               <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -169,7 +169,7 @@ export default function Home() {
                   <CheckCircle className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <p className="text-[11px] uppercase tracking-[3px] text-violet-400 mb-2">
+              <p className="text-[11px] uppercase tracking-[3px] text-amber-400 mb-2">
                 Step 3
               </p>
               <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -249,11 +249,11 @@ export default function Home() {
         {/* ambient glow orbs */}
         <div
           aria-hidden
-          className="animate-glow-pulse absolute top-0 left-1/3 -z-10 h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+          className="animate-glow-pulse absolute top-0 left-1/3 -z-10 h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
         />
         <div
           aria-hidden
-          className="animate-glow-pulse absolute bottom-0 right-1/3 -z-10 h-[250px] w-[250px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)]"
+          className="animate-glow-pulse absolute bottom-0 right-1/3 -z-10 h-[250px] w-[250px] rounded-full bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)]"
           style={{ animationDelay: "2s" }}
         />
 

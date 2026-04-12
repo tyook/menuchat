@@ -106,14 +106,14 @@ class TestMenuItemAPI:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == "New Name"
 
-    def test_deactivate_item(self, api_client, setup):
+    def test_delete_item(self, api_client, setup):
         owner, restaurant, category = setup
         item = MenuItemFactory(category=category)
         api_client.force_authenticate(user=owner)
         response = api_client.delete(f"/api/restaurants/{restaurant.slug}/items/{item.id}/")
-        assert response.status_code == status.HTTP_200_OK
-        item.refresh_from_db()
-        assert item.is_active is False
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        from restaurants.models import MenuItem
+        assert not MenuItem.objects.filter(id=item.id).exists()
 
 
 @pytest.mark.django_db
@@ -123,8 +123,8 @@ class TestFullMenuAPI:
         restaurant = RestaurantFactory(owner=owner)
         version = MenuVersionFactory(restaurant=restaurant, is_active=True)
         cat = MenuCategoryFactory(version=version)
-        MenuItemFactory(category=cat, is_active=True)
-        MenuItemFactory(category=cat, is_active=False)
+        MenuItemFactory(category=cat, status="active")
+        MenuItemFactory(category=cat, status="inactive")
 
         api_client.force_authenticate(user=owner)
         response = api_client.get(f"/api/restaurants/{restaurant.slug}/menu/")

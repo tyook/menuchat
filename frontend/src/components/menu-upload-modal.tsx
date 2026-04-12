@@ -185,7 +185,7 @@ export function MenuUploadModal({ slug, open, onOpenChange, hasExistingMenu }: M
 
         {step === "review" && parsedMenu && (
           <div className="space-y-4">
-            <ParsedMenuEditor menu={parsedMenu} onChange={setParsedMenu} />
+            <ParsedMenuEditor slug={slug} menu={parsedMenu} onChange={setParsedMenu} />
 
             {hasExistingMenu && (
               <div className="grid grid-cols-2 gap-3">

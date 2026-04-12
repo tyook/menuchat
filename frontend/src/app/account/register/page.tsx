@@ -39,7 +39,7 @@ export default function CustomerRegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       {/* Ambient glow orb */}
-      <div className="absolute w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(124,58,237,0.12),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none" />
+      <div className="absolute w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(217,119,6,0.12),transparent_70%)] rounded-full animate-glow-pulse pointer-events-none" />
 
       <div className="glass-card rounded-2xl p-8 max-w-md w-full relative z-10">
         <h1 className="text-2xl font-bold mb-6 text-center gradient-text">Create Account</h1>
