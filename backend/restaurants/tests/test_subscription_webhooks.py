@@ -206,3 +206,71 @@ class TestSubscriptionWebhooks:
             HTTP_STRIPE_SIGNATURE="test_sig",
         )
         mock_email_task.assert_not_called()
+
+    @patch("stripe.Webhook.construct_event")
+    @patch("restaurants.tasks.send_payment_success_email_task.delay")
+    def test_invoice_paid_sends_success_email(self, mock_email_task, mock_construct, api_client):
+        restaurant = RestaurantFactory()
+        Subscription.objects.create(
+            restaurant=restaurant,
+            plan="growth",
+            status="active",
+            stripe_subscription_id="sub_invoice_test",
+            stripe_customer_id="cus_invoice_test",
+            current_period_start=timezone.now(),
+            current_period_end=timezone.now() + timedelta(days=30),
+            order_count=50,
+        )
+
+        period_end_ts = int((timezone.now() + timedelta(days=30)).timestamp())
+        mock_construct.return_value = {
+            "type": "invoice.paid",
+            "data": {
+                "object": {
+                    "subscription": "sub_invoice_test",
+                    "amount_paid": 9900,
+                    "currency": "usd",
+                    "lines": {
+                        "data": [
+                            {
+                                "period": {"end": period_end_ts},
+                            }
+                        ]
+                    },
+                }
+            },
+        }
+
+        response = api_client.post(
+            "/api/webhooks/stripe/",
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        mock_email_task.assert_called_once_with(
+            str(restaurant.id), 9900, "growth", period_end_ts
+        )
+
+    @patch("stripe.Webhook.construct_event")
+    @patch("restaurants.tasks.send_payment_success_email_task.delay")
+    def test_invoice_paid_without_subscription_skips_email(self, mock_email_task, mock_construct, api_client):
+        """Non-subscription invoices should not trigger email."""
+        mock_construct.return_value = {
+            "type": "invoice.paid",
+            "data": {
+                "object": {
+                    "subscription": None,
+                    "amount_paid": 500,
+                    "currency": "usd",
+                }
+            },
+        }
+
+        api_client.post(
+            "/api/webhooks/stripe/",
+            data=json.dumps({}),
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="test_sig",
+        )
+        mock_email_task.assert_not_called()

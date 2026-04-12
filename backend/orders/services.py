@@ -864,6 +864,16 @@ class OrderService:
             )
             sub.order_count = 0
             sub.save(update_fields=["order_count"])
+
+            # Send payment success email
+            amount_cents = invoice.get("amount_paid", 0)
+            lines = invoice.get("lines", {}).get("data", [])
+            period_end = lines[0].get("period", {}).get("end", 0) if lines else 0
+
+            from restaurants.tasks import send_payment_success_email_task
+            send_payment_success_email_task.delay(
+                str(sub.restaurant_id), amount_cents, sub.plan, period_end
+            )
         except Subscription.DoesNotExist:
             pass
 
