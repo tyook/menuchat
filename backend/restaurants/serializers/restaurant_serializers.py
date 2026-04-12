@@ -148,6 +148,8 @@ class MenuItemModifierSerializer(serializers.ModelSerializer):
 
 
 class MenuItemVariantSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+
     class Meta:
         model = MenuItemVariant
         fields = ["id", "label", "price", "is_default"]
@@ -166,8 +168,9 @@ class MenuItemSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "image_url",
-            "is_active",
+            "status",
             "is_upsellable",
+            "is_featured",
             "sort_order",
             "variants",
             "modifiers",
@@ -198,21 +201,45 @@ class MenuItemSerializer(serializers.ModelSerializer):
         return item
 
     def update(self, instance, validated_data):
-        # For simplicity, variants/modifiers are not updated inline on PATCH.
-        # They can be managed separately in a future iteration.
-        validated_data.pop("variants", None)
+        variants_data = validated_data.pop("variants", None)
         validated_data.pop("modifiers", None)
         validated_data.pop("category_id", None)
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+
+        if variants_data is not None:
+            incoming_ids = {v["id"] for v in variants_data if v.get("id")}
+            # Delete variants not in the incoming list
+            instance.variants.exclude(id__in=incoming_ids).delete()
+            # Update existing / create new
+            for variant_data in variants_data:
+                variant_id = variant_data.get("id")
+                if variant_id:
+                    try:
+                        variant = instance.variants.get(id=variant_id)
+                        for attr, value in variant_data.items():
+                            if attr != "id":
+                                setattr(variant, attr, value)
+                        variant.save()
+                    except MenuItemVariant.DoesNotExist:
+                        pass
+                else:
+                    data = {k: v for k, v in variant_data.items() if k != "id"}
+                    MenuItemVariant.objects.create(menu_item=instance, **data)
+
+        return instance
 
 
 class PublicMenuItemSerializer(serializers.ModelSerializer):
     variants = MenuItemVariantSerializer(many=True, read_only=True)
     modifiers = MenuItemModifierSerializer(many=True, read_only=True)
+    is_sold_out = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuItem
-        fields = ["id", "name", "description", "image_url", "variants", "modifiers"]
+        fields = ["id", "name", "description", "image_url", "is_sold_out", "is_featured", "variants", "modifiers"]
+
+    def get_is_sold_out(self, obj):
+        return obj.status == MenuItem.Status.SOLD_OUT
 
 
 class PublicMenuCategorySerializer(serializers.ModelSerializer):
@@ -223,8 +250,10 @@ class PublicMenuCategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "items"]
 
     def get_items(self, obj):
-        active_items = obj.items.filter(is_active=True).prefetch_related("variants", "modifiers")
-        return PublicMenuItemSerializer(active_items, many=True).data
+        visible_items = obj.items.filter(
+            status__in=[MenuItem.Status.ACTIVE, MenuItem.Status.SOLD_OUT]
+        ).prefetch_related("variants", "modifiers")
+        return PublicMenuItemSerializer(visible_items, many=True).data
 
 
 class PublicMenuSerializer(serializers.Serializer):

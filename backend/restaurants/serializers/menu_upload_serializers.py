@@ -55,6 +55,8 @@ class ParsedVariantInput(serializers.Serializer):
 class ParsedItemInput(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    image_url = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    is_featured = serializers.BooleanField(required=False, default=False)
     variants = ParsedVariantInput(many=True, min_length=1)
 
 
