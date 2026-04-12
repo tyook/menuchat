@@ -17,10 +17,15 @@ export function useOrderQueue({ slug, orderId, enabled = true }: UseOrderQueueOp
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout>();
   const pollRef = useRef<NodeJS.Timeout>();
+  const slugRef = useRef(slug);
+  const orderIdRef = useRef(orderId);
   const enabledRef = useRef(enabled);
-  enabledRef.current = enabled;
+  const queueInfoRef = useRef(queueInfo);
 
-  const isTerminal = queueInfo?.status === "ready" || queueInfo?.status === "completed";
+  slugRef.current = slug;
+  orderIdRef.current = orderId;
+  enabledRef.current = enabled;
+  queueInfoRef.current = queueInfo;
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -30,25 +35,34 @@ export function useOrderQueue({ slug, orderId, enabled = true }: UseOrderQueueOp
   }, []);
 
   const startPolling = useCallback(() => {
-    if (!orderId || !enabledRef.current || isTerminal) return;
     stopPolling();
+    const oid = orderIdRef.current;
+    const s = slugRef.current;
+    if (!oid || !enabledRef.current) return;
     pollRef.current = setInterval(async () => {
       try {
-        const data = await fetchOrderQueue(slug, orderId);
+        const data = await fetchOrderQueue(s, oid);
         setQueueInfo(data);
       } catch {
         // Silently fail — will retry on next interval
       }
     }, POLL_INTERVAL);
-  }, [slug, orderId, stopPolling, isTerminal]);
+  }, [stopPolling]);
 
   const connect = useCallback(() => {
-    if (!orderId || !enabledRef.current || isTerminal) return;
+    const oid = orderIdRef.current;
+    const s = slugRef.current;
+    if (!oid || !enabledRef.current) return;
+
+    const qi = queueInfoRef.current;
+    if (qi?.status === "ready" || qi?.status === "completed") return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(`${WS_URL}/ws/order/${slug}/${orderId}/`);
+    console.log("[WS] connecting to", `${WS_URL}/ws/order/${s}/${oid}/`);
+    const ws = new WebSocket(`${WS_URL}/ws/order/${s}/${oid}/`);
 
     ws.onopen = () => {
+      console.log("[WS] connected");
       setIsConnected(true);
       stopPolling();
     };
@@ -56,35 +70,44 @@ export function useOrderQueue({ slug, orderId, enabled = true }: UseOrderQueueOp
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("[WS] message", data);
         setQueueInfo(data);
+        queueInfoRef.current = data;
       } catch {
         // Ignore non-JSON messages
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      console.log("[WS] closed", { code: event.code, reason: event.reason, enabled: enabledRef.current });
       setIsConnected(false);
+      // Only reconnect if still enabled and not intentionally closed
       if (enabledRef.current) {
+        const currentQi = queueInfoRef.current;
+        if (currentQi?.status === "ready" || currentQi?.status === "completed") return;
         startPolling();
         reconnectRef.current = setTimeout(connect, RECONNECT_INTERVAL);
       }
     };
 
-    ws.onerror = () => ws.close();
+    ws.onerror = (event) => { console.log("[WS] error", event); ws.close(); };
     wsRef.current = ws;
-  }, [slug, orderId, stopPolling, startPolling, isTerminal]);
+  }, [stopPolling, startPolling]);
 
   // Stop everything when order reaches terminal state
   useEffect(() => {
+    const isTerminal = queueInfo?.status === "ready" || queueInfo?.status === "completed";
     if (isTerminal) {
       stopPolling();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       wsRef.current?.close();
     }
-  }, [isTerminal, stopPolling]);
+  }, [queueInfo?.status, stopPolling]);
 
+  // Connect/disconnect effect — only re-runs when enabled or orderId changes
   useEffect(() => {
     if (!enabled || !orderId) return;
+    enabledRef.current = true;
     connect();
 
     return () => {
@@ -93,7 +116,7 @@ export function useOrderQueue({ slug, orderId, enabled = true }: UseOrderQueueOp
       stopPolling();
       wsRef.current?.close();
     };
-  }, [connect, enabled, orderId, stopPolling]);
+  }, [enabled, orderId, connect, stopPolling]);
 
   return {
     queuePosition: queueInfo?.queue_position ?? null,

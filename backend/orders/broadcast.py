@@ -25,7 +25,7 @@ def broadcast_order_to_kitchen(order):
     send_push_notification(
         user=order.restaurant.owner,
         title="New Order",
-        body=f"New order #{order.order_number} received",
+        body=f"New order #{str(order.id)[:8]} received",
         data={"type": "new_order", "order_id": str(order.id)},
     )
 

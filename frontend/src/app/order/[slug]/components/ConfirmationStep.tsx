@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ interface ConfirmationStepProps {
 }
 
 export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationStepProps) {
+  const router = useRouter();
   const {
     parsedItems,
     parsedAllergies,
@@ -94,7 +96,7 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
           onSuccess: (result) => {
             setOrderId(result.id);
             setPaymentMode("pos_collected");
-            setStep("submitted");
+            router.push(`/order/${slug}/status/${result.id}`);
           },
           onError: (err) => {
             setError(err instanceof Error ? err.message : "Failed to place order");

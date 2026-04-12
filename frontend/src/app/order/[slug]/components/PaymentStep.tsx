@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Elements,
   PaymentElement,
@@ -84,6 +85,7 @@ function PaymentForm({
 }) {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
   const { setStep, paymentModel, tabPaymentId } = useOrderStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -134,7 +136,11 @@ function PaymentForm({
           }
         }
       }
-      setStep("submitted");
+      if (slug && orderId) {
+        router.push(`/order/${slug}/status/${orderId}`);
+      } else {
+        setStep("submitted");
+      }
     }
   };
 
@@ -162,6 +168,7 @@ interface PaymentStepProps {
 }
 
 export function PaymentStep({ taxRate }: PaymentStepProps) {
+  const router = useRouter();
   const {
     clientSecret,
     totalPrice,
@@ -228,7 +235,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
       setOrderId(response.id);
 
       if (response.status === "confirmed") {
-        setStep("submitted");
+        router.push(`/order/${slug}/status/${response.id}`);
       } else {
         // Payment requires further action — fall back to Payment Element
         setClientSecret(response.client_secret);

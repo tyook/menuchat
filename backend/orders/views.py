@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.authentication import CookieJWTAuthentication
-from orders.broadcast import broadcast_order_to_customer
+from orders.broadcast import broadcast_order_to_customer, broadcast_order_to_kitchen
 from integrations.models import POSConnection
 from integrations.tasks import dispatch_order_to_pos
 from orders.models import Order
@@ -208,6 +208,7 @@ class CreatePaymentView(APIView):
             response_data["status"] = "confirmed"
             response_data["payment_status"] = "paid"
             OrderService.set_status_timestamp(order, "confirmed")
+            broadcast_order_to_kitchen(order)
             broadcast_order_to_customer(order)
             from orders.tasks import broadcast_queue_updates
             broadcast_queue_updates.apply_async(

@@ -60,6 +60,13 @@
     Estimated wait: <strong>~{{ estimated_wait }} minutes</strong>
   </p>
   {% endif %}
+
+  <!-- Track order link -->
+  <p style="margin:24px 0 0;text-align:center;">
+    <a href="{{ frontend_url }}/order/{{ restaurant_slug }}/status/{{ order_id }}" style="display:inline-block;padding:12px 24px;background-color:#18181b;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      Track Your Order
+    </a>
+  </p>
 </td></tr>
 
 <!-- Footer -->
