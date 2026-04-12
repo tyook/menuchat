@@ -147,16 +147,26 @@ class MenuCategory(models.Model):
 
 
 class MenuItem(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        SOLD_OUT = "sold_out", "Sold out"
+        INACTIVE = "inactive", "Inactive"
+
     category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name="items")
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     image_url = models.URLField(blank=True, default="")
-    is_active = models.BooleanField(default=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     is_upsellable = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
     sort_order = models.IntegerField(default=0)
 
     class Meta:
         ordering = ["sort_order"]
+
+    @property
+    def is_active(self):
+        return self.status == self.Status.ACTIVE
 
     def __str__(self):
         return self.name
