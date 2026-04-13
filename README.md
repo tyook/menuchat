@@ -68,12 +68,25 @@ AI-powered QR code ordering system for restaurants. Customers scan, speak or typ
       ```
       brew install stripe/stripe-cli/stripe
       stripe login
-      stripe listen --forward-to localhost:5005/api/order/webhook/stripe/
+      stripe listen --forward-to localhost:5005/api/webhooks/stripe/
       ```
       Copy the webhook signing secret it prints and set it in `.env`:
       ```
       STRIPE_WEBHOOK_SECRET=whsec_...
       ```
+
+   > **Important:** `stripe listen` generates a new signing secret each session.
+   > You must update `STRIPE_WEBHOOK_SECRET` in `.env` every time you restart it,
+   > then restart the backend. When done testing, revert `STRIPE_WEBHOOK_SECRET`
+   > to the value configured in the Stripe Dashboard for your deployed environment.
+
+### Stripe Troubleshooting
+
+| Error | Cause | Fix |
+|---|---|---|
+| `No such price: 'prod_...'` | Using a product ID instead of a price ID in `STRIPE_PRICE_*` env vars | Go to Stripe Dashboard > Products > click the product > copy the `price_` ID from the Pricing section. Product IDs (`prod_`) are not price IDs (`price_`). |
+| Webhook returns 400 | `STRIPE_WEBHOOK_SECRET` doesn't match the `stripe listen` signing secret | Copy the `whsec_` value printed by `stripe listen` into `.env` and restart the backend |
+| Subscription plan not updating after checkout | Stripe webhooks not reaching your local server | Run `stripe listen --forward-to localhost:5005/api/webhooks/stripe/` and verify events show `[200]` responses |
 
 ## Database Reset
 
@@ -118,7 +131,7 @@ yarn dev -- -p 3001
 
 Start Stripe webhook forwarding (in a separate terminal):
 ```
-stripe listen --forward-to localhost:5005/api/order/webhook/stripe/
+stripe listen --forward-to localhost:5005/api/webhooks/stripe/
 ```
 
 | Service  | URL                     |
