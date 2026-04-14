@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { useAuthStore } from "@/stores/auth-store";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl");
   const login = useAuthStore((s) => s.login);
   const getUser = () => useAuthStore.getState().user;
   const [email, setEmail] = useState("");
@@ -19,14 +21,19 @@ export default function CustomerLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const getRedirectPath = () => {
+    if (returnUrl) return returnUrl;
+    const user = getUser();
+    return user?.onboarding_completed ? "/account/orders" : "/account/onboarding";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       await login(email, password);
-      const user = getUser();
-      router.push(user?.onboarding_completed ? "/account/orders" : "/account/onboarding");
+      router.push(getRedirectPath());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -79,8 +86,7 @@ export default function CustomerLoginPage() {
 
         <SocialLoginButtons
           onSuccess={() => {
-            const user = getUser();
-            router.push(user?.onboarding_completed ? "/account/orders" : "/account/onboarding");
+            router.push(getRedirectPath());
           }}
           onError={(err) => setError(err)}
           buttonClassName="bg-card border border-border rounded-xl hover:bg-card/80"

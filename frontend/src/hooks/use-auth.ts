@@ -1,22 +1,31 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function useRequireAuth() {
   const { isAuthenticated, checkAuth } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
+    const redirectToLogin = () => {
+      const currentUrl = searchParams.toString()
+        ? `${pathname}?${searchParams.toString()}`
+        : pathname;
+      router.push(`/account/login?returnUrl=${encodeURIComponent(currentUrl)}`);
+    };
+
     if (isAuthenticated === null) {
       checkAuth().then((ok) => {
-        if (!ok) router.push("/account/login");
+        if (!ok) redirectToLogin();
       });
     } else if (isAuthenticated === false) {
-      router.push("/account/login");
+      redirectToLogin();
     }
-  }, [isAuthenticated, checkAuth, router]);
+  }, [isAuthenticated, checkAuth, router, pathname, searchParams]);
 
   return isAuthenticated;
 }
