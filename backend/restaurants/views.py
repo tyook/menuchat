@@ -408,10 +408,10 @@ class TableDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView):
 
 
 class RestaurantAnalyticsView(RestaurantMixin, APIView):
-    """GET /api/restaurants/:slug/analytics/?period=7d|30d|90d"""
+    """GET /api/restaurants/:slug/analytics/?period=7d|30d|90d|custom&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD"""
 
     def get(self, request, slug):
-        from datetime import timedelta
+        from datetime import datetime, timedelta
 
         from django.db.models import Avg, Count, Sum
         from django.db.models.functions import ExtractHour, TruncDate
@@ -422,12 +422,26 @@ class RestaurantAnalyticsView(RestaurantMixin, APIView):
         restaurant = self.get_restaurant()
 
         period_str = request.query_params.get("period", "30d")
-        days_map = {"7d": 7, "30d": 30, "90d": 90}
-        days = days_map.get(period_str, 30)
+        start_date_param = request.query_params.get("start_date")
+        end_date_param = request.query_params.get("end_date")
 
         now = timezone.now()
-        start_date = now - timedelta(days=days)
-        prev_start = start_date - timedelta(days=days)
+
+        if period_str == "custom" and start_date_param and end_date_param:
+            start_date = timezone.make_aware(
+                datetime.strptime(start_date_param, "%Y-%m-%d")
+            )
+            end_date = timezone.make_aware(
+                datetime.strptime(end_date_param, "%Y-%m-%d")
+            ) + timedelta(days=1)  # include the end date fully
+            days = (end_date - start_date).days
+            prev_start = start_date - timedelta(days=days)
+        else:
+            days_map = {"7d": 7, "30d": 30, "90d": 90}
+            days = days_map.get(period_str, 30)
+            end_date = now
+            start_date = now - timedelta(days=days)
+            prev_start = start_date - timedelta(days=days)
 
         completed_statuses = [Order.Status.COMPLETED, Order.Status.CONFIRMED]
         base_qs = Order.objects.filter(
@@ -435,7 +449,7 @@ class RestaurantAnalyticsView(RestaurantMixin, APIView):
             status__in=completed_statuses,
         )
 
-        current_qs = base_qs.filter(created_at__gte=start_date)
+        current_qs = base_qs.filter(created_at__gte=start_date, created_at__lt=end_date)
         prev_qs = base_qs.filter(created_at__gte=prev_start, created_at__lt=start_date)
 
         # Summary metrics

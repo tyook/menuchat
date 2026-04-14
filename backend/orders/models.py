@@ -198,6 +198,16 @@ class Order(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["restaurant", "-created_at"],
+                name="orders_rest_created_idx",
+            ),
+            models.Index(
+                fields=["restaurant", "status", "confirmed_at"],
+                name="orders_rest_status_conf_idx",
+            ),
+        ]
 
     def __str__(self):
         table = f" (Table {self.table_identifier})" if self.table_identifier else ""

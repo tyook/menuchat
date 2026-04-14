@@ -716,10 +716,17 @@ import type { AnalyticsResponse } from "@/types";
 
 export async function fetchAnalytics(
   slug: string,
-  period: string = "30d"
+  period: string = "30d",
+  startDate?: string,
+  endDate?: string
 ): Promise<AnalyticsResponse> {
+  const params = new URLSearchParams({ period });
+  if (period === "custom" && startDate && endDate) {
+    params.set("start_date", startDate);
+    params.set("end_date", endDate);
+  }
   return apiFetch<AnalyticsResponse>(
-    `/api/restaurants/${slug}/analytics/?period=${period}`
+    `/api/restaurants/${slug}/analytics/?${params.toString()}`
   );
 }
 
