@@ -23,6 +23,9 @@ interface AuthState {
   clearAuth: () => void;
 }
 
+// Deduplication: if a checkAuth call is already in-flight, reuse its promise
+let pendingCheckAuth: Promise<boolean> | null = null;
+
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: null,
   user: null,
@@ -73,15 +76,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    try {
-      const { fetchMe } = await import("@/lib/api");
-      const user = await fetchMe();
-      set({ isAuthenticated: true, user });
-      return true;
-    } catch {
-      set({ isAuthenticated: false, user: null });
-      return false;
+    if (pendingCheckAuth) {
+      return pendingCheckAuth;
     }
+
+    pendingCheckAuth = (async () => {
+      try {
+        const { fetchMe } = await import("@/lib/api");
+        const user = await fetchMe();
+        set({ isAuthenticated: true, user });
+        return true;
+      } catch {
+        set({ isAuthenticated: false, user: null });
+        return false;
+      } finally {
+        pendingCheckAuth = null;
+      }
+    })();
+
+    return pendingCheckAuth;
   },
 
   clearAuth: () => {
