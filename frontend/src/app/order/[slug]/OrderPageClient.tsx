@@ -16,6 +16,7 @@ import { PaymentStep } from "./components/PaymentStep";
 import { SubmittedStep } from "./components/SubmittedStep";
 import TabReviewStep from "./components/TabReviewStep";
 import TabStatusBar from "./components/TabStatusBar";
+import { TabClosedStep } from "./components/TabClosedStep";
 
 export default function OrderPage() {
   const params = useParams<{ slug: string }>();
@@ -114,6 +115,7 @@ export default function OrderPage() {
       {step === "payment" && <PaymentStep taxRate={menu.tax_rate} />}
       {step === "submitted" && <SubmittedStep slug={slug} />}
       {step === "tab_review" && <TabReviewStep slug={slug} />}
+      {step === "tab_closed" && <TabClosedStep />}
 
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
     </main>

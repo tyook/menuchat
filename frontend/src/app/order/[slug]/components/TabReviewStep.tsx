@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useOrderStore } from "@/stores/order-store";
-import { closeTab } from "@/lib/api";
+import { closeTab, createTabPayment } from "@/lib/api";
 import SplitEvenModal from "./SplitEvenModal";
 import PayByItemModal from "./PayByItemModal";
 
@@ -39,7 +39,17 @@ export default function TabReviewStep({ slug }: TabReviewStepProps) {
       } else if (payType === "pay_by_item") {
         setShowItemModal(true);
       } else {
-        setStep("payment");
+        // "full" — create a payment intent for the full remaining amount
+        const { client_secret, payment_id } = await createTabPayment(
+          slug,
+          tab.id,
+          "full"
+        );
+        const store = useOrderStore.getState();
+        store.setClientSecret(client_secret);
+        store.setTabPaymentId(payment_id);
+        store.setTotalPrice(tab.amount_remaining);
+        store.setStep("payment");
       }
     } catch {
       setClosing(false);

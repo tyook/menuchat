@@ -27,9 +27,11 @@ export default function SplitEvenModal({ slug, onClose }: SplitEvenModalProps) {
         "split_even",
         splitCount
       );
-      useOrderStore.getState().setClientSecret(client_secret);
-      useOrderStore.getState().setTabPaymentId(payment_id);
-      useOrderStore.getState().setStep("payment");
+      const store = useOrderStore.getState();
+      store.setClientSecret(client_secret);
+      store.setTabPaymentId(payment_id);
+      store.setTotalPrice(perPerson);
+      store.setStep("payment");
       onClose();
     } catch {
       setLoading(false);

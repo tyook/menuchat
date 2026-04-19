@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ParsedOrderItem, MenuItem, MenuItemVariant, MenuItemModifier, TabOrder, TabResponse } from "@/types";
 
-type OrderStep = "welcome" | "ordering" | "cart" | "payment" | "submitted" | "tab_review";
+type OrderStep = "welcome" | "ordering" | "cart" | "payment" | "submitted" | "tab_review" | "tab_closed";
 
 interface OrderState {
   step: OrderStep;
@@ -48,6 +48,7 @@ interface OrderState {
   setPaymentModel: (model: "upfront" | "tab") => void;
   setTabId: (id: string | null) => void;
   setTabData: (tab: TabResponse) => void;
+  setTotalPrice: (price: string) => void;
   setTabPaymentId: (id: string | null) => void;
   reset: () => void;
 }
@@ -159,6 +160,7 @@ export const useOrderStore = create<OrderState>((set) => ({
     tabAmountPaid: tab.amount_paid,
     tabAmountRemaining: tab.amount_remaining,
   }),
+  setTotalPrice: (totalPrice) => set({ totalPrice }),
   setTabPaymentId: (tabPaymentId) => set({ tabPaymentId }),
   reset: () => set(initialState),
 }));

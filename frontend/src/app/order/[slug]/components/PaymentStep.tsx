@@ -122,11 +122,17 @@ function PaymentForm({
       if (paymentModel === "tab") {
         if (slug && tabPaymentId) {
           try {
-            await confirmTabPayment(slug, tabPaymentId);
+            const updatedTab = await confirmTabPayment(slug, tabPaymentId);
+            useOrderStore.getState().setTabData(updatedTab);
+            if (parseFloat(updatedTab.amount_remaining) <= 0) {
+              setStep("tab_closed");
+              return;
+            }
           } catch {
             // Non-fatal: webhook will eventually confirm
           }
         }
+        setStep("submitted");
       } else {
         if (slug && orderId) {
           try {
@@ -135,11 +141,11 @@ function PaymentForm({
             // Non-fatal: webhook will eventually confirm the order
           }
         }
-      }
-      if (slug && orderId) {
-        router.push(`/order/${slug}/status/${orderId}`);
-      } else {
-        setStep("submitted");
+        if (slug && orderId) {
+          router.push(`/order/${slug}/status/${orderId}`);
+        } else {
+          setStep("submitted");
+        }
       }
     }
   };
@@ -182,6 +188,7 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
     customerPhone,
     orderId,
     setOrderId,
+    paymentModel,
   } = useOrderStore();
   const { isAuthenticated } = useAuthStore();
   const { data: savedMethods } = usePaymentMethods();
@@ -191,7 +198,8 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const hasSavedCards = isAuthenticated && savedMethods && savedMethods.length > 0;
+  const isTabPayment = paymentModel === "tab";
+  const hasSavedCards = !isTabPayment && isAuthenticated && savedMethods && savedMethods.length > 0;
 
   // Auto-select first saved card if available and nothing selected yet
   const effectiveSelectedId =

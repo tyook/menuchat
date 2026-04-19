@@ -1,3 +1,5 @@
+import threading
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
@@ -20,14 +22,18 @@ def broadcast_order_to_kitchen(order):
         },
     )
 
-    # Push notification to restaurant owner
+    # Push notification to restaurant owner (fire-and-forget in background thread)
     from notifications.services import send_push_notification
-    send_push_notification(
-        user=order.restaurant.owner,
-        title="New Order",
-        body=f"New order #{str(order.id)[:8]} received",
-        data={"type": "new_order", "order_id": str(order.id)},
-    )
+    threading.Thread(
+        target=send_push_notification,
+        kwargs={
+            "user": order.restaurant.owner,
+            "title": "New Order",
+            "body": f"New order #{str(order.id)[:8]} received",
+            "data": {"type": "new_order", "order_id": str(order.id)},
+        },
+        daemon=True,
+    ).start()
 
 
 def broadcast_order_to_customer(order):
@@ -45,13 +51,17 @@ def broadcast_order_to_customer(order):
         },
     )
 
-    # Push notification when order is ready
+    # Push notification when order is ready (fire-and-forget in background thread)
     from notifications.services import send_push_notification
     if order.status == "ready":
-        send_push_notification(
-            user=order.user if order.user else None,
-            order=order if not order.user else None,
-            title="Order Ready!",
-            body=f"Your order from {order.restaurant.name} is ready for pickup",
-            data={"type": "order_ready", "order_id": str(order.id)},
-        )
+        threading.Thread(
+            target=send_push_notification,
+            kwargs={
+                "user": order.user if order.user else None,
+                "order": order if not order.user else None,
+                "title": "Order Ready!",
+                "body": f"Your order from {order.restaurant.name} is ready for pickup",
+                "data": {"type": "order_ready", "order_id": str(order.id)},
+            },
+            daemon=True,
+        ).start()
