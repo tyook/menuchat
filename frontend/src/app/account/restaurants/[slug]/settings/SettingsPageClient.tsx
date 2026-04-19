@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Trash2, Plus, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, CheckCircle2, AlertTriangle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -105,6 +107,55 @@ export default function SettingsPage() {
       return `${baseUrl}/order/${params.slug}/${tableNumber}`;
     }
     return `${baseUrl}/order/${params.slug}`;
+  };
+
+  const handlePrintQR = (url: string, label: string) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code - ${label}</title>
+          <style>
+            body {
+              margin: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              font-family: sans-serif;
+            }
+            h1 { font-size: 24px; margin-bottom: 24px; }
+            p { font-size: 14px; color: #666; margin-top: 16px; word-break: break-all; }
+          </style>
+        </head>
+        <body>
+          <h1>${label}</h1>
+          <div id="qr"></div>
+          <p>${url}</p>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    // Render QR into the print window
+    const container = printWindow.document.getElementById("qr");
+    if (container) {
+      const tempDiv = document.createElement("div");
+      document.body.appendChild(tempDiv);
+      const root = createRoot(tempDiv);
+      flushSync(() => {
+        root.render(
+          <QRCodeSVG value={url} size={300} />
+        );
+      });
+      container.innerHTML = tempDiv.innerHTML;
+      root.unmount();
+      document.body.removeChild(tempDiv);
+    }
+    printWindow.focus();
+    printWindow.print();
   };
 
   const handleAddTable = () => {
@@ -270,9 +321,19 @@ export default function SettingsPage() {
           <>
             {/* Counter QR (no table) */}
             <Card className="bg-card border border-border rounded-2xl p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Counter / Pickup QR Code
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">
+                  Counter / Pickup QR Code
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePrintQR(getOrderUrl(), "Counter / Pickup QR Code")}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
                 For counter service without table numbers.
               </p>
@@ -359,6 +420,15 @@ export default function SettingsPage() {
                       <p className="text-xs text-muted-foreground break-all text-center mt-1">
                         {getOrderUrl(table.number)}
                       </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => handlePrintQR(getOrderUrl(table.number), `${table.name} (#${table.number})`)}
+                      >
+                        <Printer className="h-3 w-3 mr-1" />
+                        Print
+                      </Button>
                     </div>
                   ))}
                 </div>

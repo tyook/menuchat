@@ -218,14 +218,16 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
         </div>
       )}
 
-      <Button
-        variant="gradient"
-        size="lg"
-        className="mt-6 w-full max-w-sm"
-        onClick={reset}
-      >
-        Done
-      </Button>
+      {paymentModel !== "tab" && (
+        <Button
+          variant="gradient"
+          size="lg"
+          className="mt-6 w-full max-w-sm"
+          onClick={reset}
+        >
+          Done
+        </Button>
+      )}
     </div>
   );
 }
