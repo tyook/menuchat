@@ -118,6 +118,8 @@ class RestaurantService:
             customer=subscription.stripe_customer_id,
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
+            automatic_tax={"enabled": True},
+            customer_update={"address": "auto"},
             success_url=(
                 f"{django_settings.FRONTEND_URL}/account/restaurants/{restaurant.slug}"
                 f"/billing?session_id={{CHECKOUT_SESSION_ID}}"
