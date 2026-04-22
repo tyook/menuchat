@@ -40,8 +40,12 @@ export default function MenuManagementPage() {
   const [newItem, setNewItem] = useState({
     name: "",
     description: "",
-    variantLabel: "Regular",
-    variantPrice: "",
+    variants: [{ label: "Regular", price: "", is_default: true }] as {
+      label: string;
+      price: string;
+      is_default: boolean;
+    }[],
+    modifiers: [] as { name: string; price_adjustment: string }[],
   });
 
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -49,7 +53,8 @@ export default function MenuManagementPage() {
     name: string;
     description: string;
     variants: { id: number; label: string; price: string; is_default: boolean }[];
-  }>({ name: "", description: "", variants: [] });
+    modifiers: { id: number; name: string; price_adjustment: string }[];
+  }>({ name: "", description: "", variants: [], modifiers: [] });
 
   const { data: menu, isLoading } = useAdminMenu(params.slug, isAuthenticated === true);
   const addCategory = useAddCategory(params.slug);
@@ -82,12 +87,14 @@ export default function MenuManagementPage() {
     name: string;
     description: string;
     variants: { id: number; label: string; price: string; is_default: boolean }[];
+    modifiers: { id: number; name: string; price_adjustment: string }[];
   }) => {
     setEditingItemId(item.id);
     setEditForm({
       name: item.name,
       description: item.description || "",
       variants: item.variants.map((v) => ({ ...v })),
+      modifiers: item.modifiers.map((m) => ({ ...m })),
     });
   };
 
@@ -97,12 +104,16 @@ export default function MenuManagementPage() {
     const variants = editForm.variants.map((v) =>
       v.id < 0 ? { label: v.label, price: v.price, is_default: v.is_default } : v
     );
+    const modifiers = editForm.modifiers.map((m) =>
+      m.id < 0 ? { name: m.name, price_adjustment: m.price_adjustment } : m
+    );
     updateMenuItem.mutate(
       {
         itemId: editingItemId,
         name: editForm.name,
         description: editForm.description,
         variants,
+        modifiers,
       },
       { onSuccess: () => setEditingItemId(null) },
     );
@@ -135,6 +146,21 @@ export default function MenuManagementPage() {
     }));
   };
 
+  const addEditModifier = () => {
+    const tempId = nextTempId--;
+    setEditForm((prev) => ({
+      ...prev,
+      modifiers: [...prev.modifiers, { id: tempId, name: "", price_adjustment: "" }],
+    }));
+  };
+
+  const removeEditModifier = (index: number) => {
+    setEditForm((prev) => ({
+      ...prev,
+      modifiers: prev.modifiers.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     addCategory.mutate(
@@ -155,14 +181,8 @@ export default function MenuManagementPage() {
         name: newItem.name,
         description: newItem.description,
         sort_order: 0,
-        variants: [
-          {
-            label: newItem.variantLabel,
-            price: newItem.variantPrice,
-            is_default: true,
-          },
-        ],
-        modifiers: [],
+        variants: newItem.variants,
+        modifiers: newItem.modifiers,
       },
       {
         onSuccess: () => {
@@ -170,8 +190,8 @@ export default function MenuManagementPage() {
           setNewItem({
             name: "",
             description: "",
-            variantLabel: "Regular",
-            variantPrice: "",
+            variants: [{ label: "Regular", price: "", is_default: true }],
+            modifiers: [],
           });
         },
       }
@@ -338,6 +358,55 @@ export default function MenuManagementPage() {
                           + Add Variant
                         </Button>
                       </div>
+                      <div>
+                        <Label className="text-xs">Add-ons</Label>
+                        <div className="space-y-2 mt-1">
+                          {editForm.modifiers.map((m, mi) => (
+                            <div key={m.id} className="flex gap-2 items-center">
+                              <div className="grid grid-cols-2 gap-2 flex-1">
+                                <Input
+                                  value={m.name}
+                                  onChange={(e) => {
+                                    const modifiers = [...editForm.modifiers];
+                                    modifiers[mi] = { ...m, name: e.target.value };
+                                    setEditForm({ ...editForm, modifiers });
+                                  }}
+                                  placeholder="Name (e.g. Extra Patty)"
+                                />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={m.price_adjustment}
+                                  onChange={(e) => {
+                                    const modifiers = [...editForm.modifiers];
+                                    modifiers[mi] = { ...m, price_adjustment: e.target.value };
+                                    setEditForm({ ...editForm, modifiers });
+                                  }}
+                                  placeholder="Extra price (e.g. 2.00)"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="shrink-0 text-destructive hover:text-destructive h-8 w-8 p-0"
+                                onClick={() => removeEditModifier(mi)}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={addEditModifier}
+                        >
+                          + Add Add-on
+                        </Button>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -420,7 +489,7 @@ export default function MenuManagementPage() {
                           </div>
                           {item.modifiers.length > 0 && (
                             <div className="text-sm text-muted-foreground mt-1">
-                              Modifiers:{" "}
+                              Add-ons:{" "}
                               {item.modifiers
                                 .map(
                                   (m) =>
@@ -581,35 +650,147 @@ export default function MenuManagementPage() {
                       placeholder="Classic pizza with tomato and mozzarella"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Size/Variant Label</Label>
-                      <Input
-                        value={newItem.variantLabel}
-                        onChange={(e) =>
-                          setNewItem({
-                            ...newItem,
-                            variantLabel: e.target.value,
-                          })
-                        }
-                        placeholder="Regular"
-                      />
+                  <div>
+                    <Label>Variants</Label>
+                    <div className="space-y-2 mt-1">
+                      {newItem.variants.map((v, vi) => (
+                        <div key={vi} className="flex gap-2 items-center">
+                          <div className="grid grid-cols-2 gap-2 flex-1">
+                            <Input
+                              value={v.label}
+                              onChange={(e) => {
+                                const variants = [...newItem.variants];
+                                variants[vi] = { ...v, label: e.target.value };
+                                setNewItem({ ...newItem, variants });
+                              }}
+                              placeholder="Label (e.g. Large)"
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={v.price}
+                              onChange={(e) => {
+                                const variants = [...newItem.variants];
+                                variants[vi] = { ...v, price: e.target.value };
+                                setNewItem({ ...newItem, variants });
+                              }}
+                              placeholder="Price"
+                            />
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const variants = newItem.variants.map((vr, i) => ({
+                                    ...vr,
+                                    is_default: i === vi,
+                                  }));
+                                  setNewItem({ ...newItem, variants });
+                                }}
+                                className={`shrink-0 text-xs px-2 py-1 rounded ${v.is_default ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                              >
+                                Default
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Set as the default variant shown to customers</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          {newItem.variants.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0 text-destructive hover:text-destructive h-8 w-8 p-0"
+                              onClick={() => {
+                                const variants = newItem.variants.filter((_, i) => i !== vi);
+                                if (!variants.some((vr) => vr.is_default)) {
+                                  variants[0] = { ...variants[0], is_default: true };
+                                }
+                                setNewItem({ ...newItem, variants });
+                              }}
+                            >
+                              ×
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <Label>Price</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={newItem.variantPrice}
-                        onChange={(e) =>
-                          setNewItem({
-                            ...newItem,
-                            variantPrice: e.target.value,
-                          })
-                        }
-                        placeholder="12.99"
-                      />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        setNewItem({
+                          ...newItem,
+                          variants: [
+                            ...newItem.variants,
+                            { label: "", price: "", is_default: false },
+                          ],
+                        })
+                      }
+                    >
+                      + Add Variant
+                    </Button>
+                  </div>
+                  <div>
+                    <Label>Add-ons</Label>
+                    <div className="space-y-2 mt-1">
+                      {newItem.modifiers.map((m, mi) => (
+                        <div key={mi} className="flex gap-2 items-center">
+                          <div className="grid grid-cols-2 gap-2 flex-1">
+                            <Input
+                              value={m.name}
+                              onChange={(e) => {
+                                const modifiers = [...newItem.modifiers];
+                                modifiers[mi] = { ...m, name: e.target.value };
+                                setNewItem({ ...newItem, modifiers });
+                              }}
+                              placeholder="Name (e.g. Extra Patty)"
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={m.price_adjustment}
+                              onChange={(e) => {
+                                const modifiers = [...newItem.modifiers];
+                                modifiers[mi] = { ...m, price_adjustment: e.target.value };
+                                setNewItem({ ...newItem, modifiers });
+                              }}
+                              placeholder="Extra price (e.g. 2.00)"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0 text-destructive hover:text-destructive h-8 w-8 p-0"
+                            onClick={() => {
+                              const modifiers = newItem.modifiers.filter((_, i) => i !== mi);
+                              setNewItem({ ...newItem, modifiers });
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
                     </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() =>
+                        setNewItem({
+                          ...newItem,
+                          modifiers: [...newItem.modifiers, { name: "", price_adjustment: "" }],
+                        })
+                      }
+                    >
+                      + Add Add-on
+                    </Button>
                   </div>
                   <div className="flex gap-2">
                     <Button

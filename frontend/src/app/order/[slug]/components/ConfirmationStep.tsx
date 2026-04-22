@@ -173,9 +173,13 @@ export function ConfirmationStep({ slug, taxRate, paymentMode }: ConfirmationSte
                   {item.variant.label} — ${item.variant.price}
                 </p>
                 {item.modifiers.length > 0 && (
-                  <p className="text-muted-foreground text-xs">
-                    + {item.modifiers.map((m) => m.name).join(", ")}
-                  </p>
+                  <div className="mt-0.5">
+                    {item.modifiers.map((m) => (
+                      <p key={m.id} className="text-muted-foreground text-xs">
+                        + {m.name} (+${m.price_adjustment})
+                      </p>
+                    ))}
+                  </div>
                 )}
                 {item.special_requests && (
                   <p className="text-muted-foreground text-xs italic mt-0.5">Note: {item.special_requests}</p>

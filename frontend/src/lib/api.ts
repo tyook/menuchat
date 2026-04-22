@@ -711,6 +711,13 @@ export async function deleteTable(
   });
 }
 
+// ── Hall Status ──
+import type { HallStatusTable } from "@/types";
+
+export async function fetchHallStatus(slug: string): Promise<HallStatusTable[]> {
+  return apiFetch<HallStatusTable[]>(`/api/restaurants/${slug}/hall-status/`);
+}
+
 // ── Analytics ──
 import type { AnalyticsResponse } from "@/types";
 

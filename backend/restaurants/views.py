@@ -407,6 +407,65 @@ class TableDetailView(RestaurantMixin, generics.RetrieveUpdateDestroyAPIView):
         return Table.objects.filter(restaurant=restaurant)
 
 
+class HallStatusView(RestaurantMixin, APIView):
+    """GET /api/restaurants/:slug/hall-status/ - Table grid with active tab info."""
+
+    def get(self, request, slug):
+        from orders.models import Tab
+
+        restaurant = self.get_restaurant()
+        tables = Table.objects.filter(restaurant=restaurant, is_active=True).order_by("number")
+
+        # Fetch all open tabs for this restaurant, keyed by table_identifier
+        open_tabs = (
+            Tab.objects.filter(restaurant=restaurant, status="open")
+            .prefetch_related("orders__items__menu_item", "orders__items__variant")
+        )
+        tab_by_table = {tab.table_identifier: tab for tab in open_tabs}
+
+        result = []
+        for table in tables:
+            tab = tab_by_table.get(table.number)
+            table_data = {
+                "id": str(table.id),
+                "name": table.name,
+                "number": table.number,
+                "has_tab": tab is not None,
+                "tab": None,
+            }
+            if tab:
+                first_order = tab.orders.order_by("created_at").first()
+                table_data["tab"] = {
+                    "id": str(tab.id),
+                    "status": tab.status,
+                    "total": f"{tab.total:.2f}",
+                    "order_count": tab.orders.count(),
+                    "opened_at": tab.opened_at.isoformat(),
+                    "first_order_at": first_order.created_at.isoformat() if first_order else None,
+                    "orders": [
+                        {
+                            "id": str(order.id),
+                            "status": order.status,
+                            "total_price": f"{order.total_price:.2f}",
+                            "created_at": order.created_at.isoformat(),
+                            "items": [
+                                {
+                                    "id": item.id,
+                                    "name": item.menu_item.name,
+                                    "variant_label": item.variant.label,
+                                    "quantity": item.quantity,
+                                }
+                                for item in order.items.all()
+                            ],
+                        }
+                        for order in tab.orders.order_by("created_at")
+                    ],
+                }
+            result.append(table_data)
+
+        return Response(result)
+
+
 class RestaurantAnalyticsView(RestaurantMixin, APIView):
     """GET /api/restaurants/:slug/analytics/?period=7d|30d|90d|custom&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD"""
 

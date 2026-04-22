@@ -70,10 +70,21 @@ export default function PayByItemModal({ slug, onClose }: PayByItemModalProps) {
                 onChange={() => toggleItem(item.id)}
                 className="h-5 w-5 rounded border-zinc-600"
               />
-              <span className="flex-1 text-sm text-zinc-200">
-                {item.quantity}x {item.name}
-              </span>
-              <span className="text-sm text-zinc-300">${item.line_total}</span>
+              <div className="flex-1">
+                <span className="text-sm text-zinc-200">
+                  {item.quantity}x {item.name}
+                </span>
+                {item.modifiers && item.modifiers.length > 0 && (
+                  <div className="ml-4 mt-0.5">
+                    {item.modifiers.map((m) => (
+                      <p key={m.id} className="text-xs text-zinc-400">
+                        + {m.name} (+${m.price_adjustment})
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="text-sm text-zinc-300 shrink-0">${item.line_total}</span>
             </label>
           ))}
         </div>

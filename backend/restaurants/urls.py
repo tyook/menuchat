@@ -14,6 +14,7 @@ from restaurants.views import (
     ConnectDashboardView,
     ConnectOnboardView,
     ConnectStatusView,
+    HallStatusView,
     OnboardingConnectInitiateView,
     OnboardingConnectStatusView,
     CreateBillingPortalView,
@@ -134,6 +135,12 @@ urlpatterns = [
         "restaurants/<slug:slug>/tables/<uuid:pk>/",
         TableDetailView.as_view(),
         name="table-detail",
+    ),
+    # Hall Status
+    path(
+        "restaurants/<slug:slug>/hall-status/",
+        HallStatusView.as_view(),
+        name="hall-status",
     ),
     # Analytics
     path(

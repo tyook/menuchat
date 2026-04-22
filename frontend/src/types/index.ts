@@ -395,3 +395,37 @@ export interface TabPaymentResponse {
   payment_id: string;
   client_secret: string;
 }
+
+// Hall Status types
+export interface HallStatusOrderItem {
+  id: number;
+  name: string;
+  variant_label: string;
+  quantity: number;
+}
+
+export interface HallStatusOrder {
+  id: string;
+  status: string;
+  total_price: string;
+  created_at: string;
+  items: HallStatusOrderItem[];
+}
+
+export interface HallStatusTab {
+  id: string;
+  status: string;
+  total: string;
+  order_count: number;
+  opened_at: string;
+  first_order_at: string | null;
+  orders: HallStatusOrder[];
+}
+
+export interface HallStatusTable {
+  id: string;
+  name: string;
+  number: string;
+  has_tab: boolean;
+  tab: HallStatusTab | null;
+}

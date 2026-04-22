@@ -291,6 +291,15 @@ export function PaymentStep({ taxRate }: PaymentStepProps) {
                 {item.variant.label && (
                   <p className="text-muted-foreground text-xs">{item.variant.label}</p>
                 )}
+                {item.modifiers.length > 0 && (
+                  <div className="mt-0.5">
+                    {item.modifiers.map((m) => (
+                      <p key={m.id} className="text-muted-foreground text-xs">
+                        + {m.name} (+${m.price_adjustment})
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="text-right shrink-0">
                 <p className="text-foreground text-sm">×{item.quantity}</p>

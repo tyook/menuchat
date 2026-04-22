@@ -92,6 +92,15 @@ export default function OrderHistoryPage() {
                   {order.items.map((item) => (
                     <li key={item.id}>
                       {item.quantity}x {item.name} ({item.variant_label})
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <ul className="ml-4">
+                          {item.modifiers.map((m) => (
+                            <li key={m.id} className="text-xs">
+                              + {m.name} (+${m.price_adjustment})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

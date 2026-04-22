@@ -88,14 +88,25 @@ export function SubmittedStep({ slug }: SubmittedStepProps) {
           </p>
           <div className="space-y-2">
             {parsedItems.map((item, index) => (
-              <div key={index} className="flex justify-between items-center">
-                <span className="text-foreground/80 text-sm">
-                  {item.quantity > 1 && (
-                    <span className="text-muted-foreground text-xs mr-1">×{item.quantity}</span>
-                  )}
-                  {item.name}
-                </span>
-                <span className="text-muted-foreground text-xs">${item.line_total}</span>
+              <div key={index}>
+                <div className="flex justify-between items-center">
+                  <span className="text-foreground/80 text-sm">
+                    {item.quantity > 1 && (
+                      <span className="text-muted-foreground text-xs mr-1">×{item.quantity}</span>
+                    )}
+                    {item.name}
+                  </span>
+                  <span className="text-muted-foreground text-xs">${item.line_total}</span>
+                </div>
+                {item.modifiers.length > 0 && (
+                  <div className="ml-4 mt-0.5">
+                    {item.modifiers.map((m) => (
+                      <p key={m.id} className="text-muted-foreground text-xs">
+                        + {m.name} (+${m.price_adjustment})
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

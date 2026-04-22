@@ -108,16 +108,27 @@ export default function OrderStatusPageClient() {
             </p>
             <div className="space-y-2">
               {order.items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <span className="text-foreground/80 text-sm">
-                    {item.quantity > 1 && (
-                      <span className="text-muted-foreground text-xs mr-1">{item.quantity}x</span>
-                    )}
-                    {item.name}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    ${(Number(item.variant_price) * item.quantity).toFixed(2)}
-                  </span>
+                <div key={item.id}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-foreground/80 text-sm">
+                      {item.quantity > 1 && (
+                        <span className="text-muted-foreground text-xs mr-1">{item.quantity}x</span>
+                      )}
+                      {item.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      ${(Number(item.variant_price) * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                  {item.modifiers && item.modifiers.length > 0 && (
+                    <div className="ml-4 mt-0.5">
+                      {item.modifiers.map((m) => (
+                        <p key={m.id} className="text-muted-foreground text-xs">
+                          + {m.name} (+${m.price_adjustment})
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

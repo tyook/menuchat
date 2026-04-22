@@ -88,6 +88,11 @@ export default function RestaurantsDashboard() {
                   <Link href={`/account/restaurants/${r.slug}/settings`}>
                     <Button variant="outline" size="sm">Settings</Button>
                   </Link>
+                  {r.payment_model === "tab" && (
+                    <Link href={`/account/restaurants/${r.slug}/hall-status`}>
+                      <Button variant="outline" size="sm">Hall Status</Button>
+                    </Link>
+                  )}
                   <Link href={`/kitchen/${r.slug}`}>
                     <Button size="sm">Kitchen</Button>
                   </Link>

@@ -111,6 +111,15 @@ export default function OrderDetailPage() {
                   <p className="text-sm text-muted-foreground">
                     {item.variant_label}
                   </p>
+                  {item.modifiers && item.modifiers.length > 0 && (
+                    <div className="mt-0.5">
+                      {item.modifiers.map((m) => (
+                        <p key={m.id} className="text-sm text-muted-foreground">
+                          + {m.name} (+${m.price_adjustment})
+                        </p>
+                      ))}
+                    </div>
+                  )}
                   {item.special_requests && (
                     <p className="text-sm text-muted-foreground italic mt-1">
                       Note: {item.special_requests}

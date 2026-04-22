@@ -142,6 +142,8 @@ class MenuCategorySerializer(serializers.ModelSerializer):
 
 
 class MenuItemModifierSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+
     class Meta:
         model = MenuItemModifier
         fields = ["id", "name", "price_adjustment"]
@@ -202,7 +204,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         variants_data = validated_data.pop("variants", None)
-        validated_data.pop("modifiers", None)
+        modifiers_data = validated_data.pop("modifiers", None)
         validated_data.pop("category_id", None)
         instance = super().update(instance, validated_data)
 
@@ -225,6 +227,24 @@ class MenuItemSerializer(serializers.ModelSerializer):
                 else:
                     data = {k: v for k, v in variant_data.items() if k != "id"}
                     MenuItemVariant.objects.create(menu_item=instance, **data)
+
+        if modifiers_data is not None:
+            incoming_ids = {m["id"] for m in modifiers_data if m.get("id")}
+            instance.modifiers.exclude(id__in=incoming_ids).delete()
+            for modifier_data in modifiers_data:
+                modifier_id = modifier_data.get("id")
+                if modifier_id:
+                    try:
+                        modifier = instance.modifiers.get(id=modifier_id)
+                        for attr, value in modifier_data.items():
+                            if attr != "id":
+                                setattr(modifier, attr, value)
+                        modifier.save()
+                    except MenuItemModifier.DoesNotExist:
+                        pass
+                else:
+                    data = {k: v for k, v in modifier_data.items() if k != "id"}
+                    MenuItemModifier.objects.create(menu_item=instance, **data)
 
         return instance
 

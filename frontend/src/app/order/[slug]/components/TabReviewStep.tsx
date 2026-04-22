@@ -70,11 +70,22 @@ export default function TabReviewStep({ slug }: TabReviewStepProps) {
               Order {idx + 1}
             </div>
             {order.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm text-zinc-200">
-                <span>
-                  {item.quantity}x {item.name}
-                </span>
-                <span>${item.line_total}</span>
+              <div key={item.id}>
+                <div className="flex justify-between text-sm text-zinc-200">
+                  <span>
+                    {item.quantity}x {item.name}
+                  </span>
+                  <span>${item.line_total}</span>
+                </div>
+                {item.modifiers && item.modifiers.length > 0 && (
+                  <div className="ml-4 mt-0.5">
+                    {item.modifiers.map((m) => (
+                      <p key={m.id} className="text-xs text-zinc-400">
+                        + {m.name} (+${m.price_adjustment})
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div className="mt-2 border-t border-zinc-700 pt-2 text-right text-sm text-zinc-300">

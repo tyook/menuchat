@@ -74,7 +74,7 @@ export function useAddMenuItem(slug: string) {
       description: string;
       sort_order: number;
       variants: { label: string; price: string; is_default: boolean }[];
-      modifiers: unknown[];
+      modifiers: { name: string; price_adjustment: string }[];
     }) =>
       apiFetch(`/api/restaurants/${slug}/items/`, {
         method: "POST",
@@ -98,6 +98,7 @@ export function useUpdateMenuItem(slug: string) {
       name?: string;
       description?: string;
       variants?: { id?: number; label: string; price: string; is_default: boolean }[];
+      modifiers?: { id?: number; name: string; price_adjustment: string }[];
     }) =>
       apiFetch(`/api/restaurants/${slug}/items/${itemId}/`, {
         method: "PATCH",
