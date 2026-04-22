@@ -1,11 +1,21 @@
 services:
   - type: web
     name: menuchat-backend
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    runtime: python
+    region: ohio
     plan: free
+    buildCommand: >-
+      cd backend &&
+      pip install poetry &&
+      poetry config virtualenvs.create false &&
+      poetry install --no-interaction --no-ansi --no-root --only main &&
+      python manage.py collectstatic --noinput
+    startCommand: >-
+      cd backend &&
+      python manage.py migrate --noinput &&
+      daphne -b 0.0.0.0 -p $PORT config.asgi:application
     healthCheckPath: /api/health/
+    autoDeploy: false
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -85,14 +95,25 @@ services:
         sync: false
       - key: DEFAULT_FROM_EMAIL
         value: "noreply@menuchat.app"
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
 
   - type: worker
     name: menuchat-celery
-    runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    runtime: python
+    region: ohio
     plan: free
-    dockerCommand: celery -A config worker --loglevel=info
+    buildCommand: >-
+      cd backend &&
+      pip install poetry &&
+      poetry config virtualenvs.create false &&
+      poetry install --no-interaction --no-ansi --no-root --only main
+    startCommand: >-
+      cd backend &&
+      celery -A config worker --loglevel=info
+    autoDeploy: false
     envVars:
       - key: DJANGO_SECRET_KEY
         fromService:
@@ -135,3 +156,7 @@ services:
         sync: false
       - key: DEFAULT_FROM_EMAIL
         value: "noreply@menuchat.app"
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
