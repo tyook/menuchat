@@ -109,6 +109,73 @@ export default function SettingsPage() {
     return `${baseUrl}/order/${params.slug}`;
   };
 
+  const handlePrintAllQR = () => {
+    if (activeTables.length === 0) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const tableEntries = activeTables.map((table: Table) => ({
+      url: getOrderUrl(table.number),
+      label: `${table.name} (#${table.number})`,
+    }));
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>All Table QR Codes</title>
+          <style>
+            body { margin: 0; font-family: sans-serif; }
+            .page {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              page-break-after: always;
+            }
+            .page:last-child { page-break-after: auto; }
+            h1 { font-size: 24px; margin-bottom: 24px; }
+            p { font-size: 14px; color: #666; margin-top: 16px; word-break: break-all; }
+          </style>
+        </head>
+        <body>
+          ${tableEntries.map((_, i) => `
+            <div class="page">
+              <h1 id="label-${i}"></h1>
+              <div id="qr-${i}"></div>
+              <p id="url-${i}"></p>
+            </div>
+          `).join("")}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    tableEntries.forEach((entry, i) => {
+      const labelEl = printWindow.document.getElementById(`label-${i}`);
+      const urlEl = printWindow.document.getElementById(`url-${i}`);
+      if (labelEl) labelEl.textContent = entry.label;
+      if (urlEl) urlEl.textContent = entry.url;
+
+      const container = printWindow.document.getElementById(`qr-${i}`);
+      if (container) {
+        const tempDiv = document.createElement("div");
+        document.body.appendChild(tempDiv);
+        const root = createRoot(tempDiv);
+        flushSync(() => {
+          root.render(<QRCodeSVG value={entry.url} size={300} />);
+        });
+        container.innerHTML = tempDiv.innerHTML;
+        root.unmount();
+        document.body.removeChild(tempDiv);
+      }
+    });
+
+    printWindow.focus();
+    printWindow.print();
+  };
+
   const handlePrintQR = (url: string, label: string) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -347,7 +414,19 @@ export default function SettingsPage() {
 
             {/* Table Management */}
             <Card className="bg-card border border-border rounded-2xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Table Management</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Table Management</h2>
+                {activeTables.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrintAllQR}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print All
+                  </Button>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
                 Add tables and generate per-table QR codes for dine-in ordering.
               </p>
